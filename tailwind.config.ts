@@ -58,6 +58,12 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
+      boxShadow: {
+        'neo-sm': 'var(--neo-shadow-sm)',
+        'neo': 'var(--neo-shadow)',
+        'neo-lg': 'var(--neo-shadow-lg)',
+        'neo-inset': 'var(--neo-inset)',
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
