@@ -72,6 +72,33 @@ const Calendar = () => {
             </div>
           </NeoCard>
         </div>
+
+        <NeoCard>
+          <h3 className="font-semibold mb-4">Properes festes i tancaments</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset">
+              <div>
+                <p className="font-medium">Divendres Sant</p>
+                <p className="text-sm text-muted-foreground">Festiu general</p>
+              </div>
+              <span className="text-sm font-medium text-primary">29 Mar</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset">
+              <div>
+                <p className="font-medium">Dilluns de Pasqua</p>
+                <p className="text-sm text-muted-foreground">Festiu general</p>
+              </div>
+              <span className="text-sm font-medium text-primary">1 Abr</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset">
+              <div>
+                <p className="font-medium">Tancament Arbúcies</p>
+                <p className="text-sm text-muted-foreground">Manteniment</p>
+              </div>
+              <span className="text-sm font-medium text-destructive">10-12 Abr</span>
+            </div>
+          </div>
+        </NeoCard>
       </div>
     </div>
   );

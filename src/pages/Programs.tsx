@@ -71,6 +71,13 @@ const Programs = () => {
                     {program.activeDays} dies actiu
                   </div>
                 </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-3 shadow-neo hover:shadow-neo-sm"
+                >
+                  Gestionar subprogrames
+                </Button>
               </div>
             </div>
           </NeoCard>

@@ -9,9 +9,11 @@ const Index = () => {
   ];
 
   const upcomingBirthdays = [
-    { name: "Maria García", date: "15 Mar", isPast: false },
-    { name: "Joan Martínez", date: "18 Mar", isPast: false },
-    { name: "Anna López", date: "22 Mar", isPast: false },
+    { name: "Joan Pérez", date: "2 Mar", status: "past" },
+    { name: "Maria García", date: "8 Mar", status: "past" },
+    { name: "Laura Soler", date: "10 Mar", status: "today" },
+    { name: "Joan Martínez", date: "15 Mar", status: "upcoming" },
+    { name: "Anna López", date: "18 Mar", status: "upcoming" },
   ];
 
   return (
@@ -93,10 +95,22 @@ const Index = () => {
           {upcomingBirthdays.map((birthday, index) => (
             <div
               key={index}
-              className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset"
+              className={`flex items-center justify-between p-3 rounded-xl transition-all ${
+                birthday.status === "past" 
+                  ? "shadow-neo-inset opacity-50" 
+                  : birthday.status === "today"
+                  ? "shadow-neo bg-primary/10 border-2 border-primary"
+                  : "shadow-neo-inset"
+              }`}
             >
-              <span className="font-medium">{birthday.name}</span>
-              <span className="text-sm text-primary">{birthday.date}</span>
+              <span className={`font-medium ${birthday.status === "past" ? "text-muted-foreground" : ""}`}>
+                {birthday.name}
+              </span>
+              <span className={`text-sm ${
+                birthday.status === "today" ? "text-primary font-bold" : "text-muted-foreground"
+              }`}>
+                {birthday.date}
+              </span>
             </div>
           ))}
         </div>

@@ -13,6 +13,7 @@ const Users = () => {
       center: "Arbúcies",
       birthday: "15/03/1990",
       phone: "666 123 456",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria",
     },
     {
       id: 2,
@@ -21,6 +22,7 @@ const Users = () => {
       center: "Sant Hilari",
       birthday: "22/07/1985",
       phone: "677 234 567",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Joan",
     },
     {
       id: 3,
@@ -29,6 +31,16 @@ const Users = () => {
       center: "Arbúcies",
       birthday: "10/11/1992",
       phone: "688 345 678",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Anna",
+    },
+    {
+      id: 4,
+      name: "Laura Soler",
+      email: "laura@example.com",
+      center: "Sant Hilari",
+      birthday: "05/09/1988",
+      phone: "699 456 789",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Laura",
     },
   ];
 
@@ -61,22 +73,31 @@ const Users = () => {
           {mockUsers.map((user) => (
             <div
               key={user.id}
-              className="p-4 rounded-xl shadow-neo hover:shadow-neo-sm transition-all cursor-pointer"
+              className={`p-4 rounded-xl shadow-neo hover:shadow-neo-sm transition-all cursor-pointer ${
+                user.center === "Arbúcies" ? "bg-blue-500/5" : "bg-green-500/5"
+              }`}
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start gap-4">
+                <img 
+                  src={user.avatar} 
+                  alt={user.name}
+                  className="w-16 h-16 rounded-full shadow-neo"
+                />
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">{user.name}</h3>
                   <p className="text-sm text-muted-foreground">{user.email}</p>
                   <div className="flex gap-4 mt-2 text-sm">
                     <span className="text-muted-foreground">
-                      Centre: <span className="text-primary font-medium">{user.center}</span>
+                      Centre: <span className={`font-medium ${
+                        user.center === "Arbúcies" ? "text-blue-600" : "text-green-600"
+                      }`}>{user.center}</span>
                     </span>
                     <span className="text-muted-foreground">
                       Aniversari: {user.birthday}
                     </span>
+                    <span className="text-muted-foreground">{user.phone}</span>
                   </div>
                 </div>
-                <span className="text-sm text-muted-foreground">{user.phone}</span>
               </div>
             </div>
           ))}
