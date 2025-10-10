@@ -1,7 +1,14 @@
+import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
+import { DaySessionsModal } from "@/components/DaySessionsModal";
 import { Calendar, Users, TrendingUp, Cake, PartyPopper } from "lucide-react";
+import { programColors, weekSchedule, holidays2025, Session } from "@/lib/programColors";
 
 const Index = () => {
+  const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const activePrograms = [
     { name: "BodyPump 120", code: "BP", days: 45, color: "bg-red-500" },
     { name: "BodyCombat 95", code: "BC", days: 30, color: "bg-orange-500" },
@@ -15,6 +22,63 @@ const Index = () => {
     { name: "Joan Martínez", date: "15 Mar", status: "upcoming", age: 42, center: "Sant Hilari", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=JoanM" },
     { name: "Anna López", date: "18 Mar", status: "upcoming", age: 25, center: "Arbúcies", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Anna" },
   ];
+
+  // Mock vacances i tancaments (haurien de venir de configuració)
+  const vacations = ["2025-03-24", "2025-03-25", "2025-03-26", "2025-03-27", "2025-03-28"];
+  const closures = ["2025-03-15"]; // Tancament centre
+
+  const getSessionsForDate = (date: Date): Session[] => {
+    const dateKey = date.toISOString().split("T")[0];
+    
+    // Si té sessions personalitzades, retorna-les
+    if (customSessions[dateKey]) {
+      return customSessions[dateKey];
+    }
+    
+    // Si no, retorna l'horari setmanal
+    const dayOfWeek = date.getDay();
+    const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek; // Diumenge=7
+    return weekSchedule[adjustedDay] || [];
+  };
+
+  const handleUpdateSessions = (date: Date, sessions: Session[]) => {
+    const dateKey = date.toISOString().split("T")[0];
+    setCustomSessions((prev) => ({
+      ...prev,
+      [dateKey]: sessions,
+    }));
+  };
+
+  const handleDayClick = (day: number) => {
+    const now = new Date();
+    const date = new Date(now.getFullYear(), now.getMonth(), day);
+    setSelectedDate(date);
+    setIsModalOpen(true);
+  };
+
+  const isHoliday = (day: number) => {
+    const now = new Date();
+    const dateKey = new Date(now.getFullYear(), now.getMonth(), day)
+      .toISOString()
+      .split("T")[0];
+    return holidays2025.some((h) => h.date === dateKey);
+  };
+
+  const isVacation = (day: number) => {
+    const now = new Date();
+    const dateKey = new Date(now.getFullYear(), now.getMonth(), day)
+      .toISOString()
+      .split("T")[0];
+    return vacations.includes(dateKey);
+  };
+
+  const isClosure = (day: number) => {
+    const now = new Date();
+    const dateKey = new Date(now.getFullYear(), now.getMonth(), day)
+      .toISOString()
+      .split("T")[0];
+    return closures.includes(dateKey);
+  };
 
   return (
     <div className="space-y-6">
@@ -134,17 +198,85 @@ const Index = () => {
       {/* Mini calendari */}
       <NeoCard>
         <h2 className="text-xl font-semibold mb-4">Calendari del mes</h2>
-        <div className="grid grid-cols-7 gap-2">
-          {Array.from({ length: 31 }, (_, i) => (
-            <div
-              key={i}
-              className="aspect-square rounded-lg shadow-neo hover:shadow-neo-sm transition-all flex items-center justify-center text-sm font-medium cursor-pointer"
-            >
-              {i + 1}
+        
+        {/* Dies de la setmana */}
+        <div className="grid grid-cols-7 gap-2 mb-2">
+          {["Dl", "Dt", "Dc", "Dj", "Dv", "Ds", "Dg"].map((day) => (
+            <div key={day} className="text-center font-semibold text-xs text-muted-foreground py-1">
+              {day}
             </div>
           ))}
         </div>
+
+        {/* Dies del mes */}
+        <div className="grid grid-cols-7 gap-2">
+          {Array.from({ length: 31 }, (_, i) => {
+            const day = i + 1;
+            const now = new Date();
+            const date = new Date(now.getFullYear(), now.getMonth(), day);
+            const sessions = getSessionsForDate(date);
+            const holiday = isHoliday(day);
+            const vacation = isVacation(day);
+            const closure = isClosure(day);
+
+            return (
+              <button
+                key={i}
+                onClick={() => handleDayClick(day)}
+                className={`aspect-square rounded-lg shadow-neo hover:shadow-neo-sm transition-all flex flex-col items-center justify-start p-1 text-sm font-medium cursor-pointer ${
+                  holiday
+                    ? "bg-yellow-500/20 border-2 border-yellow-500/50"
+                    : vacation
+                    ? "bg-blue-500/20 border-2 border-blue-500/50"
+                    : closure
+                    ? "bg-gray-500/20 border-2 border-gray-500/50"
+                    : ""
+                }`}
+              >
+                <span className="text-xs mb-1">{day}</span>
+                {sessions.length > 0 && (
+                  <div className="flex gap-0.5 flex-wrap justify-center">
+                    {sessions.map((session, idx) => (
+                      <div
+                        key={idx}
+                        className={`w-5 h-5 rounded ${
+                          programColors[session.program].color
+                        } text-white text-[8px] flex items-center justify-center font-bold`}
+                      >
+                        {session.program}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Llegenda */}
+        <div className="mt-4 flex flex-wrap gap-3 text-xs">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded bg-yellow-500/50"></div>
+            <span>Festiu</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded bg-blue-500/50"></div>
+            <span>Vacances</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded bg-gray-500/50"></div>
+            <span>Tancament</span>
+          </div>
+        </div>
       </NeoCard>
+
+      <DaySessionsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        date={selectedDate}
+        sessions={selectedDate ? getSessionsForDate(selectedDate) : []}
+        onUpdateSessions={handleUpdateSessions}
+      />
     </div>
   );
 };
