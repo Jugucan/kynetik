@@ -7,8 +7,21 @@ const Calendar = () => {
     year: "numeric" 
   });
 
-  // Simulació de dies del mes
-  const daysInMonth = Array.from({ length: 31 }, (_, i) => i + 1);
+  // Horari setmanal - Dilluns=1, Dimarts=2, Dimecres=3, Dijous=4, Divendres=5
+  const weekSchedule = {
+    1: [{ time: "18:15", program: "SB" }, { time: "19:05", program: "BP" }, { time: "20:00", program: "BP" }],
+    2: [{ time: "19:30", program: "BC" }],
+    3: [{ time: "17:00", program: "BP" }],
+    4: [{ time: "19:10", program: "SB" }, { time: "20:00", program: "BP" }],
+    5: [{ time: "17:00", program: "SB" }, { time: "18:00", program: "BC" }, { time: "19:00", program: "BP" }, { time: "20:00", program: "ES" }],
+  };
+
+  // Simulació de dies del mes - començant dilluns (dia 1 de març és dilluns)
+  const daysInMonth = Array.from({ length: 31 }, (_, i) => {
+    const day = i + 1;
+    const dayOfWeek = ((i) % 7) + 1; // 1=Dilluns, 7=Diumenge
+    return { day, dayOfWeek, sessions: weekSchedule[dayOfWeek as keyof typeof weekSchedule] || [] };
+  });
   const dayNames = ["Dl", "Dt", "Dc", "Dj", "Dv", "Ds", "Dg"];
 
   return (
@@ -32,12 +45,19 @@ const Calendar = () => {
                 {day}
               </div>
             ))}
-            {daysInMonth.map((day) => (
+            {daysInMonth.map((dayInfo) => (
               <button
-                key={day}
-                className="aspect-square rounded-xl shadow-neo hover:shadow-neo-sm transition-all flex items-center justify-center font-medium"
+                key={dayInfo.day}
+                className="aspect-square rounded-xl shadow-neo hover:shadow-neo-sm transition-all flex flex-col items-center justify-center font-medium p-1"
               >
-                {day}
+                <span className="text-sm">{dayInfo.day}</span>
+                {dayInfo.sessions.length > 0 && (
+                  <div className="flex gap-0.5 mt-1 flex-wrap justify-center">
+                    {dayInfo.sessions.map((session, idx) => (
+                      <span key={idx} className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                    ))}
+                  </div>
+                )}
               </button>
             ))}
           </div>

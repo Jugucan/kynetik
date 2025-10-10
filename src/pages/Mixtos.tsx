@@ -58,48 +58,82 @@ const Mixtos = () => {
 
         {programs.map((program) => (
           <TabsContent key={program.code} value={program.code}>
-            <div className="grid md:grid-cols-3 gap-6">
-              <NeoCard className="md:col-span-2">
-                <h2 className="text-xl font-semibold mb-4">Mix de {program.name}</h2>
-                <div className="space-y-3 mb-6">
-                  {mockTracks[program.code as keyof typeof mockTracks].map((track, index) => (
-                    <div
-                      key={track.id}
-                      className="flex items-center gap-4 p-3 rounded-xl shadow-neo-inset"
-                    >
-                      <span className="text-muted-foreground font-mono text-sm w-8">{index + 1}</span>
-                      <div className="flex-1">
-                        <p className="font-medium">{track.name}</p>
-                        <p className="text-sm text-muted-foreground">Posició: {track.position}</p>
-                      </div>
-                      <Button variant="ghost" size="icon" className="shadow-neo hover:shadow-neo-sm">
-                        <Play className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <Button className="w-full shadow-neo hover:shadow-neo-sm">
-                  Generar nou mix de {program.name}
-                </Button>
-              </NeoCard>
+            <div className="space-y-6">
+              {/* Mixtos guardats */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <NeoCard className="cursor-pointer hover:shadow-neo-lg transition-all">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold">Mix 1 {program.code}</h3>
+                    <span className="text-xs text-muted-foreground">45 min</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-2">10 tracks</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="shadow-neo hover:shadow-neo-sm">
+                      <Play className="w-3 h-3 mr-1" />
+                      Veure
+                    </Button>
+                  </div>
+                </NeoCard>
 
-              <NeoCard>
-                <h3 className="font-semibold mb-4">Estadístiques {program.code}</h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Tracks preferits</p>
-                    <p className="text-2xl font-bold text-primary">{mockTracks[program.code as keyof typeof mockTracks].length}</p>
+                <NeoCard className="cursor-pointer hover:shadow-neo-lg transition-all">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold">Mix 2 {program.code}</h3>
+                    <span className="text-xs text-muted-foreground">42 min</span>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Mixos creats</p>
-                    <p className="text-2xl font-bold text-primary">5</p>
+                  <p className="text-sm text-muted-foreground mb-2">10 tracks</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="shadow-neo hover:shadow-neo-sm">
+                      <Play className="w-3 h-3 mr-1" />
+                      Veure
+                    </Button>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Durada mitjana</p>
-                    <p className="text-2xl font-bold text-primary">45 min</p>
+                </NeoCard>
+              </div>
+
+              {/* Crear nou mix */}
+              <div className="grid md:grid-cols-3 gap-6">
+                <NeoCard className="md:col-span-2">
+                  <h2 className="text-xl font-semibold mb-4">Crear nou mix de {program.name}</h2>
+                  <div className="space-y-3 mb-6">
+                    {mockTracks[program.code as keyof typeof mockTracks].map((track, index) => (
+                      <div
+                        key={track.id}
+                        className="flex items-center gap-4 p-3 rounded-xl shadow-neo-inset"
+                      >
+                        <span className="text-muted-foreground font-mono text-sm w-8">{index + 1}</span>
+                        <div className="flex-1">
+                          <p className="font-medium">{track.name}</p>
+                          <p className="text-sm text-muted-foreground">Posició: {track.position}</p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="shadow-neo hover:shadow-neo-sm">
+                          <Play className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </NeoCard>
+                  <Button className="w-full shadow-neo hover:shadow-neo-sm">
+                    Generar nou mix de {program.name}
+                  </Button>
+                </NeoCard>
+
+                <NeoCard>
+                  <h3 className="font-semibold mb-4">Estadístiques {program.code}</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tracks preferits</p>
+                      <p className="text-2xl font-bold text-primary">{mockTracks[program.code as keyof typeof mockTracks].length}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Mixos creats</p>
+                      <p className="text-2xl font-bold text-primary">2</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Durada mitjana</p>
+                      <p className="text-2xl font-bold text-primary">43 min</p>
+                    </div>
+                  </div>
+                </NeoCard>
+              </div>
             </div>
           </TabsContent>
         ))}

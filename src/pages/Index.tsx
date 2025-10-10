@@ -1,5 +1,5 @@
 import { NeoCard } from "@/components/NeoCard";
-import { Calendar, Users, TrendingUp, Cake } from "lucide-react";
+import { Calendar, Users, TrendingUp, Cake, PartyPopper } from "lucide-react";
 
 const Index = () => {
   const activePrograms = [
@@ -9,11 +9,11 @@ const Index = () => {
   ];
 
   const upcomingBirthdays = [
-    { name: "Joan Pérez", date: "2 Mar", status: "past" },
-    { name: "Maria García", date: "8 Mar", status: "past" },
-    { name: "Laura Soler", date: "10 Mar", status: "today" },
-    { name: "Joan Martínez", date: "15 Mar", status: "upcoming" },
-    { name: "Anna López", date: "18 Mar", status: "upcoming" },
+    { name: "Joan Pérez", date: "2 Mar", status: "past", age: 34, center: "Arbúcies", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Joan" },
+    { name: "Maria García", date: "8 Mar", status: "past", age: 28, center: "Sant Hilari", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria" },
+    { name: "Laura Soler", date: "10 Mar", status: "today", age: 31, center: "Arbúcies", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Laura" },
+    { name: "Joan Martínez", date: "15 Mar", status: "upcoming", age: 42, center: "Sant Hilari", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=JoanM" },
+    { name: "Anna López", date: "18 Mar", status: "upcoming", age: 25, center: "Arbúcies", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Anna" },
   ];
 
   return (
@@ -95,17 +95,32 @@ const Index = () => {
           {upcomingBirthdays.map((birthday, index) => (
             <div
               key={index}
-              className={`flex items-center justify-between p-3 rounded-xl transition-all ${
+              className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
                 birthday.status === "past" 
                   ? "shadow-neo-inset opacity-50" 
                   : birthday.status === "today"
-                  ? "shadow-neo bg-primary/10 border-2 border-primary"
+                  ? "shadow-neo bg-gradient-to-r from-primary/20 to-accent/20 border-2 border-primary"
                   : "shadow-neo-inset"
               }`}
             >
-              <span className={`font-medium ${birthday.status === "past" ? "text-muted-foreground" : ""}`}>
-                {birthday.name}
-              </span>
+              <img 
+                src={birthday.photo} 
+                alt={birthday.name} 
+                className="w-12 h-12 rounded-full shadow-neo"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className={`font-medium ${birthday.status === "past" ? "text-muted-foreground" : ""}`}>
+                    {birthday.name}
+                  </span>
+                  {birthday.status === "today" && (
+                    <PartyPopper className="w-5 h-5 text-primary animate-bounce" />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {birthday.age} anys · {birthday.center}
+                </p>
+              </div>
               <span className={`text-sm ${
                 birthday.status === "today" ? "text-primary font-bold" : "text-muted-foreground"
               }`}>
