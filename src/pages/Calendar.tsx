@@ -6,6 +6,7 @@ import { programColors, weekSchedule, holidays2025, Session } from "@/lib/progra
 
 const Calendar = () => {
   const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
+  const [deletedSessions, setDeletedSessions] = useState<Record<string, Array<{sessionIndex: number, reason: string}>>>({});
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const currentMonth = new Date().toLocaleDateString("ca-ES", { 
@@ -19,6 +20,11 @@ const Calendar = () => {
 
   const getSessionsForDate = (date: Date): Session[] => {
     const dateKey = date.toISOString().split("T")[0];
+    
+    // Check if it's a holiday or vacation - no sessions
+    if (isHoliday(date) || isVacation(date)) {
+      return [];
+    }
     
     if (customSessions[dateKey]) {
       return customSessions[dateKey];
@@ -37,58 +43,67 @@ const Calendar = () => {
     }));
   };
 
-  const handleDayClick = (day: number) => {
-    const now = new Date();
-    const date = new Date(now.getFullYear(), now.getMonth(), day);
+  const handleDeleteSession = (date: Date, sessionIndex: number, reason: string) => {
+    const dateKey = date.toISOString().split("T")[0];
+    setDeletedSessions((prev) => ({
+      ...prev,
+      [dateKey]: [...(prev[dateKey] || []), { sessionIndex, reason }],
+    }));
+  };
+
+  const handleDayClick = (date: Date) => {
     setSelectedDate(date);
     setIsModalOpen(true);
   };
 
-  const isHoliday = (day: number) => {
-    const now = new Date();
-    const dateKey = new Date(now.getFullYear(), now.getMonth(), day)
-      .toISOString()
-      .split("T")[0];
+  const isHoliday = (date: Date) => {
+    const dateKey = date.toISOString().split("T")[0];
     return holidays2025.some((h) => h.date === dateKey);
   };
 
-  const isVacation = (day: number) => {
-    const now = new Date();
-    const dateKey = new Date(now.getFullYear(), now.getMonth(), day)
-      .toISOString()
-      .split("T")[0];
+  const isVacation = (date: Date) => {
+    const dateKey = date.toISOString().split("T")[0];
     return vacations.includes(dateKey);
   };
 
-  const isClosure = (day: number) => {
-    const now = new Date();
-    const dateKey = new Date(now.getFullYear(), now.getMonth(), day)
-      .toISOString()
-      .split("T")[0];
+  const isClosure = (date: Date) => {
+    const dateKey = date.toISOString().split("T")[0];
     return closures.includes(dateKey);
   };
 
-  const getHolidayName = (day: number) => {
-    const now = new Date();
-    const dateKey = new Date(now.getFullYear(), now.getMonth(), day)
-      .toISOString()
-      .split("T")[0];
+  const getHolidayName = (date: Date) => {
+    const dateKey = date.toISOString().split("T")[0];
     const holiday = holidays2025.find((h) => h.date === dateKey);
     return holiday?.name || "";
   };
 
-  // Simulació de dies del mes
-  const daysInMonth = Array.from({ length: 31 }, (_, i) => {
-    const day = i + 1;
-    const now = new Date();
-    const date = new Date(now.getFullYear(), now.getMonth(), day);
+  // Generar calendari correcte
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  
+  const firstDayOfMonth = new Date(year, month, 1);
+  const lastDayOfMonth = new Date(year, month + 1, 0);
+  const daysInCurrentMonth = lastDayOfMonth.getDate();
+  
+  const firstDayOfWeek = firstDayOfMonth.getDay();
+  const adjustedFirstDay = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+  
+  const calendarDays: Array<{ day: number | null; date: Date | null; sessions: Session[]; holiday: boolean; vacation: boolean; closure: boolean }> = [];
+  
+  for (let i = 0; i < adjustedFirstDay; i++) {
+    calendarDays.push({ day: null, date: null, sessions: [], holiday: false, vacation: false, closure: false });
+  }
+  
+  for (let day = 1; day <= daysInCurrentMonth; day++) {
+    const date = new Date(year, month, day);
     const sessions = getSessionsForDate(date);
-    const holiday = isHoliday(day);
-    const vacation = isVacation(day);
-    const closure = isClosure(day);
+    const holiday = isHoliday(date);
+    const vacation = isVacation(date);
+    const closure = isClosure(date);
     
-    return { day, date, sessions, holiday, vacation, closure };
-  });
+    calendarDays.push({ day, date, sessions, holiday, vacation, closure });
+  }
 
   const dayNames = ["Dl", "Dt", "Dc", "Dj", "Dv", "Ds", "Dg"];
 
@@ -113,12 +128,15 @@ const Calendar = () => {
                 {day}
               </div>
             ))}
-            {daysInMonth.map((dayInfo) => (
+            {calendarDays.map((dayInfo, idx) => (
               <button
-                key={dayInfo.day}
-                onClick={() => handleDayClick(dayInfo.day)}
+                key={idx}
+                onClick={() => dayInfo.date && handleDayClick(dayInfo.date)}
+                disabled={!dayInfo.day}
                 className={`aspect-square rounded-xl shadow-neo hover:shadow-neo-sm transition-all flex flex-col items-center justify-start font-medium p-2 ${
-                  dayInfo.holiday
+                  !dayInfo.day
+                    ? "invisible"
+                    : dayInfo.holiday
                     ? "bg-yellow-500/20 border-2 border-yellow-500/50"
                     : dayInfo.vacation
                     ? "bg-blue-500/20 border-2 border-blue-500/50"
@@ -127,34 +145,38 @@ const Calendar = () => {
                     : ""
                 }`}
               >
-                <span className="text-sm mb-1">{dayInfo.day}</span>
-                
-                {/* Indicador festiu/vacances/tancament */}
-                {dayInfo.holiday && (
-                  <span className="text-[8px] text-yellow-700 font-bold mb-1">FESTIU</span>
-                )}
-                {dayInfo.vacation && (
-                  <span className="text-[8px] text-blue-700 font-bold mb-1">VACANCES</span>
-                )}
-                {dayInfo.closure && (
-                  <span className="text-[8px] text-gray-700 font-bold mb-1">TANCAT</span>
-                )}
+                {dayInfo.day && (
+                  <>
+                    <span className="text-sm mb-1">{dayInfo.day}</span>
+                    
+                    {/* Indicador festiu/vacances/tancament */}
+                    {dayInfo.holiday && (
+                      <span className="text-[8px] text-yellow-700 font-bold mb-1">FESTIU</span>
+                    )}
+                    {dayInfo.vacation && (
+                      <span className="text-[8px] text-blue-700 font-bold mb-1">VACANCES</span>
+                    )}
+                    {dayInfo.closure && (
+                      <span className="text-[8px] text-gray-700 font-bold mb-1">TANCAT</span>
+                    )}
 
-                {/* Sessions amb colors i inicials */}
-                {dayInfo.sessions.length > 0 && (
-                  <div className="flex gap-0.5 flex-wrap justify-center w-full">
-                    {dayInfo.sessions.map((session, idx) => (
-                      <div
-                        key={idx}
-                        className={`w-7 h-7 rounded ${
-                          programColors[session.program].color
-                        } text-white text-[10px] flex items-center justify-center font-bold shadow-sm`}
-                        title={`${session.time} - ${programColors[session.program].name}`}
-                      >
-                        {session.program}
+                    {/* Sessions amb colors i inicials */}
+                    {dayInfo.sessions.length > 0 && (
+                      <div className="flex gap-0.5 flex-wrap justify-center w-full">
+                        {dayInfo.sessions.map((session, idx) => (
+                          <div
+                            key={idx}
+                            className={`w-7 h-7 rounded ${
+                              programColors[session.program].color
+                            } text-white text-[10px] flex items-center justify-center font-bold shadow-sm`}
+                            title={`${session.time} - ${programColors[session.program].name}`}
+                          >
+                            {session.program}
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    )}
+                  </>
                 )}
               </button>
             ))}
@@ -247,6 +269,7 @@ const Calendar = () => {
         date={selectedDate}
         sessions={selectedDate ? getSessionsForDate(selectedDate) : []}
         onUpdateSessions={handleUpdateSessions}
+        onDeleteSession={handleDeleteSession}
       />
     </div>
   );

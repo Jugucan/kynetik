@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { DaySessionsModal } from "@/components/DaySessionsModal";
+import { DayInfoModal } from "@/components/DayInfoModal";
 import { Calendar, Users, TrendingUp, Cake, PartyPopper } from "lucide-react";
 import { programColors, weekSchedule, holidays2025, Session } from "@/lib/programColors";
 
 const Index = () => {
-  const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -30,53 +29,33 @@ const Index = () => {
   const getSessionsForDate = (date: Date): Session[] => {
     const dateKey = date.toISOString().split("T")[0];
     
-    // Si té sessions personalitzades, retorna-les
-    if (customSessions[dateKey]) {
-      return customSessions[dateKey];
+    // Check if it's a holiday or vacation - no sessions
+    if (isHoliday(date) || isVacation(date)) {
+      return [];
     }
     
-    // Si no, retorna l'horari setmanal
     const dayOfWeek = date.getDay();
-    const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek; // Diumenge=7
+    const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
     return weekSchedule[adjustedDay] || [];
   };
 
-  const handleUpdateSessions = (date: Date, sessions: Session[]) => {
-    const dateKey = date.toISOString().split("T")[0];
-    setCustomSessions((prev) => ({
-      ...prev,
-      [dateKey]: sessions,
-    }));
-  };
-
-  const handleDayClick = (day: number) => {
-    const now = new Date();
-    const date = new Date(now.getFullYear(), now.getMonth(), day);
+  const handleDayClick = (date: Date) => {
     setSelectedDate(date);
     setIsModalOpen(true);
   };
 
-  const isHoliday = (day: number) => {
-    const now = new Date();
-    const dateKey = new Date(now.getFullYear(), now.getMonth(), day)
-      .toISOString()
-      .split("T")[0];
+  const isHoliday = (date: Date) => {
+    const dateKey = date.toISOString().split("T")[0];
     return holidays2025.some((h) => h.date === dateKey);
   };
 
-  const isVacation = (day: number) => {
-    const now = new Date();
-    const dateKey = new Date(now.getFullYear(), now.getMonth(), day)
-      .toISOString()
-      .split("T")[0];
+  const isVacation = (date: Date) => {
+    const dateKey = date.toISOString().split("T")[0];
     return vacations.includes(dateKey);
   };
 
-  const isClosure = (day: number) => {
-    const now = new Date();
-    const dateKey = new Date(now.getFullYear(), now.getMonth(), day)
-      .toISOString()
-      .split("T")[0];
+  const isClosure = (date: Date) => {
+    const dateKey = date.toISOString().split("T")[0];
     return closures.includes(dateKey);
   };
 
@@ -208,49 +187,86 @@ const Index = () => {
           ))}
         </div>
 
-        {/* Dies del mes */}
+        {/* Dies del mes - Generar calendari correcte */}
         <div className="grid grid-cols-7 gap-2">
-          {Array.from({ length: 31 }, (_, i) => {
-            const day = i + 1;
+          {(() => {
             const now = new Date();
-            const date = new Date(now.getFullYear(), now.getMonth(), day);
-            const sessions = getSessionsForDate(date);
-            const holiday = isHoliday(day);
-            const vacation = isVacation(day);
-            const closure = isClosure(day);
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            
+            const firstDayOfMonth = new Date(year, month, 1);
+            const lastDayOfMonth = new Date(year, month + 1, 0);
+            const daysInCurrentMonth = lastDayOfMonth.getDate();
+            
+            const firstDayOfWeek = firstDayOfMonth.getDay();
+            const adjustedFirstDay = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+            
+            const calendarDays: Array<{ day: number | null; date: Date | null }> = [];
+            
+            for (let i = 0; i < adjustedFirstDay; i++) {
+              calendarDays.push({ day: null, date: null });
+            }
+            
+            for (let day = 1; day <= daysInCurrentMonth; day++) {
+              const date = new Date(year, month, day);
+              calendarDays.push({ day, date });
+            }
+            
+            return calendarDays.map((dayInfo, idx) => {
+              if (!dayInfo.day || !dayInfo.date) {
+                return <div key={idx} className="aspect-square" />;
+              }
+              
+              const sessions = getSessionsForDate(dayInfo.date);
+              const holiday = isHoliday(dayInfo.date);
+              const vacation = isVacation(dayInfo.date);
+              const closure = isClosure(dayInfo.date);
 
-            return (
-              <button
-                key={i}
-                onClick={() => handleDayClick(day)}
-                className={`aspect-square rounded-lg shadow-neo hover:shadow-neo-sm transition-all flex flex-col items-center justify-start p-1 text-sm font-medium cursor-pointer ${
-                  holiday
-                    ? "bg-yellow-500/20 border-2 border-yellow-500/50"
-                    : vacation
-                    ? "bg-blue-500/20 border-2 border-blue-500/50"
-                    : closure
-                    ? "bg-gray-500/20 border-2 border-gray-500/50"
-                    : ""
-                }`}
-              >
-                <span className="text-xs mb-1">{day}</span>
-                {sessions.length > 0 && (
-                  <div className="flex gap-0.5 flex-wrap justify-center">
-                    {sessions.map((session, idx) => (
-                      <div
-                        key={idx}
-                        className={`w-5 h-5 rounded ${
-                          programColors[session.program].color
-                        } text-white text-[8px] flex items-center justify-center font-bold`}
-                      >
-                        {session.program}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={idx}
+                  onClick={() => handleDayClick(dayInfo.date!)}
+                  className={`aspect-square rounded-lg shadow-neo hover:shadow-neo-sm transition-all flex flex-col items-center justify-start p-1 text-sm font-medium cursor-pointer ${
+                    holiday
+                      ? "bg-yellow-500/20 border-2 border-yellow-500/50"
+                      : vacation
+                      ? "bg-blue-500/20 border-2 border-blue-500/50"
+                      : closure
+                      ? "bg-gray-500/20 border-2 border-gray-500/50"
+                      : ""
+                  }`}
+                >
+                  <span className="text-xs mb-1">{dayInfo.day}</span>
+                  
+                  {holiday && (
+                    <span className="text-[6px] text-yellow-700 font-bold mb-0.5">FESTIU</span>
+                  )}
+                  {vacation && (
+                    <span className="text-[6px] text-blue-700 font-bold mb-0.5">VAC</span>
+                  )}
+                  {closure && (
+                    <span className="text-[6px] text-gray-700 font-bold mb-0.5">TANCAT</span>
+                  )}
+                  
+                  {sessions.length > 0 && (
+                    <div className="flex gap-0.5 flex-wrap justify-center">
+                      {sessions.map((session, idx) => (
+                        <div
+                          key={idx}
+                          className={`w-5 h-5 rounded ${
+                            programColors[session.program].color
+                          } text-white text-[8px] flex items-center justify-center font-bold`}
+                          title={`${session.time} - ${programColors[session.program].name}`}
+                        >
+                          {session.program}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </button>
+              );
+            });
+          })()}
         </div>
 
         {/* Llegenda */}
@@ -270,12 +286,11 @@ const Index = () => {
         </div>
       </NeoCard>
 
-      <DaySessionsModal
+      <DayInfoModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         date={selectedDate}
         sessions={selectedDate ? getSessionsForDate(selectedDate) : []}
-        onUpdateSessions={handleUpdateSessions}
       />
     </div>
   );
