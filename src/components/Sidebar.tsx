@@ -31,12 +31,12 @@ export const AppSidebar = () => {
         <div className="px-2 py-4">
           {!isCollapsed && (
             <>
-              <h1 className="text-2xl font-bold text-primary">FitManage</h1>
+              <h1 className="text-2xl font-bold text-primary">Kynetik</h1>
               <p className="text-sm text-muted-foreground mt-1">Gestió de sessions</p>
             </>
           )}
           {isCollapsed && (
-            <h1 className="text-2xl font-bold text-primary text-center">FM</h1>
+            <h1 className="text-2xl font-bold text-primary text-center">KY</h1>
           )}
         </div>
       </SidebarHeader>
