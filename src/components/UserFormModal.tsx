@@ -4,7 +4,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Hem d'importar Textarea
+import { Textarea } from "@/components/ui/textarea"; 
 import { User } from "@/hooks/useUsers";
+
+// Definició de l'estat inicial del formulari (amb els nous camps)
+const initialFormData = {
+  name: "",
+  email: "",
+  center: "Arbúcies",
+  birthday: "", // Format DD/MM/YYYY
+  age: 0,
+  phone: "",
+  avatar: "", // Valor per defecte original
+  
+  // NOUS CAMPS:
+  profileImageUrl: "",
+  preferredPrograms: "", // Com a string separada per comes per facilitar l'Input
+  notes: "",
+};
 
 interface UserFormModalProps {
   open: boolean;
@@ -14,49 +32,42 @@ interface UserFormModalProps {
 }
 
 export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProps) => {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    center: "Arbúcies",
-    birthday: "",
-    age: 0,
-    phone: "",
-    avatar: "",
-  });
+  const [formData, setFormData] = useState(initialFormData);
 
   useEffect(() => {
     if (user) {
+      // Inicialització del formulari amb les dades de l'usuari
       setFormData({
         name: user.name,
         email: user.email,
         center: user.center,
-        birthday: user.birthday,
+        // La data ja ve en format DD/MM/YYYY des del hook
+        birthday: user.birthday as string, 
         age: user.age,
         phone: user.phone,
         avatar: user.avatar,
+        // Inicialització dels nous camps (l'array es converteix a string)
+        profileImageUrl: user.profileImageUrl || '',
+        preferredPrograms: Array.isArray(user.preferredPrograms) ? user.preferredPrograms.join(', ') : (user.preferredPrograms as string || ''),
+        notes: user.notes || '',
       });
     } else {
-      setFormData({
-        name: "",
-        email: "",
-        center: "Arbúcies",
-        birthday: "",
-        age: 0,
-        phone: "",
-        avatar: "",
-      });
+      setFormData(initialFormData);
     }
   }, [user, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Generate avatar if not provided
-    const avatarUrl = formData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${formData.name}`;
+    // Utilitzem l'avatar proporcionat o generem un per defecte
+    const finalAvatar = formData.profileImageUrl || formData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${formData.name}`;
     
     await onSave({
       ...formData,
-      avatar: avatarUrl,
+      // La lògica de conversió de birthday i preferredPrograms a format de Firebase
+      // es fa dins del hook useUsers.ts abans de guardar.
+      avatar: finalAvatar, // Sobreescriu l'avatar anterior si s'ha posat la URL a profileImageUrl
+      profileImageUrl: formData.profileImageUrl, // Mantenim el camp nou
     });
     
     onClose();
@@ -69,6 +80,8 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
           <DialogTitle>{user ? "Editar usuari" : "Afegir usuari"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* CAMPS EXISTENTS */}
           <div className="space-y-2">
             <Label htmlFor="name">Nom</Label>
             <Input
@@ -105,10 +118,10 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="birthday">Data de naixement</Label>
+              <Label htmlFor="birthday">Data de naixement (DD/MM/AAAA)</Label> {/* Instrucció de format */}
               <Input
                 id="birthday"
-                placeholder="DD/MM/YYYY"
+                placeholder="DD/MM/AAAA"
                 value={formData.birthday}
                 onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
                 required
@@ -137,6 +150,41 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
             />
           </div>
 
+          {/* NOUS CAMPS DE GESTIÓ */}
+          
+          {/* profileImageUrl */}
+          <div className="space-y-2">
+            <Label htmlFor="profileImageUrl">URL de la Foto de Perfil (Opcional)</Label>
+            <Input
+              id="profileImageUrl"
+              placeholder="https://..."
+              value={formData.profileImageUrl}
+              onChange={(e) => setFormData({ ...formData, profileImageUrl: e.target.value })}
+            />
+          </div>
+
+          {/* preferredPrograms */}
+          <div className="space-y-2">
+            <Label htmlFor="preferredPrograms">Programes Preferits (separa per comes: BP, BC, etc.)</Label>
+            <Input
+              id="preferredPrograms"
+              placeholder="BP, BC, Body Combat"
+              value={formData.preferredPrograms}
+              onChange={(e) => setFormData({ ...formData, preferredPrograms: e.target.value })}
+            />
+          </div>
+
+          {/* notes */}
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes Personals (Internes)</Label>
+            <Textarea
+              id="notes"
+              placeholder="Afegeix aquí notes mèdiques, observacions, etc."
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            />
+          </div>
+          
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel·lar
