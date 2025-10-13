@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// Hem d'importar Textarea
+// Importem el Textarea per a les notes
 import { Textarea } from "@/components/ui/textarea"; 
 import { User } from "@/hooks/useUsers";
 
@@ -48,6 +48,7 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
         avatar: user.avatar,
         // Inicialització dels nous camps (l'array es converteix a string)
         profileImageUrl: user.profileImageUrl || '',
+        // Converteix l'array a una string separada per comes per mostrar-la a l'Input
         preferredPrograms: Array.isArray(user.preferredPrograms) ? user.preferredPrograms.join(', ') : (user.preferredPrograms as string || ''),
         notes: user.notes || '',
       });
@@ -59,15 +60,15 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Utilitzem l'avatar proporcionat o generem un per defecte
+    // Utilitzem profileImageUrl com a valor de l'avatar final si està present
     const finalAvatar = formData.profileImageUrl || formData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${formData.name}`;
     
     await onSave({
       ...formData,
       // La lògica de conversió de birthday i preferredPrograms a format de Firebase
       // es fa dins del hook useUsers.ts abans de guardar.
-      avatar: finalAvatar, // Sobreescriu l'avatar anterior si s'ha posat la URL a profileImageUrl
-      profileImageUrl: formData.profileImageUrl, // Mantenim el camp nou
+      avatar: finalAvatar, 
+      profileImageUrl: formData.profileImageUrl, 
     });
     
     onClose();
@@ -75,10 +76,15 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      {/* CANVI CLAU: 
+        - overflow-y-auto: Habilita el scroll vertical quan el contingut supera l'alçada.
+        - max-h-[90vh]: Limita l'alçada de la finestra al 90% del viewport (pantalla).
+      */}
+      <DialogContent className="sm:max-w-[500px] overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{user ? "Editar usuari" : "Afegir usuari"}</DialogTitle>
         </DialogHeader>
+        
         <form onSubmit={handleSubmit} className="space-y-4">
           
           {/* CAMPS EXISTENTS */}
@@ -118,7 +124,7 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="birthday">Data de naixement (DD/MM/AAAA)</Label> {/* Instrucció de format */}
+              <Label htmlFor="birthday">Data de naixement (DD/MM/AAAA)</Label>
               <Input
                 id="birthday"
                 placeholder="DD/MM/AAAA"
@@ -150,9 +156,7 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
             />
           </div>
 
-          {/* NOUS CAMPS DE GESTIÓ */}
-          
-          {/* profileImageUrl */}
+          {/* NOU CAMP: profileImageUrl */}
           <div className="space-y-2">
             <Label htmlFor="profileImageUrl">URL de la Foto de Perfil (Opcional)</Label>
             <Input
@@ -163,7 +167,7 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
             />
           </div>
 
-          {/* preferredPrograms */}
+          {/* NOU CAMP: preferredPrograms */}
           <div className="space-y-2">
             <Label htmlFor="preferredPrograms">Programes Preferits (separa per comes: BP, BC, etc.)</Label>
             <Input
@@ -174,7 +178,7 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
             />
           </div>
 
-          {/* notes */}
+          {/* NOU CAMP: notes (utilitza Textarea) */}
           <div className="space-y-2">
             <Label htmlFor="notes">Notes Personals (Internes)</Label>
             <Textarea
