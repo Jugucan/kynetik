@@ -3,7 +3,8 @@ import { NeoCard } from "@/components/NeoCard";
 import { Users as UsersIcon, Search, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useUsers, User } from "@/hooks/useUsers";
+// Cal importar el nou User que ja inclou els camps extra
+import { useUsers, User } from "@/hooks/useUsers"; 
 import { UserFormModal } from "@/components/UserFormModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -21,6 +22,7 @@ const Users = () => {
 
   const handleSaveUser = async (userData: Omit<User, 'id'>) => {
     if (editingUser) {
+      // Passem l'ID a l'actualització
       await updateUser(editingUser.id, userData);
     } else {
       await addUser(userData);
@@ -88,10 +90,11 @@ const Users = () => {
                 }`}
               >
                 <div className="flex items-start gap-4">
+                  {/* Utilitzem profileImageUrl si existeix, si no, l'avatar antic/generat */}
                   <img 
-                    src={user.avatar} 
+                    src={user.profileImageUrl || user.avatar} 
                     alt={user.name}
-                    className="w-16 h-16 rounded-full shadow-neo"
+                    className="w-16 h-16 rounded-full shadow-neo object-cover"
                   />
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
@@ -125,13 +128,31 @@ const Users = () => {
                         </Button>
                       </div>
                     </div>
+                    
                     <p className="text-sm text-muted-foreground mt-1">{user.email}</p>
-                    <div className="flex gap-4 mt-2 text-sm">
+                    
+                    {/* INFORMACIÓ EXTRA */}
+                    <div className="flex flex-wrap gap-4 mt-2 text-sm">
                       <span className="text-muted-foreground">
                         🎂 {user.birthday}
                       </span>
                       <span className="text-muted-foreground">📞 {user.phone}</span>
+                      
+                      {/* Afegim els programes preferits */}
+                      {user.preferredPrograms && user.preferredPrograms.length > 0 && (
+                        <span className="font-semibold text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary-foreground shadow-neo-inset">
+                          🏋️‍♀️ {user.preferredPrograms.join(', ')}
+                        </span>
+                      )}
                     </div>
+                    
+                    {/* Afegim les notes personals */}
+                    {user.notes && (
+                      <p className="text-xs italic text-gray-500 mt-2 p-2 rounded-md bg-background/50 border shadow-neo-inset">
+                        📝 **Notes:** {user.notes}
+                      </p>
+                    )}
+                    
                   </div>
                 </div>
               </div>
