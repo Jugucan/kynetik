@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, Timestamp } from 'firebase/firestore';
-import { db } from './lib/firebase'; // Corregit per l'estructura de directoris, assumeixo que és './lib/firebase'
+import { db } from '../lib/firebase'; // Corregit per l'estructura de directoris, assumeixo que és './lib/firebase'
 import { toast } from '../components/ui/sonner'; // Corregit per l'estructura de directoris, si fas servir el teu toast de 'sonner'
 
 export interface User {
