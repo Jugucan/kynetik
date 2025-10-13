@@ -13,6 +13,11 @@ export interface User {
   age: number;
   phone: string;
   avatar: string;
+
+  // NOUS CAMPS:
+  preferredPrograms: string[]; // Array de strings (p. ex., ["BP", "BC"])
+  profileImageUrl: string;     // URL de la imatge de perfil
+  notes: string;               // Notes personals
 }
 
 export const useUsers = () => {
