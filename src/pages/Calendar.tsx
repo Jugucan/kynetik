@@ -1,18 +1,43 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { DaySessionsModal } from "@/components/DaySessionsModal";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { programColors, weekSchedule, holidays2025, Session } from "@/lib/programColors";
 
+// La teva definició de la funció Calendar (la pàgina)
 const Calendar = () => {
+  // 1. ESTAT PER GESTIONAR EL MES QUE ES VEU
+  // Inicialitzem amb el primer dia del mes actual
+  const [currentViewDate, setCurrentViewDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  
+  // Els teus estats existents
   const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
   const [deletedSessions, setDeletedSessions] = useState<Record<string, Array<{sessionIndex: number, reason: string}>>>({});
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const currentMonth = new Date().toLocaleDateString("ca-ES", { 
-    month: "long", 
-    year: "numeric" 
-  });
+
+  // 2. FUNCIONS PER CANVIAR DE MES
+  const goToPreviousMonth = useCallback(() => {
+    setCurrentViewDate(prevDate => {
+      // Restem un mes
+      return new Date(prevDate.getFullYear(), prevDate.getMonth() - 1, 1);
+    });
+  }, []);
+
+  const goToNextMonth = useCallback(() => {
+    setCurrentViewDate(prevDate => {
+      // Sumem un mes
+      return new Date(prevDate.getFullYear(), prevDate.getMonth() + 1, 1);
+    });
+  }, []);
+
+  // 3. Càlcul del mes i any per al títol, utilitzant la data d'estat
+  const currentMonthText = useMemo(() => {
+    return currentViewDate.toLocaleDateString("ca-ES", { 
+      month: "long", 
+      year: "numeric" 
+    });
+  }, [currentViewDate]);
 
   // Mock vacances i tancaments
   const vacations = ["2025-03-24", "2025-03-25", "2025-03-26", "2025-03-27", "2025-03-28"];
@@ -58,7 +83,8 @@ const Calendar = () => {
 
   const isHoliday = (date: Date) => {
     const dateKey = date.toISOString().split("T")[0];
-    return holidays2025.some((h) => h.date === dateKey);
+    // Assumim que holidays2025 és una llista d'objectes amb propietat 'date'
+    return holidays2025.some((h: { date: string, name: string }) => h.date === dateKey);
   };
 
   const isVacation = (date: Date) => {
@@ -73,21 +99,21 @@ const Calendar = () => {
 
   const getHolidayName = (date: Date) => {
     const dateKey = date.toISOString().split("T")[0];
-    const holiday = holidays2025.find((h) => h.date === dateKey);
+    // Assumim que holidays2025 és una llista d'objectes amb propietat 'date' i 'name'
+    const holiday = holidays2025.find((h: { date: string, name: string }) => h.date === dateKey);
     return holiday?.name || "";
   };
 
-  // Generar calendari correcte
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
+  // 4. GENERACIÓ DEL CALENDARI: UTILITZANT currentViewDate
+  const year = currentViewDate.getFullYear();
+  const month = currentViewDate.getMonth();
   
   const firstDayOfMonth = new Date(year, month, 1);
   const lastDayOfMonth = new Date(year, month + 1, 0);
   const daysInCurrentMonth = lastDayOfMonth.getDate();
   
   const firstDayOfWeek = firstDayOfMonth.getDay();
-  const adjustedFirstDay = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+  const adjustedFirstDay = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // Ajust de diumenge (0) a dilluns (6)
   
   const calendarDays: Array<{ day: number | null; date: Date | null; sessions: Session[]; holiday: boolean; vacation: boolean; closure: boolean }> = [];
   
@@ -109,19 +135,41 @@ const Calendar = () => {
 
   return (
     <div className="space-y-6">
+      {/* 5. TÍTOL I BOTONS DE NAVEGACIÓ */}
       <div className="flex items-center gap-3">
         <CalendarIcon className="w-8 h-8 text-primary" />
         <div>
           <h1 className="text-3xl font-bold text-foreground">Calendari</h1>
-          <p className="text-muted-foreground capitalize">{currentMonth}</p>
+          {/* Mostra el títol del mes utilitzant la variable calculada */}
+          <p className="text-muted-foreground capitalize">{currentMonthText}</p>
         </div>
       </div>
 
       <div className="grid gap-6">
         <NeoCard>
-          <h2 className="text-xl font-semibold mb-4">Sessions del mes</h2>
           
-          {/* Grid del calendari */}
+          {/* NOU: Botons de fletxa per canviar de mes */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold">Sessions del mes</h2>
+            <div className="flex space-x-2">
+              <button 
+                onClick={goToPreviousMonth} 
+                className="p-2 rounded-full shadow-neo hover:shadow-neo-sm transition-all"
+                title="Mes anterior"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={goToNextMonth} 
+                className="p-2 rounded-full shadow-neo hover:shadow-neo-sm transition-all"
+                title="Mes següent"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Grid del calendari (La resta del teu codi es manté) */}
           <div className="grid grid-cols-7 gap-2 mb-4">
             {dayNames.map((day) => (
               <div key={day} className="text-center font-semibold text-sm text-muted-foreground py-2">
@@ -182,7 +230,7 @@ const Calendar = () => {
             ))}
           </div>
 
-          {/* Llegenda */}
+          {/* Llegenda (Es manté el codi) */}
           <div className="flex flex-wrap gap-4 text-xs text-muted-foreground border-t pt-3">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded bg-yellow-500/50"></div>
