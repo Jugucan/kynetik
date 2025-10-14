@@ -2,12 +2,26 @@ import { useState, useMemo, useCallback } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { DaySessionsModal } from "@/components/DaySessionsModal";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
-import { programColors, weekSchedule, holidays2025, Session } from "@/lib/programColors";
+// S'assumeix que programColors, weekSchedule, holidays2025 i Session són tipus i dades vàlides
+import { programColors, weekSchedule, holidays2025, Session } from "@/lib/programColors"; 
 
-// La teva definició de la funció Calendar (la pàgina)
+// ******************************************************************************
+// NOU: FUNCIÓ PER GENERAR LA CLAU DE DATA EN FORMAT LOCAL (YYYY-MM-DD)
+// Sense aquesta funció, la conversió a ISOString pot canviar el dia 
+// a causa de l'ajust del fus horari a UTC.
+// ******************************************************************************
+const dateToKey = (date: Date): string => {
+  const year = date.getFullYear();
+  // El mes és base 0, per això afegim 1
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+// ******************************************************************************
+
+
 const Calendar = () => {
-  // 1. ESTAT PER GESTIONAR EL MES QUE ES VEU
-  // Inicialitzem amb el primer dia del mes actual
+  // ESTAT PER GESTIONAR EL MES QUE ES VEU
   const [currentViewDate, setCurrentViewDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   
   // Els teus estats existents
@@ -16,7 +30,7 @@ const Calendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // 2. FUNCIONS PER CANVIAR DE MES
+  // FUNCIONS PER CANVIAR DE MES
   const goToPreviousMonth = useCallback(() => {
     setCurrentViewDate(prevDate => {
       // Restem un mes
@@ -31,7 +45,7 @@ const Calendar = () => {
     });
   }, []);
 
-  // 3. Càlcul del mes i any per al títol, utilitzant la data d'estat
+  // Càlcul del mes i any per al títol
   const currentMonthText = useMemo(() => {
     return currentViewDate.toLocaleDateString("ca-ES", { 
       month: "long", 
@@ -44,10 +58,11 @@ const Calendar = () => {
   const closures = ["2025-03-15"];
 
   const getSessionsForDate = (date: Date): Session[] => {
-    const dateKey = date.toISOString().split("T")[0];
+    // CLAU DE DATA CORREGIDA
+    const dateKey = dateToKey(date);
     
     // Check if it's a holiday or vacation - no sessions
-    if (isHoliday(date) || isVacation(date)) {
+    if (isHoliday(date) || isVacation(date) || isClosure(date)) { // Afegim isClosure aquí per si de cas
       return [];
     }
     
@@ -56,12 +71,13 @@ const Calendar = () => {
     }
     
     const dayOfWeek = date.getDay();
-    const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
+    const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek; // Diumenge (0) -> 7
     return weekSchedule[adjustedDay] || [];
   };
 
   const handleUpdateSessions = (date: Date, sessions: Session[]) => {
-    const dateKey = date.toISOString().split("T")[0];
+    // CLAU DE DATA CORREGIDA
+    const dateKey = dateToKey(date);
     setCustomSessions((prev) => ({
       ...prev,
       [dateKey]: sessions,
@@ -69,7 +85,8 @@ const Calendar = () => {
   };
 
   const handleDeleteSession = (date: Date, sessionIndex: number, reason: string) => {
-    const dateKey = date.toISOString().split("T")[0];
+    // CLAU DE DATA CORREGIDA
+    const dateKey = dateToKey(date);
     setDeletedSessions((prev) => ({
       ...prev,
       [dateKey]: [...(prev[dateKey] || []), { sessionIndex, reason }],
@@ -82,29 +99,32 @@ const Calendar = () => {
   };
 
   const isHoliday = (date: Date) => {
-    const dateKey = date.toISOString().split("T")[0];
-    // Assumim que holidays2025 és una llista d'objectes amb propietat 'date'
+    // CLAU DE DATA CORREGIDA
+    const dateKey = dateToKey(date);
+    // Assegurem que l'estructura de holidays2025 és d'objectes amb propietat 'date' (string YYYY-MM-DD)
     return holidays2025.some((h: { date: string, name: string }) => h.date === dateKey);
   };
 
   const isVacation = (date: Date) => {
-    const dateKey = date.toISOString().split("T")[0];
+    // CLAU DE DATA CORREGIDA
+    const dateKey = dateToKey(date);
     return vacations.includes(dateKey);
   };
 
   const isClosure = (date: Date) => {
-    const dateKey = date.toISOString().split("T")[0];
+    // CLAU DE DATA CORREGIDA
+    const dateKey = dateToKey(date);
     return closures.includes(dateKey);
   };
 
   const getHolidayName = (date: Date) => {
-    const dateKey = date.toISOString().split("T")[0];
-    // Assumim que holidays2025 és una llista d'objectes amb propietat 'date' i 'name'
+    // CLAU DE DATA CORREGIDA
+    const dateKey = dateToKey(date);
     const holiday = holidays2025.find((h: { date: string, name: string }) => h.date === dateKey);
     return holiday?.name || "";
   };
 
-  // 4. GENERACIÓ DEL CALENDARI: UTILITZANT currentViewDate
+  // GENERACIÓ DEL CALENDARI: UTILITZANT currentViewDate (això ja estava bé)
   const year = currentViewDate.getFullYear();
   const month = currentViewDate.getMonth();
   
@@ -135,12 +155,11 @@ const Calendar = () => {
 
   return (
     <div className="space-y-6">
-      {/* 5. TÍTOL I BOTONS DE NAVEGACIÓ */}
+      {/* TÍTOL I BOTONS DE NAVEGACIÓ */}
       <div className="flex items-center gap-3">
         <CalendarIcon className="w-8 h-8 text-primary" />
         <div>
           <h1 className="text-3xl font-bold text-foreground">Calendari</h1>
-          {/* Mostra el títol del mes utilitzant la variable calculada */}
           <p className="text-muted-foreground capitalize">{currentMonthText}</p>
         </div>
       </div>
@@ -148,7 +167,7 @@ const Calendar = () => {
       <div className="grid gap-6">
         <NeoCard>
           
-          {/* NOU: Botons de fletxa per canviar de mes */}
+          {/* Botons de fletxa per canviar de mes */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold">Sessions del mes</h2>
             <div className="flex space-x-2">
@@ -169,7 +188,7 @@ const Calendar = () => {
             </div>
           </div>
           
-          {/* Grid del calendari (La resta del teu codi es manté) */}
+          {/* Grid del calendari */}
           <div className="grid grid-cols-7 gap-2 mb-4">
             {dayNames.map((day) => (
               <div key={day} className="text-center font-semibold text-sm text-muted-foreground py-2">
@@ -230,7 +249,7 @@ const Calendar = () => {
             ))}
           </div>
 
-          {/* Llegenda (Es manté el codi) */}
+          {/* Llegenda */}
           <div className="flex flex-wrap gap-4 text-xs text-muted-foreground border-t pt-3">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded bg-yellow-500/50"></div>
@@ -253,6 +272,7 @@ const Calendar = () => {
           </div>
         </NeoCard>
 
+        {/* Informació d'Arbúcies i Sant Hilari (Es manté el codi) */}
         <div className="grid md:grid-cols-2 gap-6">
           <NeoCard>
             <h3 className="font-semibold mb-3">Arbúcies</h3>
@@ -283,6 +303,7 @@ const Calendar = () => {
           </NeoCard>
         </div>
 
+        {/* Properes festes i tancaments (Es manté el codi) */}
         <NeoCard>
           <h3 className="font-semibold mb-4">Properes festes i tancaments</h3>
           <div className="space-y-3">
