@@ -119,7 +119,10 @@ const Settings = () => {
 
     // FUNCIÓ per processar dades rebudes de Firebase
     const convertToDateWithReason = (dataField: Record<string, string> | Record<string, any> | undefined): DateWithReason[] => {
-        if (!dataField || typeof dataField !== 'object') return [];
+        // CORRECCIÓ: Si és undefined, null, o un Array (format antic), o no és un objecte, tornem array buit.
+        if (!dataField || typeof dataField !== 'object' || Array.isArray(dataField)) {
+            return [];
+        }
         
         return Object.entries(dataField).flatMap(([key, value]) => {
             
@@ -149,10 +152,11 @@ const Settings = () => {
         
     ) => {
         // No canviem isSaving aquí per evitar flickering amb els guardats automàtics
-        // setIsSaving(true); 
-
         try {
             const convertToFirebaseFormat = (datesWithReason: DateWithReason[]): Record<string, string> => {
+                // CORRECCIÓ: Si l'array és buit, retornem un objecte buit {}
+                if (datesWithReason.length === 0) return {};
+                
                 return datesWithReason.filter(d => d.date).reduce((acc, { date, reason }) => {
                     acc[dateToKey(date)] = reason; 
                     return acc;
@@ -166,6 +170,7 @@ const Settings = () => {
 
 
             const dataToSave = {
+                // CORRECCIÓ CLAU: Guardem l'objecte buit si la llista de dates està buida
                 vacations: convertToFirebaseFormat(currentVacations), 
                 closuresArbucies: convertToFirebaseFormat(currentClosuresArbucies), 
                 closuresSantHilari: convertToFirebaseFormat(currentClosuresSantHilari),
@@ -183,9 +188,6 @@ const Settings = () => {
             
         } catch (error) {
             console.error("Error al guardar a Firebase:", error);
-        } finally {
-            // No canviem isSaving aquí
-            // setIsSaving(false); 
         }
     }, [vacationDates, closureDatesArbucies, closureDatesSantHilari, availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari]);
     
@@ -198,7 +200,7 @@ const Settings = () => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 
-                // DATES DE TANCAMENT
+                // DATES DE TANCAMENT (Utilitzem la funció més robusta)
                 setVacationDates(convertToDateWithReason(data.vacations));
                 setClosureDatesArbucies(convertToDateWithReason(data.closuresArbucies));
                 setClosureDatesSantHilari(convertToDateWithReason(data.closuresSantHilari));
@@ -210,6 +212,7 @@ const Settings = () => {
                 if (typeof data.availableDaysSantHilari === 'number') {
                     setAvailableDaysSantHilari(data.availableDaysSantHilari);
                 }
+                // ... (Workdays i altres camps)
                 if (data.workDaysArbucies && Array.isArray(data.workDaysArbucies)) {
                     setWorkDaysArbucies(data.workDaysArbucies as number[]);
                 }
@@ -231,8 +234,6 @@ const Settings = () => {
 
     
     // Funció per gestionar la selecció al calendari (mode multiple)
-    // CORRECCIÓ CRÍTICA: Utilitzem el "state update function" de React per assegurar
-    // que el `handleSave` utilitza la llista de dates correcta i actualitzada.
     const handleDateSelect = async (selectedDates: Date[] | undefined) => {
         if (!selectedDates) return;
         
@@ -255,14 +256,10 @@ const Settings = () => {
             return { date: newDate, reason: '' }; // Nova data
         });
         
-        // 2. Actualitza l'estat local.
-        // Amb la lògica de guardat que ve a continuació, no necessitem el setter per sí sol.
-        
-        // 3. GUARDA AUTOMÀTICAMENT ELS CANVIS A FIREBASE (CORRECCIÓ DE SINCRONITZACIÓ)
-        // Guardem directament la 'finalDates' que ja conté les eliminacions.
+        // 2. Actualitza l'estat local I GUARDA A FIREBASE AMB LA LLISTA ACTUALITZADA
         if (center === 'Vacation') {
-            setVacationDates(finalDates);
-            await handleSave(finalDates, closureDatesArbucies, closureDatesSantHilari);
+            setVacationDates(finalDates); 
+            await handleSave(finalDates, closureDatesArbucies, closureDatesSantHilari); 
         } else if (center === 'Arbucies') {
             setClosureDatesArbucies(finalDates);
             await handleSave(vacationDates, finalDates, closureDatesSantHilari);
@@ -335,9 +332,6 @@ const Settings = () => {
             setWorkDaysSantHilari(newDays);
         }
 
-        // ⚠️ Nota: Com que workDaysArbucies/SantHilari s'actualitzen amb setX, handleSave 
-        // haurà d'agafar els valors *actuals* (però a la pràctica pot trigar 
-        // un cicle de renderitzat). Per seguretat, només depenem de l'estat per defecte.
         await handleSave(); 
     };
 
@@ -373,7 +367,6 @@ const Settings = () => {
         const baseColor = center.includes('Vacation') ? 'blue' : 'gray';
         const centerType = center === 'Vacation' ? 'Vacation' : center === 'Tancament Arbúcies' ? 'Arbucies' : 'SantHilari';
         
-        // Determinem el setter correcte
         const setter = centerType === 'Vacation' ? setVacationDates : centerType === 'Arbucies' ? setClosureDatesArbucies : setClosureDatesSantHilari;
         
         return dates.length > 0 ? (
@@ -422,8 +415,8 @@ const Settings = () => {
             {/* Crida a handleSave en fer submit per guardar les dades que no es guarden automàticament (Dies disponibles/laborals) */}
             <form onSubmit={(e) => {
                 e.preventDefault(); 
-                setIsSaving(true); // Activem l'estat de desat
-                handleSave().finally(() => setIsSaving(false)); // Desem i desactivem l'estat
+                setIsSaving(true); 
+                handleSave().finally(() => setIsSaving(false)); 
             }} className="grid gap-6"> 
                 
                 <NeoCard>
