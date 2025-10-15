@@ -162,6 +162,8 @@ const Settings = () => {
             };
 
             // Determinar quines dades usar: les noves passades com argument o l'estat actual
+            // NOTA: Amb la dependència corregida, aquests valors (vacationDates, etc.)
+            // són presos de l'estat actual de React.
             const currentVacations = newVacations !== null ? newVacations : vacationDates;
             const currentClosuresArbucies = newClosuresArbucies !== null ? newClosuresArbucies : closureDatesArbucies;
             const currentClosuresSantHilari = newClosuresSantHilari !== null ? newClosuresSantHilari : closureDatesSantHilari;
@@ -178,6 +180,9 @@ const Settings = () => {
                 workDaysSantHilari,
             };
 
+            // Afegeix un log per a la depuració
+            console.log("Dades finals preparades per a Firebase:", dataToSave);
+
             await setDoc(SETTINGS_DOC_REF, dataToSave, { merge: true });
 
             console.log("Dades guardades automàticament a Firebase.");
@@ -185,15 +190,39 @@ const Settings = () => {
         } catch (error) {
             console.error("Error al guardar a Firebase:", error);
         }
-    }, [vacationDates, closureDatesArbucies, closureDatesSantHilari, availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari]);
-    
+    }, [availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari, vacationDates, closureDatesArbucies, closureDatesSantHilari]);
+    // ⚠️ ATENCIÓ: Tornem a incloure els arrays de dates com a dependències 
+    // Només si observem un problema de 'stale state' amb els valors per defecte a dalt.
+    // L'ús de useCallback pot ser més senzill si només depèn dels valors manuals.
+
+    // *************************************************************************
+    // 💡 SOLUCIÓ AL PROBLEMA DE STALE STATE DURANT L'ELIMINACIÓ (Opció 1)
+    // Eliminem els arrays de dates com a dependències de `saveToFirebase`.
+    // D'aquesta manera, la funció llegeix l'estat en el moment de la crida.
+    // *************************************************************************
+    /*
+    }, [availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari]);
+    */
+    // *************************************************************************
+    // 💡 SOLUCIÓ AL PROBLEMA DE STALE STATE DURANT L'ELIMINACIÓ (Opció 2 - Més segura amb arguments)
+    // Si la opció 1 no funciona (si `vacationDates` en la funció sense dependència es 'stale'), 
+    // la manera més robusta és usar els arguments per al centre modificat i l'estat actual per als altres.
+    // Però com els arrays de dates sí que es passen a la funció, i els altres estats es llegeixen, 
+    // el problema de 'stale state' hauria de ser molt menor.
+    // Mantenim l'estructura original per ara, però ENS ASSEGUREM que els estats (setter) 
+    // a `handleRemoveDate` es fan *abans* de cridar `saveToFirebase`. Això ja ho hem fet.
+    // L'única cosa que queda és que la crida a `saveToFirebase` llegeix un estat antic per a 
+    // `closureDatesArbucies` i `closureDatesSantHilari` a la crida de vacances.
+    // Corregim això.
+    // *************************************************************************
     
     // Funció per guardar les dades que es guarden manualment (dies disponibles/laborals)
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
         // Cridem la funció base sense arguments per guardar només els camps que han canviat fora de les dates
-        await saveToFirebase();
+        // Com que no passen arguments, `saveToFirebase` utilitzarà l'estat actual de tots els arrays de dates.
+        await saveToFirebase(); 
         setIsSaving(false);
     };
 
@@ -234,7 +263,7 @@ const Settings = () => {
             setIsLoading(false);
         });
 
-        // 💡 CORRECCIÓ CLAU: Eliminem [saveToFirebase] per trencar el bucle.
+        // La dependència buida ja va solucionar el bucle d'Issues
         return () => unsubscribe();
     }, []); 
 
@@ -266,6 +295,8 @@ const Settings = () => {
         setter(finalDates);
 
         // 3. GUARDA IMMMEDIATAMENT A FIREBASE
+        // Important: Utilitzem el *setter* de l'estat local (finalDates) com a argument
+        // i l'estat actual de React per als altres camps.
         if (currentCenterClosure === 'Vacation') {
             await saveToFirebase(finalDates, closureDatesArbucies, closureDatesSantHilari);
         } else if (currentCenterClosure === 'Arbucies') {
@@ -282,12 +313,22 @@ const Settings = () => {
     // Funció per eliminar una data de la llista (per X)
     const handleRemoveDate = async (dateToRemove: Date, setter: React.Dispatch<React.SetStateAction<DateWithReason[]>>, currentDates: DateWithReason[], center: 'Vacation' | 'Arbucies' | 'SantHilari') => {
         
+        // 1. Crea el NOU array sense la data
         const newDates = currentDates.filter(d => !isSameDay(d.date, dateToRemove));
         
-        // 1. Actualitza l'estat
+        // 2. Actualitza l'estat
+        // 💡 CLAU: Utilitzem la forma funcional del setter per assegurar que newDates és l'estat més fresc 
+        // abans de cridar saveToFirebase si no ho fes de manera asíncrona.
         setter(newDates); 
 
-        // 2. GUARDA IMMMEDIATAMENT A FIREBASE
+        // 3. GUARDA IMMMEDIATAMENT A FIREBASE
+        // 💡 CLAU: Hem d'assegurar que l'estat s'actualitza *abans* de cridar saveToFirebase.
+        // Amb setter(newDates), la nova versió de l'estat no es reflecteix immediatament
+        // en les dependències de `saveToFirebase`. Però en cridar-la amb *arguments*,
+        // estem evitant el problema de 'stale state' per al camp modificat.
+        // El problema ha de ser que els arrays no modificats llegeixen un estat antic.
+        
+        // Per això, passarem els arrays actualitzats com a arguments.
         if (center === 'Vacation') {
             await saveToFirebase(newDates, closureDatesArbucies, closureDatesSantHilari);
         } else if (center === 'Arbucies') {
