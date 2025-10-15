@@ -41,6 +41,7 @@ const keyToDate = (key: string): Date | null => {
       return null;
   }
   
+  // Utilitzem UTC o ajust de zona horària per evitar problemes amb dates
   const date = new Date(parts[0], parts[1] - 1, parts[2]); 
 
   // Ajust de l'hora per assegurar que es manté com a dia complet (ajusta a les 00:00:00)
@@ -91,7 +92,9 @@ const Settings = () => {
         return workDays.includes(adjustedDay);
     }, []);
     
-    // Càlcul de Dies Utilitzats (CORRECTE: comprova dies laborables)
+    // ************************************************
+    // Càlcul de Dies Utilitzats (CORRECCIÓ: es recalculen al canviar workDays)
+    // ************************************************
     const { usedDaysArbucies, usedDaysSantHilari } = useMemo(() => {
         let arbuciesCount = 0;
         let santHilariCount = 0;
@@ -119,7 +122,7 @@ const Settings = () => {
     }, [vacationDates, workDaysArbucies, workDaysSantHilari, isWorkDay, workYear]); 
 
 
-    // FUNCIÓ PER GARANTIR LA RETROCOMPATIBILITAT DURANT LA CÀRREGA
+    // FUNCIÓ per processar dades rebudes de Firebase
     const convertToDateWithReason = (dataField: Record<string, string> | Record<string, any> | undefined): DateWithReason[] => {
         if (!dataField || typeof dataField !== 'object') return [];
         
@@ -128,22 +131,16 @@ const Settings = () => {
             let date: Date | null = null;
             let reason: string = '';
 
-            // TENTATIVA 1: Format Nou (Key és Data 'YYYY-MM-DD', Value és Motiu 'string')
+            // Format correcte: Key és Data 'YYYY-MM-DD', Value és Motiu 'string'
             date = keyToDate(key); 
             if (date) {
                 reason = String(value) || ''; 
-            } else if (/^\d+$/.test(key) && typeof value === 'string') {
-                // TENTATIVA 2: Format Antic (Key és Índex '0', '1', '2', Value és Data 'YYYY-MM-DD')
-                date = keyToDate(value); 
-                reason = ''; // El motiu és buit per les dades antigues
-            }
-            
-            if (!date) {
+            } else {
                 return []; 
             }
             
             return [{ date, reason }];
-        });
+        }).filter(item => item.date !== null) as DateWithReason[];
     };
 
 
@@ -154,7 +151,6 @@ const Settings = () => {
         newVacations: DateWithReason[] | null = null, 
         newClosuresArbucies: DateWithReason[] | null = null,
         newClosuresSantHilari: DateWithReason[] | null = null,
-        // Altres paràmetres per si volem guardar altres coses (no utilitzat ara)
         
     ) => {
         setIsSaving(true);
@@ -162,7 +158,8 @@ const Settings = () => {
         try {
             // Totes les dades es guarden en el format NOU (Data com a clau, Motiu com a valor)
             const convertToFirebaseFormat = (datesWithReason: DateWithReason[]): Record<string, string> => {
-                return datesWithReason.reduce((acc, { date, reason }) => {
+                // Filtra les dates no vàlides si n'hi hagués
+                return datesWithReason.filter(d => d.date).reduce((acc, { date, reason }) => {
                     // La clau és la data (YYYY-MM-DD) i el valor és el motiu (string)
                     acc[dateToKey(date)] = reason; 
                     return acc;
@@ -192,8 +189,7 @@ const Settings = () => {
             setIsSaving(false);
         }
     }, [vacationDates, closureDatesArbucies, closureDatesSantHilari, availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari]);
-    // La llista de dependències ha de contenir tot el que s'utilitza a la funció!
-
+    
 
     // ************************************************
     // CÀRREGA DE DADES (READ) de Firebase
@@ -236,7 +232,8 @@ const Settings = () => {
 
     
     // Funció per gestionar la selecció al calendari (mode multiple)
-    // CORRECCIÓ: S'afegeix el guardat automàtic
+    // CORRECCIÓ: Aquesta funció ha estat reescrita per gestionar correctament
+    // l'eliminació (des-selecció) i la conservació del motiu.
     const handleDateSelect = async (selectedDates: Date[] | undefined) => {
         if (!selectedDates) return;
         
@@ -250,23 +247,22 @@ const Settings = () => {
             : vacationDates;
             
         // 1. Mapeja les dates seleccionades a l'estructura DateWithReason
-        const newDatesWithReason = selectedDates.map(newDate => {
+        // Només inclou les dates que s'han mantingut o afegit
+        const finalDates: DateWithReason[] = selectedDates.map(newDate => {
             // Busca si la data ja existia per mantenir el motiu
             const existing = currentDates.find(d => isSameDay(d.date, newDate));
             if (existing) {
+                // Data existent: la retorna amb el seu motiu
                 return existing; 
             }
-            // Si és una data nova, l'afegeix amb el motiu actual del popover (o buit)
-            return { date: newDate, reason: currentReason || '' }; 
+            // Data nova: l'afegeix amb el motiu buit
+            return { date: newDate, reason: '' }; 
         });
 
-        // 2. Manté només les dates que s'han seleccionat (el DayPicker elimina les des-seleccionades)
-        const finalDates = newDatesWithReason.filter(d => selectedDates.some(s => isSameDay(s, d.date)));
-        
-        // 3. Actualitza l'estat local
+        // 2. Actualitza l'estat local amb les noves dates (ara inclou les eliminacions)
         setter(finalDates);
 
-        // 4. GUARDA AUTOMÀTICAMENT ELS CANVIS A FIREBASE
+        // 3. GUARDA AUTOMÀTICAMENT ELS CANVIS A FIREBASE
         if (center === 'Vacation') {
             await handleSave(finalDates, closureDatesArbucies, closureDatesSantHilari);
         } else if (center === 'Arbucies') {
@@ -275,8 +271,7 @@ const Settings = () => {
             await handleSave(vacationDates, closureDatesArbucies, finalDates);
         }
 
-
-        // Si l'usuari només ha triat una data nova o una des-seleccionat, resetegem el motiu
+        // Tanca el popover per netejar la vista (opcional)
         if (selectedDates.length !== currentDates.length) {
              setCurrentReason('');
              setIsPopoverOpen(false);
@@ -285,7 +280,7 @@ const Settings = () => {
     
     // Funció per eliminar una data de la llista (ara amb DateWithReason)
     // CORRECCIÓ: S'afegeix el guardat automàtic
-    const handleRemoveDate = async (dateToRemove: Date, setter: React.Dispatch<React.SetStateAction<DateWithReason[]>>, currentDates: DateWithReason[], center: 'Vacation' | 'Arbucies' | 'SantHilari') => {
+    const handleRemoveDate = useCallback(async (dateToRemove: Date, setter: React.Dispatch<React.SetStateAction<DateWithReason[]>>, currentDates: DateWithReason[], center: 'Vacation' | 'Arbucies' | 'SantHilari') => {
         
         const newDates = currentDates.filter(d => !isSameDay(d.date, dateToRemove));
 
@@ -299,7 +294,7 @@ const Settings = () => {
         } else if (center === 'SantHilari') {
             await handleSave(vacationDates, closureDatesArbucies, newDates);
         }
-    };
+    }, [handleSave, vacationDates, closureDatesArbucies, closureDatesSantHilari]);
 
     // FUNCIÓ PER ACTUALITZAR EL MOTIU
     // CORRECCIÓ: S'ha de cridar aquesta funció directament des de l'Input i amb el guardat automàtic
@@ -329,6 +324,7 @@ const Settings = () => {
     }, [handleSave, vacationDates, closureDatesArbucies, closureDatesSantHilari]);
     
     // Funció per gestionar el canvi de checkbox (Dies de treball)
+    // S'ha afegit una crida a handleSave al final per guardar workDays immediatament
     const handleWorkDayChange = async (dayIndex: number, center: 'Arbucies' | 'SantHilari') => {
         
         const currentDays = center === 'Arbucies' ? workDaysArbucies : workDaysSantHilari;
@@ -340,12 +336,13 @@ const Settings = () => {
         // Actualitza l'estat local
         if (center === 'Arbucies') {
             setWorkDaysArbucies(newDays);
+            // Guarda per actualitzar la configuració i forçar el recalcul de dies utilitzats
+            await handleSave(vacationDates, closureDatesArbucies, closureDatesSantHilari); 
         } else {
             setWorkDaysSantHilari(newDays);
+            // Guarda per actualitzar la configuració i forçar el recalcul de dies utilitzats
+            await handleSave(vacationDates, closureDatesArbucies, closureDatesSantHilari);
         }
-
-        // NO cal cridar handleSave aquí perquè el botó general de guardar (a l'event onSubmit) ja guarda workDays
-        // i les dependències de handleSave es refrescaran.
     };
 
     const holidays2025 = [
@@ -404,11 +401,11 @@ const Settings = () => {
                                     )}
                                 />
                             </div>
-                            {/* CORRECCIÓ: Utilitza un Input normal i crida directament a handleReasonChange */}
+                            {/* Input per a la nota amb la correcció de Bug 2 */}
                             <Input
                                 type="text"
                                 value={d.reason}
-                                // Aquí és on s'ha fet la correcció del Bug 2!
+                                // Aquí s'utilitza directament handleReasonChange per actualitzar el motiu i guardar-lo
                                 onChange={(e) => handleReasonChange(d.date, e.target.value, dates, centerType)}
                                 placeholder="Afegir motiu (opcional)"
                                 className={`h-6 text-xs p-1 mt-1 shadow-neo-inset border-0 bg-transparent placeholder:text-${baseColor}-600/70`}
@@ -432,7 +429,10 @@ const Settings = () => {
             </div>
 
             {/* Crida a handleSave en fer submit per guardar les dades que no es guarden automàticament (Dies disponibles/laborals) */}
-            <form onSubmit={(e) => handleSave(e)} className="grid gap-6"> 
+            <form onSubmit={(e) => {
+                e.preventDefault(); // Prevé el comportament per defecte
+                handleSave(); // Guarda tot
+            }} className="grid gap-6"> 
                 
                 <NeoCard>
                     <div className="flex items-center gap-2 mb-4">
@@ -628,7 +628,7 @@ const Settings = () => {
                                             <input 
                                                 type="checkbox" 
                                                 checked={workDaysArbucies.includes(dayIndex)} 
-                                                // La funció no és async perquè workDays només es guarda amb el botó principal
+                                                // La funció guarda automàticament
                                                 onChange={() => handleWorkDayChange(dayIndex, 'Arbucies')} 
                                                 className="rounded shadow-neo-inset" 
                                             />
@@ -649,7 +649,7 @@ const Settings = () => {
                                             <input 
                                                 type="checkbox" 
                                                 checked={workDaysSantHilari.includes(dayIndex)} 
-                                                // La funció no és async perquè workDays només es guarda amb el botó principal
+                                                // La funció guarda automàticament
                                                 onChange={() => handleWorkDayChange(dayIndex, 'SantHilari')} 
                                                 className="rounded shadow-neo-inset" 
                                             />
@@ -680,7 +680,7 @@ const Settings = () => {
                 </NeoCard>
 
 
-                {/* BOTÓ DE GUARDAR */}
+                {/* BOTÓ DE GUARDAR (per guardar Dies disponibles) */}
                 <div className="flex justify-end">
                     <Button 
                         type="submit" 
