@@ -17,6 +17,12 @@ import { doc, setDoc, onSnapshot } from "firebase/firestore";
 // Referència al document de configuració global
 const SETTINGS_DOC_REF = doc(db, 'settings', 'global');
 
+// 💡 NOU TIPUS: Estructura per a guardar dates amb el motiu
+interface DateWithReason {
+    date: Date;
+    reason: string;
+}
+
 // Funció auxiliar per convertir objecte Date a string YYYY-MM-DD
 const dateToKey = (date: Date): string => {
   const year = date.getFullYear();
@@ -48,26 +54,28 @@ const getCurrentWorkYear = (today: Date): { start: Date, end: Date } => {
         endYear = currentYear + 1;
     }
     
-    // Període: 1 de Febrer de l'any d'inici a 31 de Gener de l'any final
     const startDate = new Date(startYear, 1, 1); // Febrer és mes 1
-    // Ajust per a l'últim dia de l'any laboral (31 de Gener)
-    const endDate = new Date(endYear, 1, 0); // 0 dia del mes 2 (Març) és l'últim dia de Febrer. 0 dia del mes 1 (Febrer) és l'últim dia de Gener.
+    const endDate = new Date(endYear, 1, 0);   // 0 dia del mes 1 (Febrer) és l'últim dia de Gener.
     
     return { start: startDate, end: endDate };
 };
 
 const Settings = () => {
-    // const { toast } = useToast(); 
+    // 💡 ESTATS ACTUALITZATS per emmagatzemar DateWithReason[]
+    const [vacationDates, setVacationDates] = useState<DateWithReason[]>([]);
+    const [closureDatesArbucies, setClosureDatesArbucies] = useState<DateWithReason[]>([]);
+    const [closureDatesSantHilari, setClosureDatesSantHilari] = useState<DateWithReason[]>([]);
     
-    // ESTATS PER DATES I DIES
-    const [vacationDates, setVacationDates] = useState<Date[]>([]);
-    const [closureDatesArbucies, setClosureDatesArbucies] = useState<Date[]>([]);
-    const [closureDatesSantHilari, setClosureDatesSantHilari] = useState<Date[]>([]);
+    // 💡 NOU ESTAT per la nota temporal
+    const [currentReason, setCurrentReason] = useState('');
+    const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+    const [currentCenterClosure, setCurrentCenterClosure] = useState<'Arbucies' | 'SantHilari' | 'Vacation' | null>(null);
+
+    // ESTATS DIES
     const [availableDaysArbucies, setAvailableDaysArbucies] = useState(30);
     const [availableDaysSantHilari, setAvailableDaysSantHilari] = useState(20);
 
     // ESTATS DIES DE TREBALL
-    // 1:Dilluns, 2:Dimarts, ..., 7:Diumenge
     const [workDaysArbucies, setWorkDaysArbucies] = useState<number[]>([1, 2, 4]); 
     const [workDaysSantHilari, setWorkDaysSantHilari] = useState<number[]>([3, 5]);
 
@@ -75,13 +83,12 @@ const Settings = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Determina el període laboral actual (1 Feb - 31 Gen)
     const workYear = useMemo(() => getCurrentWorkYear(new Date()), []);
     
     // Funció per comprovar si un dia és laborable a un centre
     const isWorkDay = useCallback((date: Date, workDays: number[]) => {
-        const dayOfWeek = date.getDay(); // 0 (Diumenge) a 6 (Dissabte)
-        const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek; // 1 (Dl) a 7 (Dg)
+        const dayOfWeek = date.getDay(); 
+        const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek; 
         return workDays.includes(adjustedDay);
     }, []);
     
@@ -93,20 +100,17 @@ const Settings = () => {
         let arbuciesCount = 0;
         let santHilariCount = 0;
 
-        vacationDates.forEach(date => {
-            // 1. Comprova si la data cau dins de l'any laboral actual (Feb-Gen)
+        // Iterem només sobre les dates (ignorem el motiu)
+        vacationDates.forEach(({ date }) => {
             const isWithinWorkYear = (
                 (isAfter(date, workYear.start) || isSameDay(date, workYear.start)) && 
                 (isBefore(date, workYear.end) || isSameDay(date, workYear.end))
             );
 
             if (isWithinWorkYear) {
-                // 2. Compta si treballa a Arbúcies i és un dia laboral seu
                 if (isWorkDay(date, workDaysArbucies)) {
                     arbuciesCount++;
                 }
-                
-                // 3. Compta si treballa a Sant Hilari i és un dia laboral seu
                 if (isWorkDay(date, workDaysSantHilari)) {
                     santHilariCount++;
                 }
@@ -125,26 +129,26 @@ const Settings = () => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 
-                // DATES DE TANCAMENT
-                if (data.vacations && Array.isArray(data.vacations)) {
-                    setVacationDates((data.vacations as string[]).map(keyToDate));
-                }
-                if (data.closuresArbucies && Array.isArray(data.closuresArbucies)) {
-                    setClosureDatesArbucies((data.closuresArbucies as string[]).map(keyToDate));
-                }
-                if (data.closuresSantHilari && Array.isArray(data.closuresSantHilari)) {
-                    setClosureDatesSantHilari((data.closuresSantHilari as string[]).map(keyToDate));
-                }
+                // 💡 LOGICA DE CARREGA ACTUALITZADA: Converteix de l'estructura de Firebase (string: string) a (Date: string)
+                const convertToDateWithReason = (dataField: Record<string, string> | undefined): DateWithReason[] => {
+                    if (!dataField || typeof dataField !== 'object') return [];
+                    return Object.entries(dataField).map(([key, reason]) => ({
+                        date: keyToDate(key),
+                        reason: reason || '',
+                    }));
+                };
+
+                setVacationDates(convertToDateWithReason(data.vacations));
+                setClosureDatesArbucies(convertToDateWithReason(data.closuresArbucies));
+                setClosureDatesSantHilari(convertToDateWithReason(data.closuresSantHilari));
                 
-                // DIES DISPONIBLES
+                // DIES DISPONIBLES i DIES DE TREBALL es mantenen igual
                 if (typeof data.availableDaysArbucies === 'number') {
                     setAvailableDaysArbucies(data.availableDaysArbucies);
                 }
                 if (typeof data.availableDaysSantHilari === 'number') {
                     setAvailableDaysSantHilari(data.availableDaysSantHilari);
                 }
-                
-                // DIES DE TREBALL
                 if (data.workDaysArbucies && Array.isArray(data.workDaysArbucies)) {
                     setWorkDaysArbucies(data.workDaysArbucies as number[]);
                 }
@@ -173,46 +177,79 @@ const Settings = () => {
         setIsSaving(true);
 
         try {
-            // Converteix les dates a strings
-            const processedVacations = vacationDates.map(dateToKey);
-            const processedClosuresArbucies = closureDatesArbucies.map(dateToKey);
-            const processedClosuresSantHilari = closureDatesSantHilari.map(dateToKey);
+            // 💡 LOGICA DE GUARDAT ACTUALITZADA: Converteix de l'estructura (Date: string) a (string: string)
+            const convertToFirebaseFormat = (datesWithReason: DateWithReason[]): Record<string, string> => {
+                return datesWithReason.reduce((acc, { date, reason }) => {
+                    acc[dateToKey(date)] = reason;
+                    return acc;
+                }, {} as Record<string, string>);
+            };
 
             const dataToSave = {
-                // DATES
-                vacations: processedVacations, 
-                closuresArbucies: processedClosuresArbucies, 
-                closuresSantHilari: processedClosuresSantHilari,
+                // DATES (amb motiu)
+                vacations: convertToFirebaseFormat(vacationDates), 
+                closuresArbucies: convertToFirebaseFormat(closureDatesArbucies), 
+                closuresSantHilari: convertToFirebaseFormat(closureDatesSantHilari),
                 
-                // DIES DISPONIBLES
+                // DIES I CONFIGURACIÓ
                 availableDaysArbucies,
                 availableDaysSantHilari,
-                
-                // DIES UTILITZATS (Guardem el valor calculat)
                 usedDaysArbucies, 
                 usedDaysSantHilari, 
-                
-                // DIES DE TREBALL
                 workDaysArbucies,
                 workDaysSantHilari,
             };
 
             await setDoc(SETTINGS_DOC_REF, dataToSave, { merge: true });
 
-            // toast({ title: "Guardat!", description: "La configuració s'ha actualitzada.", });
             console.log("Configuració guardada correctament!");
             
         } catch (error) {
             console.error("Error al guardar a Firebase:", error);
-            // toast({ title: "Error al guardar", description: "Hi ha hagut un error.", variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
     };
     
-    // Funció per eliminar una data de la llista (es manté)
-    const handleRemoveDate = (dateToRemove: Date, setter: React.Dispatch<React.SetStateAction<Date[]>>, currentDates: Date[]) => {
-        setter(currentDates.filter(date => date.getTime() !== dateToRemove.getTime()));
+    // 💡 NOVA FUNCIÓ per gestionar la selecció al calendari (mode multiple)
+    const handleDateSelect = (selectedDates: Date[] | undefined) => {
+        if (!selectedDates) return;
+        
+        const setter = currentCenterClosure === 'Arbucies' ? setClosureDatesArbucies 
+            : currentCenterClosure === 'SantHilari' ? setClosureDatesSantHilari 
+            : setVacationDates;
+        const currentDates = currentCenterClosure === 'Arbucies' ? closureDatesArbucies
+            : currentCenterClosure === 'SantHilari' ? closureDatesSantHilari
+            : vacationDates;
+            
+        const currentDatesOnly = currentDates.map(d => d.date);
+
+        // Afegeix o elimina dates
+        const newDatesWithReason = selectedDates.map(newDate => {
+            // Busca si la data ja existia
+            const existing = currentDates.find(d => isSameDay(d.date, newDate));
+            if (existing) {
+                return existing; // Manté la data i el motiu existent
+            }
+            // Si és una data nova, l'afegeix amb el motiu actual (i el reseteja si només se n'ha triat una)
+            return { date: newDate, reason: currentReason };
+        });
+
+        // Filtra les dates que ja no estan seleccionades
+        const finalDates = newDatesWithReason.filter(d => selectedDates.some(s => isSameDay(s, d.date)));
+        
+        setter(finalDates);
+
+        // Si només s'ha seleccionat una data, podem tancar i resetegar
+        if (selectedDates.length > currentDatesOnly.length) {
+             setCurrentReason('');
+             setIsPopoverOpen(false);
+        }
+    };
+    
+    // Funció per eliminar una data de la llista (ara amb DateWithReason)
+    const handleRemoveDate = (dateToRemove: Date, setter: React.Dispatch<React.SetStateAction<DateWithReason[]>>, currentDates: DateWithReason[]) => {
+        setter(currentDates.filter(d => d.date.getTime() !== dateToRemove.getTime()));
     };
     
     // Funció per gestionar el canvi de checkbox (Dies de treball)
@@ -221,15 +258,14 @@ const Settings = () => {
         const currentDays = center === 'Arbucies' ? workDaysArbucies : workDaysSantHilari;
         
         if (currentDays.includes(dayIndex)) {
-            // Elimina si ja hi és
             setter(currentDays.filter(day => day !== dayIndex));
         } else {
-            // Afegeix si no hi és
             setter([...currentDays, dayIndex].sort((a, b) => a - b));
         }
     };
 
     const holidays2025 = [
+        // ... (la teva llista de festius)
         { name: "Any Nou", date: "1 Gen" }, { name: "Reis", date: "6 Gen" }, { name: "Divendres Sant", date: "18 Abr" },
         { name: "Dilluns de Pasqua", date: "21 Abr" }, { name: "Festa del Treball", date: "1 Mai" }, { name: "Sant Joan", date: "24 Jun" },
         { name: "Assumpció", date: "15 Ago" }, { name: "Diada", date: "11 Set" }, { name: "Mercè", date: "24 Set" },
@@ -239,6 +275,8 @@ const Settings = () => {
     
     const dayNamesList = ["Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", "Dissabte", "Diumenge"];
     
+    // Funció que retorna només les dates (per al Calendar)
+    const getDatesOnly = (datesWithReason: DateWithReason[]): Date[] => datesWithReason.map(d => d.date);
 
     if (isLoading) {
         return (
@@ -272,6 +310,7 @@ const Settings = () => {
                         Període laboral actual: {format(workYear.start, "dd/MM/yyyy")} - {format(workYear.end, "dd/MM/yyyy")}
                     </p>
                     <div className="grid md:grid-cols-2 gap-6 mb-6">
+                        {/* ... (Inputs de Dies disponibles / utilitzats) ... */}
                         <div className="space-y-4">
                             <div>
                                 <Label htmlFor="arbucies-vacation">Dies disponibles Arbúcies</Label>
@@ -326,38 +365,57 @@ const Settings = () => {
                     </div>
 
                     <div className="space-y-3">
-                        <Label>Seleccionar període de vacances</Label>
-                        <Popover>
+                        <Label>Seleccionar període de vacances (amb motiu)</Label>
+                        <Popover open={isPopoverOpen && currentCenterClosure === 'Vacation'} onOpenChange={(open) => {
+                            setIsPopoverOpen(open);
+                            if (open) setCurrentCenterClosure('Vacation');
+                            else setCurrentReason(''); // Reseteja el motiu en tancar
+                        }}>
                             <PopoverTrigger asChild>
                                 <Button variant="outline" className="w-full shadow-neo hover:shadow-neo-sm justify-start" disabled={isSaving}>
                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                     Afegir vacances
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent className="w-auto p-3" align="start">
+                                <div className="space-y-3 mb-3">
+                                    <Label htmlFor="vacation-reason">Motiu / Nota de la sol·licitud</Label>
+                                    <Input 
+                                        id="vacation-reason" 
+                                        value={currentReason} 
+                                        onChange={(e) => setCurrentReason(e.target.value)} 
+                                        placeholder="Ex: Curs de formació, viatge familiar..."
+                                        className="shadow-neo-inset"
+                                    />
+                                </div>
                                 <Calendar
                                 mode="multiple"
-                                selected={vacationDates}
-                                onSelect={(dates) => setVacationDates(dates || [])}
+                                selected={getDatesOnly(vacationDates)} // Només dates
+                                onSelect={handleDateSelect}
                                 locale={ca}
                                 className="rounded-md border shadow-neo"
                                 />
                             </PopoverContent>
                         </Popover>
                         
-                        {/* Llista de dates seleccionades */}
+                        {/* Llista de dates seleccionades amb motiu */}
                         {vacationDates.length > 0 && (
                             <div className="p-3 rounded-xl shadow-neo-inset">
                                 <p className="text-sm font-medium mb-2">Dies seleccionats: {vacationDates.length}</p>
                                 <div className="flex flex-wrap gap-2">
-                                    {vacationDates.map((date, i) => (
+                                    {vacationDates.map((d, i) => (
                                         <span 
                                             key={i} 
-                                            className="text-xs px-2 py-1 rounded-full shadow-neo bg-blue-500/10 text-blue-700 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 transition-colors"
-                                            onClick={() => handleRemoveDate(date, setVacationDates, vacationDates)}
+                                            className="text-xs px-2 py-1 rounded-full shadow-neo bg-blue-500/10 text-blue-700 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 transition-colors group"
+                                            onClick={() => handleRemoveDate(d.date, setVacationDates, vacationDates)}
                                         >
-                                            {format(date, "dd MMM", { locale: ca })}
-                                            <X className="h-3 w-3" />
+                                            {format(d.date, "dd MMM", { locale: ca })}
+                                            {d.reason && (
+                                                <span className="ml-1 font-normal text-blue-600/70 opacity-80 group-hover:opacity-100 transition-opacity">
+                                                    ({d.reason})
+                                                </span>
+                                            )}
+                                            <X className="h-3 w-3 ml-1" />
                                         </span>
                                     ))}
                                 </div>
@@ -366,9 +424,6 @@ const Settings = () => {
                     </div>
                 </NeoCard>
 
-                {/* ************************************************** */}
-                {/* 💡 SECCIÓ RESTAURADA: DIES DE TANCAMENT PER CENTRES */}
-                {/* ************************************************** */}
                 <NeoCard>
                     <div className="flex items-center gap-2 mb-4">
                         <CalendarIcon className="w-5 h-5 text-destructive" />
@@ -376,20 +431,35 @@ const Settings = () => {
                     </div>
 
                     <div className="space-y-4">
+                        {/* ARBÚCIES */}
                         <div>
                             <Label className="mb-2 block">Arbúcies</Label>
-                            <Popover>
+                            <Popover open={isPopoverOpen && currentCenterClosure === 'Arbucies'} onOpenChange={(open) => {
+                                setIsPopoverOpen(open);
+                                if (open) setCurrentCenterClosure('Arbucies');
+                                else setCurrentReason('');
+                            }}>
                                 <PopoverTrigger asChild>
                                     <Button variant="outline" className="w-full shadow-neo hover:shadow-neo-sm justify-start" disabled={isSaving}>
                                         <Plus className="mr-2 h-4 w-4" />
                                         Afegir dies de tancament Arbúcies
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
+                                <PopoverContent className="w-auto p-3" align="start">
+                                    <div className="space-y-3 mb-3">
+                                        <Label htmlFor="arbucies-closure-reason">Motiu del tancament</Label>
+                                        <Input 
+                                            id="arbucies-closure-reason" 
+                                            value={currentReason} 
+                                            onChange={(e) => setCurrentReason(e.target.value)} 
+                                            placeholder="Ex: Festa Major, Manteniment anual..."
+                                            className="shadow-neo-inset"
+                                        />
+                                    </div>
                                     <Calendar
                                         mode="multiple"
-                                        selected={closureDatesArbucies}
-                                        onSelect={(dates) => setClosureDatesArbucies(dates || [])}
+                                        selected={getDatesOnly(closureDatesArbucies)}
+                                        onSelect={handleDateSelect}
                                         locale={ca}
                                         className="rounded-md border shadow-neo"
                                     />
@@ -399,14 +469,19 @@ const Settings = () => {
                                 <div className="p-3 mt-2 rounded-xl shadow-neo-inset">
                                     <p className="text-sm font-medium mb-2">Tancaments Arbúcies: {closureDatesArbucies.length}</p>
                                     <div className="flex flex-wrap gap-2">
-                                        {closureDatesArbucies.map((date, i) => (
+                                        {closureDatesArbucies.map((d, i) => (
                                             <span 
                                                 key={i} 
-                                                className="text-xs px-2 py-1 rounded-full shadow-neo bg-gray-500/10 text-gray-700 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 transition-colors"
-                                                onClick={() => handleRemoveDate(date, setClosureDatesArbucies, closureDatesArbucies)}
+                                                className="text-xs px-2 py-1 rounded-full shadow-neo bg-gray-500/10 text-gray-700 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 transition-colors group"
+                                                onClick={() => handleRemoveDate(d.date, setClosureDatesArbucies, closureDatesArbucies)}
                                             >
-                                                {format(date, "dd MMM", { locale: ca })}
-                                                <X className="h-3 w-3" />
+                                                {format(d.date, "dd MMM", { locale: ca })}
+                                                {d.reason && (
+                                                    <span className="ml-1 font-normal text-gray-600/70 opacity-80 group-hover:opacity-100 transition-opacity">
+                                                        ({d.reason})
+                                                    </span>
+                                                )}
+                                                <X className="h-3 w-3 ml-1" />
                                             </span>
                                         ))}
                                     </div>
@@ -414,20 +489,35 @@ const Settings = () => {
                             )}
                         </div>
 
+                        {/* SANT HILARI */}
                         <div>
                             <Label className="mb-2 block">Sant Hilari</Label>
-                            <Popover>
+                            <Popover open={isPopoverOpen && currentCenterClosure === 'SantHilari'} onOpenChange={(open) => {
+                                setIsPopoverOpen(open);
+                                if (open) setCurrentCenterClosure('SantHilari');
+                                else setCurrentReason('');
+                            }}>
                                 <PopoverTrigger asChild>
                                     <Button variant="outline" className="w-full shadow-neo hover:shadow-neo-sm justify-start" disabled={isSaving}>
                                         <Plus className="mr-2 h-4 w-4" />
                                         Afegir dies de tancament Sant Hilari
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
+                                <PopoverContent className="w-auto p-3" align="start">
+                                    <div className="space-y-3 mb-3">
+                                        <Label htmlFor="santhilari-closure-reason">Motiu del tancament</Label>
+                                        <Input 
+                                            id="santhilari-closure-reason" 
+                                            value={currentReason} 
+                                            onChange={(e) => setCurrentReason(e.target.value)} 
+                                            placeholder="Ex: Festa Major, Manteniment anual..."
+                                            className="shadow-neo-inset"
+                                        />
+                                    </div>
                                     <Calendar
                                         mode="multiple"
-                                        selected={closureDatesSantHilari}
-                                        onSelect={(dates) => setClosureDatesSantHilari(dates || [])}
+                                        selected={getDatesOnly(closureDatesSantHilari)}
+                                        onSelect={handleDateSelect}
                                         locale={ca}
                                         className="rounded-md border shadow-neo"
                                     />
@@ -437,14 +527,19 @@ const Settings = () => {
                                 <div className="p-3 mt-2 rounded-xl shadow-neo-inset">
                                     <p className="text-sm font-medium mb-2">Tancaments Sant Hilari: {closureDatesSantHilari.length}</p>
                                     <div className="flex flex-wrap gap-2">
-                                        {closureDatesSantHilari.map((date, i) => (
+                                        {closureDatesSantHilari.map((d, i) => (
                                             <span 
                                                 key={i} 
-                                                className="text-xs px-2 py-1 rounded-full shadow-neo bg-gray-500/10 text-gray-700 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 transition-colors"
-                                                onClick={() => handleRemoveDate(date, setClosureDatesSantHilari, closureDatesSantHilari)}
+                                                className="text-xs px-2 py-1 rounded-full shadow-neo bg-gray-500/10 text-gray-700 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 transition-colors group"
+                                                onClick={() => handleRemoveDate(d.date, setClosureDatesSantHilari, closureDatesSantHilari)}
                                             >
-                                                {format(date, "dd MMM", { locale: ca })}
-                                                <X className="h-3 w-3" />
+                                                {format(d.date, "dd MMM", { locale: ca })}
+                                                {d.reason && (
+                                                    <span className="ml-1 font-normal text-gray-600/70 opacity-80 group-hover:opacity-100 transition-opacity">
+                                                        ({d.reason})
+                                                    </span>
+                                                )}
+                                                <X className="h-3 w-3 ml-1" />
                                             </span>
                                         ))}
                                     </div>
@@ -453,10 +548,8 @@ const Settings = () => {
                         </div>
                     </div>
                 </NeoCard>
-                {/* ************************************************** */}
-                {/* FI DE SECCIÓ RESTAURADA */}
-                {/* ************************************************** */}
 
+                {/* ... (Secció Festius oficials es manté igual) ... */}
                 <NeoCard>
                     <div className="flex items-center gap-2 mb-4">
                         <CalendarIcon className="w-5 h-5 text-accent" />
@@ -472,6 +565,7 @@ const Settings = () => {
                     </div>
                 </NeoCard>
 
+                {/* ... (Secció Dies de treball es manté igual) ... */}
                 <NeoCard>
                     <div className="flex items-center gap-2 mb-4">
                         <UsersIcon className="w-5 h-5 text-primary" />
@@ -486,7 +580,7 @@ const Settings = () => {
                             <Label className="mb-3 block">Arbúcies</Label>
                             <div className="space-y-2">
                                 {dayNamesList.map((name, index) => {
-                                    const dayIndex = index + 1; // 1:Dilluns ... 7:Diumenge
+                                    const dayIndex = index + 1; 
                                     return (
                                         <label key={dayIndex} className="flex items-center gap-2 cursor-pointer">
                                             <input 
@@ -506,7 +600,7 @@ const Settings = () => {
                             <Label className="mb-3 block">Sant Hilari</Label>
                             <div className="space-y-2">
                                 {dayNamesList.map((name, index) => {
-                                    const dayIndex = index + 1; // 1:Dilluns ... 7:Diumenge
+                                    const dayIndex = index + 1; 
                                     return (
                                         <label key={dayIndex} className="flex items-center gap-2 cursor-pointer">
                                             <input 
