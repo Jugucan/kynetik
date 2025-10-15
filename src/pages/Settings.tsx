@@ -17,7 +17,7 @@ import { doc, setDoc, onSnapshot } from "firebase/firestore";
 // Referència al document de configuració global
 const SETTINGS_DOC_REF = doc(db, 'settings', 'global');
 
-// 💡 NOU TIPUS: Estructura per a guardar dates amb el motiu
+// NOU TIPUS: Estructura per a guardar dates amb el motiu
 interface DateWithReason {
     date: Date;
     reason: string;
@@ -31,10 +31,26 @@ const dateToKey = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
+// 💡 CORRECCIÓ DEL RANGEERROR: Aquesta funció ara valida la data i retorna null si és invàlida.
 // Funció auxiliar per convertir string YYYY-MM-DD a objecte Date
-const keyToDate = (key: string): Date => {
+const keyToDate = (key: string): Date | null => {
   const parts = key.split('-').map(p => parseInt(p, 10));
-  return new Date(parts[0], parts[1] - 1, parts[2]);
+  
+  // 1. Validació bàsica de format
+  if (parts.length < 3 || parts.some(isNaN)) {
+      console.warn(`KeyToDate: Skipping malformed key: ${key}`);
+      return null;
+  }
+  
+  // Creeem la data (local time: YYYY, MM-1, DD)
+  const date = new Date(parts[0], parts[1] - 1, parts[2]); 
+
+  // 2. Validació si la Date és vàlida (getTime() retorna NaN si és Invalid Date)
+  if (isNaN(date.getTime())) {
+    console.warn(`KeyToDate: Skipping invalid date from key: ${key}`);
+    return null;
+  }
+  return date;
 };
 
 // Funció per calcular l'any laboral (1 Feb - 31 Gen)
@@ -61,46 +77,36 @@ const getCurrentWorkYear = (today: Date): { start: Date, end: Date } => {
 };
 
 const Settings = () => {
-    // 💡 ESTATS ACTUALITZATS per emmagatzemar DateWithReason[]
+    
     const [vacationDates, setVacationDates] = useState<DateWithReason[]>([]);
     const [closureDatesArbucies, setClosureDatesArbucies] = useState<DateWithReason[]>([]);
     const [closureDatesSantHilari, setClosureDatesSantHilari] = useState<DateWithReason[]>([]);
     
-    // 💡 NOU ESTAT per la nota temporal
     const [currentReason, setCurrentReason] = useState('');
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [currentCenterClosure, setCurrentCenterClosure] = useState<'Arbucies' | 'SantHilari' | 'Vacation' | null>(null);
 
-    // ESTATS DIES
     const [availableDaysArbucies, setAvailableDaysArbucies] = useState(30);
     const [availableDaysSantHilari, setAvailableDaysSantHilari] = useState(20);
 
-    // ESTATS DIES DE TREBALL
     const [workDaysArbucies, setWorkDaysArbucies] = useState<number[]>([1, 2, 4]); 
     const [workDaysSantHilari, setWorkDaysSantHilari] = useState<number[]>([3, 5]);
 
-    // ESTATS DE LA UI
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
     const workYear = useMemo(() => getCurrentWorkYear(new Date()), []);
     
-    // Funció per comprovar si un dia és laborable a un centre
     const isWorkDay = useCallback((date: Date, workDays: number[]) => {
         const dayOfWeek = date.getDay(); 
         const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek; 
         return workDays.includes(adjustedDay);
     }, []);
     
-
-    // ************************************************
-    // CÀLCUL SEGREGAT: DIES UTILITZATS (useMemo)
-    // ************************************************
     const { usedDaysArbucies, usedDaysSantHilari } = useMemo(() => {
         let arbuciesCount = 0;
         let santHilariCount = 0;
 
-        // Iterem només sobre les dates (ignorem el motiu)
         vacationDates.forEach(({ date }) => {
             const isWithinWorkYear = (
                 (isAfter(date, workYear.start) || isSameDay(date, workYear.start)) && 
@@ -121,6 +127,26 @@ const Settings = () => {
     }, [vacationDates, workDaysArbucies, workDaysSantHilari, isWorkDay, workYear]);
 
 
+    // 💡 CORRECCIÓ DEL RANGEERROR: Utilitza keyToDate amb validació i flatMap per filtrar nulls.
+    const convertToDateWithReason = (dataField: Record<string, string> | undefined): DateWithReason[] => {
+        if (!dataField || typeof dataField !== 'object') return [];
+        
+        // Use flatMap per eliminar els resultats `null` de keyToDate de forma elegant.
+        return Object.entries(dataField).flatMap(([key, reason]) => {
+            const date = keyToDate(key);
+            
+            // Si keyToDate retorna null (data invàlida), retornem un array buit
+            // i flatMap l'ignora.
+            if (!date) return []; 
+            
+            return [{ // Retornem l'objecte vàlid
+                date: date,
+                reason: reason || '',
+            }];
+        });
+    };
+
+
     // ************************************************
     // CÀRREGA DE DADES (READ) de Firebase
     // ************************************************
@@ -129,15 +155,7 @@ const Settings = () => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 
-                // 💡 LOGICA DE CARREGA ACTUALITZADA: Converteix de l'estructura de Firebase (string: string) a (Date: string)
-                const convertToDateWithReason = (dataField: Record<string, string> | undefined): DateWithReason[] => {
-                    if (!dataField || typeof dataField !== 'object') return [];
-                    return Object.entries(dataField).map(([key, reason]) => ({
-                        date: keyToDate(key),
-                        reason: reason || '',
-                    }));
-                };
-
+                // DATES DE TANCAMENT (Utilitza la funció corregida)
                 setVacationDates(convertToDateWithReason(data.vacations));
                 setClosureDatesArbucies(convertToDateWithReason(data.closuresArbucies));
                 setClosureDatesSantHilari(convertToDateWithReason(data.closuresSantHilari));
@@ -177,7 +195,6 @@ const Settings = () => {
         setIsSaving(true);
 
         try {
-            // 💡 LOGICA DE GUARDAT ACTUALITZADA: Converteix de l'estructura (Date: string) a (string: string)
             const convertToFirebaseFormat = (datesWithReason: DateWithReason[]): Record<string, string> => {
                 return datesWithReason.reduce((acc, { date, reason }) => {
                     acc[dateToKey(date)] = reason;
@@ -186,12 +203,10 @@ const Settings = () => {
             };
 
             const dataToSave = {
-                // DATES (amb motiu)
                 vacations: convertToFirebaseFormat(vacationDates), 
                 closuresArbucies: convertToFirebaseFormat(closureDatesArbucies), 
                 closuresSantHilari: convertToFirebaseFormat(closureDatesSantHilari),
                 
-                // DIES I CONFIGURACIÓ
                 availableDaysArbucies,
                 availableDaysSantHilari,
                 usedDaysArbucies, 
@@ -211,7 +226,7 @@ const Settings = () => {
         }
     };
     
-    // 💡 NOVA FUNCIÓ per gestionar la selecció al calendari (mode multiple)
+    // Funció per gestionar la selecció al calendari (mode multiple)
     const handleDateSelect = (selectedDates: Date[] | undefined) => {
         if (!selectedDates) return;
         
@@ -231,7 +246,7 @@ const Settings = () => {
             if (existing) {
                 return existing; // Manté la data i el motiu existent
             }
-            // Si és una data nova, l'afegeix amb el motiu actual (i el reseteja si només se n'ha triat una)
+            // Si és una data nova, l'afegeix amb el motiu actual
             return { date: newDate, reason: currentReason };
         });
 
@@ -240,8 +255,8 @@ const Settings = () => {
         
         setter(finalDates);
 
-        // Si només s'ha seleccionat una data, podem tancar i resetegar
-        if (selectedDates.length > currentDatesOnly.length) {
+        // Si l'usuari només ha triat una data nova, resetegem el motiu i tanquem el Popover per a la usabilitat
+        if (selectedDates.length === currentDatesOnly.length + 1) {
              setCurrentReason('');
              setIsPopoverOpen(false);
         }
@@ -265,7 +280,6 @@ const Settings = () => {
     };
 
     const holidays2025 = [
-        // ... (la teva llista de festius)
         { name: "Any Nou", date: "1 Gen" }, { name: "Reis", date: "6 Gen" }, { name: "Divendres Sant", date: "18 Abr" },
         { name: "Dilluns de Pasqua", date: "21 Abr" }, { name: "Festa del Treball", date: "1 Mai" }, { name: "Sant Joan", date: "24 Jun" },
         { name: "Assumpció", date: "15 Ago" }, { name: "Diada", date: "11 Set" }, { name: "Mercè", date: "24 Set" },
@@ -310,7 +324,6 @@ const Settings = () => {
                         Període laboral actual: {format(workYear.start, "dd/MM/yyyy")} - {format(workYear.end, "dd/MM/yyyy")}
                     </p>
                     <div className="grid md:grid-cols-2 gap-6 mb-6">
-                        {/* ... (Inputs de Dies disponibles / utilitzats) ... */}
                         <div className="space-y-4">
                             <div>
                                 <Label htmlFor="arbucies-vacation">Dies disponibles Arbúcies</Label>
@@ -549,7 +562,6 @@ const Settings = () => {
                     </div>
                 </NeoCard>
 
-                {/* ... (Secció Festius oficials es manté igual) ... */}
                 <NeoCard>
                     <div className="flex items-center gap-2 mb-4">
                         <CalendarIcon className="w-5 h-5 text-accent" />
@@ -565,7 +577,6 @@ const Settings = () => {
                     </div>
                 </NeoCard>
 
-                {/* ... (Secció Dies de treball es manté igual) ... */}
                 <NeoCard>
                     <div className="flex items-center gap-2 mb-4">
                         <UsersIcon className="w-5 h-5 text-primary" />
