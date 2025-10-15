@@ -148,7 +148,6 @@ const Settings = () => {
         newClosuresArbucies: DateWithReason[] | null = null,
         newClosuresSantHilari: DateWithReason[] | null = null,
     ) => {
-        // No canviem isSaving aquí per als guardats automàtics
         try {
             const convertToFirebaseFormat = (datesWithReason: DateWithReason[]): Record<string, string> => {
                 // Si l'array és buit, retornem un objecte buit {}
@@ -161,9 +160,7 @@ const Settings = () => {
                 }, {} as Record<string, string>);
             };
 
-            // Determinar quines dades usar: les noves passades com argument o l'estat actual
-            // En eliminar les dependències de les dates del useCallback (veure línia 152),
-            // els valors de les dates es llegeixen de l'estat actual de React.
+            // Determinar quines dades usar: les noves passades com argument o l'estat actual (que ara és fresc gràcies a la dependència)
             const currentVacations = newVacations !== null ? newVacations : vacationDates;
             const currentClosuresArbucies = newClosuresArbucies !== null ? newClosuresArbucies : closureDatesArbucies;
             const currentClosuresSantHilari = newClosuresSantHilari !== null ? newClosuresSantHilari : closureDatesSantHilari;
@@ -190,27 +187,33 @@ const Settings = () => {
             console.error("Error al guardar a Firebase:", error);
         }
     }, [
-        // 💡 CORRECCIÓ CLAU: Eliminem els arrays de dates com a dependències
-        // perquè el useCallback no es tanqui amb un estat obsolet de les dates.
+        // 💡 CORRECCIÓ CLAU: Mantenim les variables d'estat de les dades com a dependències 
+        // per als casos on `newVacations` és null i perquè el useCallback utilitzi el valor actual.
+        // Si el problema persistia, era perquè els arguments (vacationDates, etc.) passats a la crida
+        // de handleRemoveDate eren els que estaven STALE, no els del useCallback.
+        // Però en no incloure-les aquí, el useCallback llegeix el valor actual de les variables d'estat (la versió fresca).
         availableDaysArbucies, 
         availableDaysSantHilari, 
         workDaysArbucies, 
-        workDaysSantHilari
+        workDaysSantHilari,
+        vacationDates, // Les re-incloem per forçar la reconstrucció
+        closureDatesArbucies,
+        closureDatesSantHilari
     ]);
-    
     
     // Funció per guardar les dades que es guarden manualment (dies disponibles/laborals)
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
         // Cridem la funció base sense arguments per guardar només els camps que han canviat fora de les dates
+        // Com que hem re-inclòs les dades al useCallback, aquesta crida funcionarà perfectament.
         await saveToFirebase();
         setIsSaving(false);
     };
 
 
     // ************************************************
-    // CÀRREGA DE DADES (READ) de Firebase (Ja Corregit)
+    // CÀRREGA DE DADES (READ) de Firebase
     // ************************************************
     useEffect(() => {
         const unsubscribe = onSnapshot(SETTINGS_DOC_REF, (docSnap) => {
@@ -245,7 +248,6 @@ const Settings = () => {
             setIsLoading(false);
         });
 
-        // Array de dependències buit: S'executa només al muntar (fixa el bucle d'Issues)
         return () => unsubscribe();
     }, []); 
 
@@ -264,12 +266,10 @@ const Settings = () => {
             
         // 1. Mapeja les dates seleccionades a l'estructura DateWithReason
         const finalDates = selectedDates.map(newDate => {
-            // Busca si la data ja existia per mantenir el motiu
             const existing = currentDates.find(d => isSameDay(d.date, newDate));
             if (existing) {
                 return existing; 
             }
-            // Si és una data nova, l'afegeix amb el motiu actual del popover (o buit)
             return { date: newDate, reason: currentReason || '' }; 
         });
 
@@ -277,8 +277,8 @@ const Settings = () => {
         setter(finalDates);
 
         // 3. GUARDA IMMMEDIATAMENT A FIREBASE
+        // Passem els tres arrays actuals, forçant l'ús de finalDates per al camp modificat.
         if (currentCenterClosure === 'Vacation') {
-            // Passem finalDates (el nou array) i l'estat actual de la resta.
             await saveToFirebase(finalDates, closureDatesArbucies, closureDatesSantHilari);
         } else if (currentCenterClosure === 'Arbucies') {
             await saveToFirebase(vacationDates, finalDates, closureDatesSantHilari);
@@ -297,12 +297,11 @@ const Settings = () => {
         // 1. Crea el NOU array sense la data
         const newDates = currentDates.filter(d => !isSameDay(d.date, dateToRemove));
         
-        // 2. Actualitza l'estat local
+        // 2. Actualitza l'estat local (això fa que desaparegui visualment)
         setter(newDates); 
 
         // 3. GUARDA IMMMEDIATAMENT A FIREBASE
-        // Com que hem arreglat el useCallback de saveToFirebase, ara acceptarà els arrays actuals
-        // dels altres centres.
+        // Passem els tres arrays actuals, forçant l'ús de newDates per al camp modificat.
         if (center === 'Vacation') {
             await saveToFirebase(newDates, closureDatesArbucies, closureDatesSantHilari);
         } else if (center === 'Arbucies') {
