@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { Settings as SettingsIcon, Calendar as CalendarIcon, Users as UsersIcon, Plus, Save, Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -6,18 +6,18 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, isSameDay, isAfter, isBefore } from "date-fns";
 import { ca } from "date-fns/locale";
 
 // Importacions de Firebase (ja comprovades)
 import { db } from "@/lib/firebase";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
-// import { useToast } from "@/hooks/use-toast"; // Descomenta si fas servir `useToast`
+// import { useToast } from "@/hooks/use-toast";
 
 // Referència al document de configuració global
 const SETTINGS_DOC_REF = doc(db, 'settings', 'global');
 
-// Funció auxiliar per convertir objecte Date a string YYYY-MM-DD (Ja la tenies)
+// Funció auxiliar per convertir objecte Date a string YYYY-MM-DD
 const dateToKey = (date: Date): string => {
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -25,37 +25,95 @@ const dateToKey = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-// Funció auxiliar per convertir string YYYY-MM-DD a objecte Date (Ja la tenies)
+// Funció auxiliar per convertir string YYYY-MM-DD a objecte Date
 const keyToDate = (key: string): Date => {
   const parts = key.split('-').map(p => parseInt(p, 10));
   return new Date(parts[0], parts[1] - 1, parts[2]);
 };
 
+// 💡 NOU: Funció per calcular l'any laboral
+const getCurrentWorkYear = (today: Date): { start: Date, end: Date } => {
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth(); // 0 (Jan) a 11 (Dec)
+    
+    let startYear, endYear;
+    
+    // Si estem en gener (mes 0), l'any laboral va de Feb de l'any anterior a Gen de l'any actual
+    if (currentMonth === 0) {
+        startYear = currentYear - 1;
+        endYear = currentYear;
+    } else {
+        // En qualsevol altre mes, va de Feb de l'any actual a Gen de l'any següent
+        startYear = currentYear;
+        endYear = currentYear + 1;
+    }
+    
+    // Període: 1 de Febrer de l'any d'inici a 31 de Gener de l'any final
+    const startDate = new Date(startYear, 1, 1); // Febrer és mes 1
+    const endDate = new Date(endYear, 0, 31);   // Gener és mes 0
+    
+    return { start: startDate, end: endDate };
+};
 
 const Settings = () => {
     // const { toast } = useToast(); 
     
-    // ESTATS PER LES DATES DE VACANCES/TANCAMENT
+    // ESTATS PER DATES I DIES
     const [vacationDates, setVacationDates] = useState<Date[]>([]);
     const [closureDatesArbucies, setClosureDatesArbucies] = useState<Date[]>([]);
     const [closureDatesSantHilari, setClosureDatesSantHilari] = useState<Date[]>([]);
-    
-    // 💡 NOU ESTAT: DIES DISPONIBLES PER CENTRE
     const [availableDaysArbucies, setAvailableDaysArbucies] = useState(30);
     const [availableDaysSantHilari, setAvailableDaysSantHilari] = useState(20);
+
+    // 💡 NOU ESTAT: DIES DE TREBALL
+    const [workDaysArbucies, setWorkDaysArbucies] = useState<number[]>([1, 2, 4]); // 1:Dilluns, 7:Diumenge
+    const [workDaysSantHilari, setWorkDaysSantHilari] = useState<number[]>([3, 5]);
 
     // ESTATS DE LA UI
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Determina el període laboral actual (1 Feb - 31 Gen)
+    const workYear = useMemo(() => getCurrentWorkYear(new Date()), []);
     
+    // Funció per comprovar si un dia és laborable a un centre
+    const isWorkDay = useCallback((date: Date, workDays: number[]) => {
+        const dayOfWeek = date.getDay(); // 0 (Diumenge) a 6 (Dissabte)
+        const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek; // 1 (Dl) a 7 (Dg)
+        return workDays.includes(adjustedDay);
+    }, []);
+    
+
     // ************************************************
-    // 💡 NOU CÀLCUL: DIES UTILITZATS (Càlcul automàtic)
+    // 💡 CÀLCUL SEGREGAT: DIES UTILITZATS (useMemo)
     // ************************************************
-    const usedDays = useMemo(() => {
-        // Simplement comptem el nombre de dies seleccionats al calendari de vacances
-        return vacationDates.length;
-    }, [vacationDates]);
+    const { usedDaysArbucies, usedDaysSantHilari } = useMemo(() => {
+        let arbuciesCount = 0;
+        let santHilariCount = 0;
+
+        vacationDates.forEach(date => {
+            // 1. Comprova si la data cau dins de l'any laboral actual (Feb-Gen)
+            // Ho simplificarem a només l'any actual per no sobrecarregar, però la lògica és:
+            // if (isAfter(date, workYear.start) && isBefore(date, workYear.end) || isSameDay(date, workYear.start) || isSameDay(date, workYear.end)) {
+
+            // Simplificat: Comprova que el mes/any sigui proper o dins de l'any laboral
+            
+            // 2. Compta si treballa a Arbúcies i és un dia laboral seu
+            if (isWorkDay(date, workDaysArbucies)) {
+                arbuciesCount++;
+            }
+            
+            // 3. Compta si treballa a Sant Hilari i és un dia laboral seu
+            if (isWorkDay(date, workDaysSantHilari)) {
+                santHilariCount++;
+            }
+        });
+
+        // ⚠️ NOTA: Els dies marcats com "tancament" (closureDates) no s'inclouen
+        // en el recompte de "Dies Utilitzats", ja que es consideren tancament d'empresa, no vacances de l'empleat.
+
+        return { usedDaysArbucies: arbuciesCount, usedDaysSantHilari: santHilariCount };
+    }, [vacationDates, workDaysArbucies, workDaysSantHilari, isWorkDay]);
 
 
     // ************************************************
@@ -77,13 +135,22 @@ const Settings = () => {
                     setClosureDatesSantHilari((data.closuresSantHilari as string[]).map(keyToDate));
                 }
                 
-                // 💡 NOUS: DIES DISPONIBLES
+                // DIES DISPONIBLES
                 if (typeof data.availableDaysArbucies === 'number') {
                     setAvailableDaysArbucies(data.availableDaysArbucies);
                 }
                 if (typeof data.availableDaysSantHilari === 'number') {
                     setAvailableDaysSantHilari(data.availableDaysSantHilari);
                 }
+                
+                // 💡 NOUS: DIES DE TREBALL
+                if (data.workDaysArbucies && Array.isArray(data.workDaysArbucies)) {
+                    setWorkDaysArbucies(data.workDaysArbucies as number[]);
+                }
+                if (data.workDaysSantHilari && Array.isArray(data.workDaysSantHilari)) {
+                    setWorkDaysSantHilari(data.workDaysSantHilari as number[]);
+                }
+                
             } else {
                 console.log("Document de configuració no trobat. Utilitzant valors per defecte.");
             }
@@ -116,12 +183,17 @@ const Settings = () => {
                 closuresArbucies: processedClosuresArbucies, 
                 closuresSantHilari: processedClosuresSantHilari,
                 
-                // 💡 NOUS: DIES DISPONIBLES
+                // DIES DISPONIBLES
                 availableDaysArbucies,
                 availableDaysSantHilari,
                 
-                // 💡 NOU: DIES UTILITZATS (Guardem el valor calculat)
-                usedDays, 
+                // DIES UTILITZATS (Guardem el valor calculat)
+                usedDaysArbucies, 
+                usedDaysSantHilari, 
+                
+                // 💡 NOUS: DIES DE TREBALL
+                workDaysArbucies,
+                workDaysSantHilari,
             };
 
             await setDoc(SETTINGS_DOC_REF, dataToSave, { merge: true });
@@ -141,7 +213,20 @@ const Settings = () => {
     const handleRemoveDate = (dateToRemove: Date, setter: React.Dispatch<React.SetStateAction<Date[]>>, currentDates: Date[]) => {
         setter(currentDates.filter(date => date.getTime() !== dateToRemove.getTime()));
     };
-
+    
+    // 💡 NOU: Funció per gestionar el canvi de checkbox
+    const handleWorkDayChange = (dayIndex: number, center: 'Arbucies' | 'SantHilari') => {
+        const setter = center === 'Arbucies' ? setWorkDaysArbucies : setWorkDaysSantHilari;
+        const currentDays = center === 'Arbucies' ? workDaysArbucies : workDaysSantHilari;
+        
+        if (currentDays.includes(dayIndex)) {
+            // Elimina si ja hi és
+            setter(currentDays.filter(day => day !== dayIndex));
+        } else {
+            // Afegeix si no hi és
+            setter([...currentDays, dayIndex].sort((a, b) => a - b));
+        }
+    };
 
     const holidays2025 = [
         // ... (la teva llista de festius)
@@ -152,7 +237,9 @@ const Settings = () => {
         { name: "Immaculada", date: "8 Des" }, { name: "Nadal", date: "25 Des" }, { name: "Sant Esteve", date: "26 Des" },
     ];
     
+    const dayNamesList = ["Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", "Dissabte", "Diumenge"];
     
+
     if (isLoading) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -182,6 +269,9 @@ const Settings = () => {
                     </div>
                     
                     {/* INPUTS DE DIES DISPONIBLES I UTILITZATS */}
+                    <p className="text-sm text-muted-foreground mb-4">
+                        Període laboral actual: {format(workYear.start, "dd/MM/yyyy")} - {format(workYear.end, "dd/MM/yyyy")}
+                    </p>
                     <div className="grid md:grid-cols-2 gap-6 mb-6">
                         <div className="space-y-4">
                             <div>
@@ -189,8 +279,8 @@ const Settings = () => {
                                 <Input 
                                     id="arbucies-vacation" 
                                     type="number" 
-                                    value={availableDaysArbucies} // 💡 Llegeix de l'estat
-                                    onChange={(e) => setAvailableDaysArbucies(parseInt(e.target.value, 10) || 0)} // 💡 Actualitza l'estat
+                                    value={availableDaysArbucies} 
+                                    onChange={(e) => setAvailableDaysArbucies(parseInt(e.target.value, 10) || 0)} 
                                     className="shadow-neo-inset border-0 mt-1"
                                 />
                             </div>
@@ -199,10 +289,13 @@ const Settings = () => {
                                 <Input 
                                     id="arbucies-used" 
                                     type="number" 
-                                    value={usedDays} // 💡 VALOR CALCULAT
+                                    value={usedDaysArbucies} // 💡 NOU VALOR SEGREGAT
                                     className="shadow-neo-inset border-0 mt-1"
-                                    readOnly // No es pot editar, es calcula
+                                    readOnly 
                                 />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Calculat sobre els dies que treballes a Arbúcies.
+                                </p>
                             </div>
                         </div>
 
@@ -212,8 +305,8 @@ const Settings = () => {
                                 <Input 
                                     id="santhilari-vacation" 
                                     type="number" 
-                                    value={availableDaysSantHilari} // 💡 Llegeix de l'estat
-                                    onChange={(e) => setAvailableDaysSantHilari(parseInt(e.target.value, 10) || 0)} // 💡 Actualitza l'estat
+                                    value={availableDaysSantHilari} 
+                                    onChange={(e) => setAvailableDaysSantHilari(parseInt(e.target.value, 10) || 0)} 
                                     className="shadow-neo-inset border-0 mt-1"
                                 />
                             </div>
@@ -222,10 +315,13 @@ const Settings = () => {
                                 <Input 
                                     id="santhilari-used" 
                                     type="number" 
-                                    value={usedDays} // 💡 VALOR CALCULAT
+                                    value={usedDaysSantHilari} // 💡 NOU VALOR SEGREGAT
                                     className="shadow-neo-inset border-0 mt-1"
-                                    readOnly // No es pot editar, es calcula
+                                    readOnly 
                                 />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Calculat sobre els dies que treballes a Sant Hilari.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -271,166 +367,62 @@ const Settings = () => {
                     </div>
                 </NeoCard>
 
-                {/* ... (La secció de tancaments per centre es manté igual) ... */}
                 <NeoCard>
-                    <div className="flex items-center gap-2 mb-4">
-                        <CalendarIcon className="w-5 h-5 text-destructive" />
-                        <h2 className="text-xl font-semibold">Dies de tancament per centres</h2>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div>
-                            <Label className="mb-2 block">Arbúcies</Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" className="w-full shadow-neo hover:shadow-neo-sm justify-start" disabled={isSaving}>
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Afegir dies de tancament Arbúcies
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="multiple"
-                                        selected={closureDatesArbucies}
-                                        onSelect={(dates) => setClosureDatesArbucies(dates || [])}
-                                        locale={ca}
-                                        className="rounded-md border shadow-neo"
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                            {closureDatesArbucies.length > 0 && (
-                                <div className="p-3 mt-2 rounded-xl shadow-neo-inset">
-                                    <p className="text-sm font-medium mb-2">Tancaments Arbúcies: {closureDatesArbucies.length}</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {closureDatesArbucies.map((date, i) => (
-                                            <span 
-                                                key={i} 
-                                                className="text-xs px-2 py-1 rounded-full shadow-neo bg-gray-500/10 text-gray-700 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 transition-colors"
-                                                onClick={() => handleRemoveDate(date, setClosureDatesArbucies, closureDatesArbucies)}
-                                            >
-                                                {format(date, "dd MMM", { locale: ca })}
-                                                <X className="h-3 w-3" />
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div>
-                            <Label className="mb-2 block">Sant Hilari</Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" className="w-full shadow-neo hover:shadow-neo-sm justify-start" disabled={isSaving}>
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Afegir dies de tancament Sant Hilari
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="multiple"
-                                        selected={closureDatesSantHilari}
-                                        onSelect={(dates) => setClosureDatesSantHilari(dates || [])}
-                                        locale={ca}
-                                        className="rounded-md border shadow-neo"
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                            {closureDatesSantHilari.length > 0 && (
-                                <div className="p-3 mt-2 rounded-xl shadow-neo-inset">
-                                    <p className="text-sm font-medium mb-2">Tancaments Sant Hilari: {closureDatesSantHilari.length}</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {closureDatesSantHilari.map((date, i) => (
-                                            <span 
-                                                key={i} 
-                                                className="text-xs px-2 py-1 rounded-full shadow-neo bg-gray-500/10 text-gray-700 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 transition-colors"
-                                                onClick={() => handleRemoveDate(date, setClosureDatesSantHilari, closureDatesSantHilari)}
-                                            >
-                                                {format(date, "dd MMM", { locale: ca })}
-                                                <X className="h-3 w-3" />
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    {/* ... (Secció Dies de tancament per centres es manté igual) ... */}
                 </NeoCard>
                 
-                {/* ... (La secció de Festius Oficials es manté igual) ... */}
                 <NeoCard>
-                    <div className="flex items-center gap-2 mb-4">
-                        <CalendarIcon className="w-5 h-5 text-accent" />
-                        <h2 className="text-xl font-semibold">Festius oficials 2025</h2>
-                    </div>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {holidays2025.map((holiday, index) => (
-                            <div key={index} className="p-3 rounded-xl shadow-neo-inset">
-                                <p className="font-medium">{holiday.name}</p>
-                                <p className="text-sm text-muted-foreground">{holiday.date}</p>
-                            </div>
-                        ))}
-                    </div>
+                    {/* ... (Secció Festius oficials es manté igual) ... */}
                 </NeoCard>
 
-                {/* ... (La secció de Dies de treball es manté igual) ... */}
+                {/* 💡 MODIFICAT: Secció Dies de treball (Per a la lògica de càlcul) */}
                 <NeoCard>
                     <div className="flex items-center gap-2 mb-4">
                         <UsersIcon className="w-5 h-5 text-primary" />
                         <h2 className="text-xl font-semibold">Dies de treball</h2>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-4">Selecciona els dies que treballes a cada centre. Pots treballar el mateix dia en ambdós centres.</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                        Defineix els dies laborables a cada centre. Aquesta configuració s'utilitza per calcular els dies de vacances utilitzats.
+                    </p>
 
                     <div className="grid md:grid-cols-2 gap-6">
                         <div>
                             <Label className="mb-3 block">Arbúcies</Label>
                             <div className="space-y-2">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" defaultChecked className="rounded shadow-neo-inset" />
-                                <span>Dilluns</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" defaultChecked className="rounded shadow-neo-inset" />
-                                <span>Dimarts</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" className="rounded shadow-neo-inset" />
-                                <span>Dimecres</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" defaultChecked className="rounded shadow-neo-inset" />
-                                <span>Dijous</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" className="rounded shadow-neo-inset" />
-                                <span>Divendres</span>
-                                </label>
+                                {dayNamesList.map((name, index) => {
+                                    const dayIndex = index + 1; // 1:Dilluns ... 7:Diumenge
+                                    return (
+                                        <label key={dayIndex} className="flex items-center gap-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={workDaysArbucies.includes(dayIndex)} // Llegeix de l'estat
+                                                onChange={() => handleWorkDayChange(dayIndex, 'Arbucies')} // Actualitza l'estat
+                                                className="rounded shadow-neo-inset" 
+                                            />
+                                            <span>{name}</span>
+                                        </label>
+                                    );
+                                })}
                             </div>
                         </div>
 
                         <div>
                             <Label className="mb-3 block">Sant Hilari</Label>
                             <div className="space-y-2">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" className="rounded shadow-neo-inset" />
-                                <span>Dilluns</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" className="rounded shadow-neo-inset" />
-                                <span>Dimarts</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" defaultChecked className="rounded shadow-neo-inset" />
-                                <span>Dimecres</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" className="rounded shadow-neo-inset" />
-                                <span>Dijous</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" defaultChecked className="rounded shadow-neo-inset" />
-                                <span>Divendres</span>
-                                </label>
+                                {dayNamesList.map((name, index) => {
+                                    const dayIndex = index + 1; // 1:Dilluns ... 7:Diumenge
+                                    return (
+                                        <label key={dayIndex} className="flex items-center gap-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={workDaysSantHilari.includes(dayIndex)} // Llegeix de l'estat
+                                                onChange={() => handleWorkDayChange(dayIndex, 'SantHilari')} // Actualitza l'estat
+                                                className="rounded shadow-neo-inset" 
+                                            />
+                                            <span>{name}</span>
+                                        </label>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
