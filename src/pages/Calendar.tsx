@@ -1,18 +1,17 @@
 import { useState, useMemo, useCallback } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { DaySessionsModal } from "@/components/DaySessionsModal";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
-// S'assumeix que programColors, weekSchedule, holidays2025 i Session són tipus i dades vàlides
-import { programColors, weekSchedule, holidays2025, Session } from "@/lib/programColors"; 
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { programColors, weekSchedule, holidays2025, Session } from "@/lib/programColors";
+// 💡 NOU: Importem el hook de configuració
+import { useSettings } from "@/hooks/useSettings"; 
 
 // ******************************************************************************
-// NOU: FUNCIÓ PER GENERAR LA CLAU DE DATA EN FORMAT LOCAL (YYYY-MM-DD)
-// Sense aquesta funció, la conversió a ISOString pot canviar el dia 
-// a causa de l'ajust del fus horari a UTC.
+// CORRECCIÓ DE FUS HORARI: FUNCIÓ PER GENERAR LA CLAU DE DATA EN FORMAT LOCAL
+// (Aquesta és la correcció per evitar que els dies surtin desplaçats)
 // ******************************************************************************
 const dateToKey = (date: Date): string => {
   const year = date.getFullYear();
-  // El mes és base 0, per això afegim 1
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const day = date.getDate().toString().padStart(2, '0');
   return `${year}-${month}-${day}`;
@@ -21,10 +20,12 @@ const dateToKey = (date: Date): string => {
 
 
 const Calendar = () => {
+  // 💡 NOU: Obtenim les dades de configuració (vacances i tancaments)
+  const { vacations, closuresArbucies, closuresSantHilari, loading } = useSettings(); 
+
   // ESTAT PER GESTIONAR EL MES QUE ES VEU
   const [currentViewDate, setCurrentViewDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   
-  // Els teus estats existents
   const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
   const [deletedSessions, setDeletedSessions] = useState<Record<string, Array<{sessionIndex: number, reason: string}>>>({});
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -33,14 +34,12 @@ const Calendar = () => {
   // FUNCIONS PER CANVIAR DE MES
   const goToPreviousMonth = useCallback(() => {
     setCurrentViewDate(prevDate => {
-      // Restem un mes
       return new Date(prevDate.getFullYear(), prevDate.getMonth() - 1, 1);
     });
   }, []);
 
   const goToNextMonth = useCallback(() => {
     setCurrentViewDate(prevDate => {
-      // Sumem un mes
       return new Date(prevDate.getFullYear(), prevDate.getMonth() + 1, 1);
     });
   }, []);
@@ -53,16 +52,13 @@ const Calendar = () => {
     });
   }, [currentViewDate]);
 
-  // Mock vacances i tancaments
-  const vacations = ["2025-03-24", "2025-03-25", "2025-03-26", "2025-03-27", "2025-03-28"];
-  const closures = ["2025-03-15"];
-
+  
   const getSessionsForDate = (date: Date): Session[] => {
-    // CLAU DE DATA CORREGIDA
+    // 💡 CLAU DE DATA CORREGIDA
     const dateKey = dateToKey(date);
     
-    // Check if it's a holiday or vacation - no sessions
-    if (isHoliday(date) || isVacation(date) || isClosure(date)) { // Afegim isClosure aquí per si de cas
+    // Check if it's a holiday, general vacation, or closure at either center - no sessions
+    if (isHoliday(date) || isVacation(date) || isClosure(date)) {
       return [];
     }
     
@@ -71,12 +67,12 @@ const Calendar = () => {
     }
     
     const dayOfWeek = date.getDay();
-    const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek; // Diumenge (0) -> 7
+    const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
     return weekSchedule[adjustedDay] || [];
   };
 
   const handleUpdateSessions = (date: Date, sessions: Session[]) => {
-    // CLAU DE DATA CORREGIDA
+    // 💡 CLAU DE DATA CORREGIDA
     const dateKey = dateToKey(date);
     setCustomSessions((prev) => ({
       ...prev,
@@ -85,7 +81,7 @@ const Calendar = () => {
   };
 
   const handleDeleteSession = (date: Date, sessionIndex: number, reason: string) => {
-    // CLAU DE DATA CORREGIDA
+    // 💡 CLAU DE DATA CORREGIDA
     const dateKey = dateToKey(date);
     setDeletedSessions((prev) => ({
       ...prev,
@@ -99,32 +95,32 @@ const Calendar = () => {
   };
 
   const isHoliday = (date: Date) => {
-    // CLAU DE DATA CORREGIDA
+    // 💡 CLAU DE DATA CORREGIDA
     const dateKey = dateToKey(date);
-    // Assegurem que l'estructura de holidays2025 és d'objectes amb propietat 'date' (string YYYY-MM-DD)
     return holidays2025.some((h: { date: string, name: string }) => h.date === dateKey);
   };
 
   const isVacation = (date: Date) => {
-    // CLAU DE DATA CORREGIDA
+    // 💡 CLAU DE DATA CORREGIDA i ÚS DE DADES DE FIREBASE
     const dateKey = dateToKey(date);
-    return vacations.includes(dateKey);
+    return vacations.includes(dateKey); // Vacances Generals
   };
-
+  
   const isClosure = (date: Date) => {
-    // CLAU DE DATA CORREGIDA
+    // 💡 CLAU DE DATA CORREGIDA i ÚS DE DADES DE FIREBASE
     const dateKey = dateToKey(date);
-    return closures.includes(dateKey);
+    // És tancament si està tancat Arbúcies O Sant Hilari
+    return closuresArbucies.includes(dateKey) || closuresSantHilari.includes(dateKey); 
   };
 
   const getHolidayName = (date: Date) => {
-    // CLAU DE DATA CORREGIDA
+    // 💡 CLAU DE DATA CORREGIDA
     const dateKey = dateToKey(date);
     const holiday = holidays2025.find((h: { date: string, name: string }) => h.date === dateKey);
     return holiday?.name || "";
   };
 
-  // GENERACIÓ DEL CALENDARI: UTILITZANT currentViewDate (això ja estava bé)
+  // GENERACIÓ DEL CALENDARI:
   const year = currentViewDate.getFullYear();
   const month = currentViewDate.getMonth();
   
@@ -152,10 +148,19 @@ const Calendar = () => {
   }
 
   const dayNames = ["Dl", "Dt", "Dc", "Dj", "Dv", "Ds", "Dg"];
+  
+  // 💡 NOU: Mostra estat de càrrega
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          Carregant dades de configuració...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* TÍTOL I BOTONS DE NAVEGACIÓ */}
       <div className="flex items-center gap-3">
         <CalendarIcon className="w-8 h-8 text-primary" />
         <div>
@@ -272,7 +277,6 @@ const Calendar = () => {
           </div>
         </NeoCard>
 
-        {/* Informació d'Arbúcies i Sant Hilari (Es manté el codi) */}
         <div className="grid md:grid-cols-2 gap-6">
           <NeoCard>
             <h3 className="font-semibold mb-3">Arbúcies</h3>
@@ -303,7 +307,6 @@ const Calendar = () => {
           </NeoCard>
         </div>
 
-        {/* Properes festes i tancaments (Es manté el codi) */}
         <NeoCard>
           <h3 className="font-semibold mb-4">Properes festes i tancaments</h3>
           <div className="space-y-3">
