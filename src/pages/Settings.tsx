@@ -11,8 +11,8 @@ import { ca } from "date-fns/locale";
 
 // Importacions de Firebase (ja comprovades)
 import { db } from "@/lib/firebase";
-import { doc, setDoc, onSnapshot } from "firebase/firestore";
-// import { useToast } from "@/hooks/use-toast";
+// Utilitzem arrayRemove per garantir l'eliminació (Tot i que estem amb Maps, ajudem a la sincronització)
+import { doc, setDoc, onSnapshot } from "firebase/firestore"; 
 
 // Referència al document de configuració global
 const SETTINGS_DOC_REF = doc(db, 'settings', 'global');
@@ -41,7 +41,6 @@ const keyToDate = (key: string): Date | null => {
       return null;
   }
   
-  // Utilitzem UTC o ajust de zona horària per evitar problemes amb dates
   const date = new Date(parts[0], parts[1] - 1, parts[2]); 
 
   // Ajust de l'hora per assegurar que es manté com a dia complet (ajusta a les 00:00:00)
@@ -92,9 +91,7 @@ const Settings = () => {
         return workDays.includes(adjustedDay);
     }, []);
     
-    // ************************************************
-    // Càlcul de Dies Utilitzats (CORRECCIÓ: es recalculen al canviar workDays)
-    // ************************************************
+    // Càlcul de Dies Utilitzats
     const { usedDaysArbucies, usedDaysSantHilari } = useMemo(() => {
         let arbuciesCount = 0;
         let santHilariCount = 0;
@@ -117,7 +114,6 @@ const Settings = () => {
             }
         });
 
-        // Les dependències asseguren que el càlcul es faci només quan canvien les dates o els dies laborables
         return { usedDaysArbucies: arbuciesCount, usedDaysSantHilari: santHilariCount };
     }, [vacationDates, workDaysArbucies, workDaysSantHilari, isWorkDay, workYear]); 
 
@@ -179,6 +175,7 @@ const Settings = () => {
                 workDaysSantHilari,
             };
 
+            // Utilitzem setDoc amb merge: true per garantir que només s'actualitzen els camps.
             await setDoc(SETTINGS_DOC_REF, dataToSave, { merge: true });
 
             console.log("Configuració guardada correctament!");
@@ -199,7 +196,7 @@ const Settings = () => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 
-                // DATES DE TANCAMENT (Utilitza la funció corregida)
+                // DATES DE TANCAMENT
                 setVacationDates(convertToDateWithReason(data.vacations));
                 setClosureDatesArbucies(convertToDateWithReason(data.closuresArbucies));
                 setClosureDatesSantHilari(convertToDateWithReason(data.closuresSantHilari));
@@ -232,8 +229,7 @@ const Settings = () => {
 
     
     // Funció per gestionar la selecció al calendari (mode multiple)
-    // CORRECCIÓ: Aquesta funció ha estat reescrita per gestionar correctament
-    // l'eliminació (des-selecció) i la conservació del motiu.
+    // CORRECCIÓ FINAL: Assegurem que l'estat es guarda immediatament amb el nou array.
     const handleDateSelect = async (selectedDates: Date[] | undefined) => {
         if (!selectedDates) return;
         
@@ -247,22 +243,20 @@ const Settings = () => {
             : vacationDates;
             
         // 1. Mapeja les dates seleccionades a l'estructura DateWithReason
-        // Només inclou les dates que s'han mantingut o afegit
+        // Si la data ja existia, conserva el motiu. Si no, l'afegeix sense motiu.
         const finalDates: DateWithReason[] = selectedDates.map(newDate => {
-            // Busca si la data ja existia per mantenir el motiu
             const existing = currentDates.find(d => isSameDay(d.date, newDate));
             if (existing) {
-                // Data existent: la retorna amb el seu motiu
                 return existing; 
             }
-            // Data nova: l'afegeix amb el motiu buit
             return { date: newDate, reason: '' }; 
         });
 
-        // 2. Actualitza l'estat local amb les noves dates (ara inclou les eliminacions)
+        // 2. Actualitza l'estat local.
         setter(finalDates);
 
-        // 3. GUARDA AUTOMÀTICAMENT ELS CANVIS A FIREBASE
+        // 3. GUARDA AUTOMÀTICAMENT ELS CANVIS A FIREBASE AMB LA LLISTA ACTUALITZADA
+        // Això garanteix que la lectura posterior (onSnapshot) rebi el nou estat de l'eliminació.
         if (center === 'Vacation') {
             await handleSave(finalDates, closureDatesArbucies, closureDatesSantHilari);
         } else if (center === 'Arbucies') {
@@ -271,15 +265,14 @@ const Settings = () => {
             await handleSave(vacationDates, closureDatesArbucies, finalDates);
         }
 
-        // Tanca el popover per netejar la vista (opcional)
+        // Tanca el popover
         if (selectedDates.length !== currentDates.length) {
              setCurrentReason('');
              setIsPopoverOpen(false);
         }
     };
     
-    // Funció per eliminar una data de la llista (ara amb DateWithReason)
-    // CORRECCIÓ: S'afegeix el guardat automàtic
+    // Funció per eliminar una data de la llista (per si es fa clic a la X)
     const handleRemoveDate = useCallback(async (dateToRemove: Date, setter: React.Dispatch<React.SetStateAction<DateWithReason[]>>, currentDates: DateWithReason[], center: 'Vacation' | 'Arbucies' | 'SantHilari') => {
         
         const newDates = currentDates.filter(d => !isSameDay(d.date, dateToRemove));
@@ -297,7 +290,6 @@ const Settings = () => {
     }, [handleSave, vacationDates, closureDatesArbucies, closureDatesSantHilari]);
 
     // FUNCIÓ PER ACTUALITZAR EL MOTIU
-    // CORRECCIÓ: S'ha de cridar aquesta funció directament des de l'Input i amb el guardat automàtic
     const handleReasonChange = useCallback(async (dateToUpdate: Date, newReason: string, currentDates: DateWithReason[], center: 'Vacation' | 'Arbucies' | 'SantHilari') => {
         
         // 1. Crea el nou array de dates amb el motiu actualitzat
@@ -308,10 +300,9 @@ const Settings = () => {
             return d;
         });
 
-        // 2. Actualitza l'estat de React amb el nou array
+        // 2. Actualitza l'estat de React amb el nou array i guarda
         if (center === 'Vacation') {
              setVacationDates(updatedDates);
-             // 3. Guarda a Firebase
              await handleSave(updatedDates, closureDatesArbucies, closureDatesSantHilari);
         } else if (center === 'Arbucies') {
              setClosureDatesArbucies(updatedDates);
@@ -324,7 +315,6 @@ const Settings = () => {
     }, [handleSave, vacationDates, closureDatesArbucies, closureDatesSantHilari]);
     
     // Funció per gestionar el canvi de checkbox (Dies de treball)
-    // S'ha afegit una crida a handleSave al final per guardar workDays immediatament
     const handleWorkDayChange = async (dayIndex: number, center: 'Arbucies' | 'SantHilari') => {
         
         const currentDays = center === 'Arbucies' ? workDaysArbucies : workDaysSantHilari;
@@ -336,13 +326,12 @@ const Settings = () => {
         // Actualitza l'estat local
         if (center === 'Arbucies') {
             setWorkDaysArbucies(newDays);
-            // Guarda per actualitzar la configuració i forçar el recalcul de dies utilitzats
-            await handleSave(vacationDates, closureDatesArbucies, closureDatesSantHilari); 
         } else {
             setWorkDaysSantHilari(newDays);
-            // Guarda per actualitzar la configuració i forçar el recalcul de dies utilitzats
-            await handleSave(vacationDates, closureDatesArbucies, closureDatesSantHilari);
         }
+
+        // Guarda els workDays (handleSave ja agafarà els workDays actualitzats des de l'estat)
+        await handleSave(); 
     };
 
     const holidays2025 = [
@@ -405,7 +394,6 @@ const Settings = () => {
                             <Input
                                 type="text"
                                 value={d.reason}
-                                // Aquí s'utilitza directament handleReasonChange per actualitzar el motiu i guardar-lo
                                 onChange={(e) => handleReasonChange(d.date, e.target.value, dates, centerType)}
                                 placeholder="Afegir motiu (opcional)"
                                 className={`h-6 text-xs p-1 mt-1 shadow-neo-inset border-0 bg-transparent placeholder:text-${baseColor}-600/70`}
