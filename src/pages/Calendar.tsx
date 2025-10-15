@@ -2,13 +2,14 @@ import { useState, useMemo, useCallback } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { DaySessionsModal } from "@/components/DaySessionsModal";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { programColors, weekSchedule, holidays2025, Session } from "@/lib/programColors";
-// 💡 NOU: Importem el hook de configuració
+import { programColors, weekSchedule, Session } from "@/lib/programColors";
+// 💡 IMPORTANT: El hook ja no necessita 'keyToDate' si no la fas servir directament aquí,
+// però assegura't que useSettings.ts té la nova estructura (Pas 1)
 import { useSettings } from "@/hooks/useSettings"; 
 
 // ******************************************************************************
-// CORRECCIÓ DE FUS HORARI: FUNCIÓ PER GENERAR LA CLAU DE DATA EN FORMAT LOCAL
-// (Aquesta és la correcció per evitar que els dies surtin desplaçats)
+// FUNCIÓ PER GENERAR LA CLAU DE DATA EN FORMAT LOCAL 'YYYY-MM-DD'
+// (Aquesta és essencial i ja era correcta aquí)
 // ******************************************************************************
 const dateToKey = (date: Date): string => {
   const year = date.getFullYear();
@@ -18,9 +19,29 @@ const dateToKey = (date: Date): string => {
 };
 // ******************************************************************************
 
+// Llista de festius de prova (extreta del teu Settings.tsx, només per a la simulació de festius)
+// NOTA: Això s'hauria de carregar de Firebase si fos dinàmic, però ho deixem local com al teu codi original.
+const holidays2025 = [
+    { name: "Any Nou", date: "2025-01-01" }, // Hem de passar-ho a YYYY-MM-DD
+    { name: "Reis", date: "2025-01-06" }, 
+    { name: "Divendres Sant", date: "2025-04-18" },
+    { name: "Dilluns de Pasqua", date: "2025-04-21" }, 
+    { name: "Festa del Treball", date: "2025-05-01" }, 
+    { name: "Sant Joan", date: "2025-06-24" },
+    { name: "Assumpció", date: "2025-08-15" }, 
+    { name: "Diada", date: "2025-09-11" }, 
+    { name: "Mercè", date: "2025-09-24" },
+    { name: "Hispanitat", date: "2025-10-12" }, 
+    { name: "Tots Sants", date: "2025-11-01" }, 
+    { name: "Constitució", date: "2025-12-06" },
+    { name: "Immaculada", date: "2025-12-08" }, 
+    { name: "Nadal", date: "2025-12-25" }, 
+    { name: "Sant Esteve", date: "2025-12-26" },
+];
+
 
 const Calendar = () => {
-  // 💡 NOU: Obtenim les dades de configuració (vacances i tancaments)
+  // 💡 NOU: Obtenim les dades de configuració. Ara són Objectes/Maps!
   const { vacations, closuresArbucies, closuresSantHilari, loading } = useSettings(); 
 
   // ESTAT PER GESTIONAR EL MES QUE ES VEU
@@ -31,7 +52,7 @@ const Calendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // FUNCIONS PER CANVIAR DE MES
+  // FUNCIONS PER CANVIAR DE MES (Sense canvis)
   const goToPreviousMonth = useCallback(() => {
     setCurrentViewDate(prevDate => {
       return new Date(prevDate.getFullYear(), prevDate.getMonth() - 1, 1);
@@ -44,7 +65,7 @@ const Calendar = () => {
     });
   }, []);
 
-  // Càlcul del mes i any per al títol
+  // Càlcul del mes i any per al títol (Sense canvis)
   const currentMonthText = useMemo(() => {
     return currentViewDate.toLocaleDateString("ca-ES", { 
       month: "long", 
@@ -54,7 +75,6 @@ const Calendar = () => {
 
   
   const getSessionsForDate = (date: Date): Session[] => {
-    // 💡 CLAU DE DATA CORREGIDA
     const dateKey = dateToKey(date);
     
     // Check if it's a holiday, general vacation, or closure at either center - no sessions
@@ -72,7 +92,6 @@ const Calendar = () => {
   };
 
   const handleUpdateSessions = (date: Date, sessions: Session[]) => {
-    // 💡 CLAU DE DATA CORREGIDA
     const dateKey = dateToKey(date);
     setCustomSessions((prev) => ({
       ...prev,
@@ -81,7 +100,6 @@ const Calendar = () => {
   };
 
   const handleDeleteSession = (date: Date, sessionIndex: number, reason: string) => {
-    // 💡 CLAU DE DATA CORREGIDA
     const dateKey = dateToKey(date);
     setDeletedSessions((prev) => ({
       ...prev,
@@ -95,32 +113,37 @@ const Calendar = () => {
   };
 
   const isHoliday = (date: Date) => {
-    // 💡 CLAU DE DATA CORREGIDA
     const dateKey = dateToKey(date);
+    // Compte: al teu fitxer Settings.tsx tenies els mesos abreujats (1 Gen),
+    // però aquí comprovem el format YYYY-MM-DD. Assumim que holidays2025 té el format YYYY-MM-DD.
     return holidays2025.some((h: { date: string, name: string }) => h.date === dateKey);
   };
 
+  // ******************************************************************************
+  // 💡 CORRECCIÓ CLAU 💡: Utilitzem hasOwnProperty()
+  // ******************************************************************************
   const isVacation = (date: Date) => {
-    // 💡 CLAU DE DATA CORREGIDA i ÚS DE DADES DE FIREBASE
     const dateKey = dateToKey(date);
-    return vacations.includes(dateKey); // Vacances Generals
+    // Ara 'vacations' és un objecte Map, comprovem si la clau (dateKey) existeix.
+    return vacations && vacations.hasOwnProperty(dateKey); 
   };
   
   const isClosure = (date: Date) => {
-    // 💡 CLAU DE DATA CORREGIDA i ÚS DE DADES DE FIREBASE
     const dateKey = dateToKey(date);
-    // És tancament si està tancat Arbúcies O Sant Hilari
-    return closuresArbucies.includes(dateKey) || closuresSantHilari.includes(dateKey); 
+    // Comprovem si la clau existeix a l'Objecte Arbúcies O a l'Objecte Sant Hilari
+    return (closuresArbucies && closuresArbucies.hasOwnProperty(dateKey)) || 
+           (closuresSantHilari && closuresSantHilari.hasOwnProperty(dateKey)); 
   };
+  // ******************************************************************************
+
 
   const getHolidayName = (date: Date) => {
-    // 💡 CLAU DE DATA CORREGIDA
     const dateKey = dateToKey(date);
     const holiday = holidays2025.find((h: { date: string, name: string }) => h.date === dateKey);
     return holiday?.name || "";
   };
 
-  // GENERACIÓ DEL CALENDARI:
+  // GENERACIÓ DEL CALENDARI (Sense canvis importants, ja que utilitza les funcions corregides)
   const year = currentViewDate.getFullYear();
   const month = currentViewDate.getMonth();
   
@@ -309,6 +332,8 @@ const Calendar = () => {
 
         <NeoCard>
           <h3 className="font-semibold mb-4">Properes festes i tancaments</h3>
+          {/* NOTA: Aquesta llista de futures festes és estàtica al teu codi original,
+             si volguessis carregar-les de forma dinàmica des de Firebase, hauries d'adaptar-la. */}
           <div className="space-y-3">
             <div className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset">
               <div>
