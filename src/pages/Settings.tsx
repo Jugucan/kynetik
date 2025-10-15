@@ -234,8 +234,9 @@ const Settings = () => {
             setIsLoading(false);
         });
 
+        // 💡 CORRECCIÓ CLAU: Eliminem [saveToFirebase] per trencar el bucle.
         return () => unsubscribe();
-    }, [saveToFirebase]); // Es pot ometre 'saveToFirebase' si no causes loop. Deixem-ho fora per seguretat.
+    }, []); 
 
 
     
@@ -264,7 +265,7 @@ const Settings = () => {
         // 2. Actualitza l'estat local
         setter(finalDates);
 
-        // 3. GUARDA IMMMEDIATAMENT A FIREBASE (CORRECCIÓ CLAU)
+        // 3. GUARDA IMMMEDIATAMENT A FIREBASE
         if (currentCenterClosure === 'Vacation') {
             await saveToFirebase(finalDates, closureDatesArbucies, closureDatesSantHilari);
         } else if (currentCenterClosure === 'Arbucies') {
@@ -286,7 +287,7 @@ const Settings = () => {
         // 1. Actualitza l'estat
         setter(newDates); 
 
-        // 2. GUARDA IMMMEDIATAMENT A FIREBASE (CORRECCIÓ CLAU)
+        // 2. GUARDA IMMMEDIATAMENT A FIREBASE
         if (center === 'Vacation') {
             await saveToFirebase(newDates, closureDatesArbucies, closureDatesSantHilari);
         } else if (center === 'Arbucies') {
