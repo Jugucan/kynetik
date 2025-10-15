@@ -17,7 +17,7 @@ import { doc, setDoc, onSnapshot } from "firebase/firestore";
 // Referència al document de configuració global
 const SETTINGS_DOC_REF = doc(db, 'settings', 'global');
 
-// NOU TIPUS: Estructura per a guardar dates amb el motiu
+// Estructura per a guardar dates amb el motiu
 interface DateWithReason {
     date: Date;
     reason: string;
@@ -31,14 +31,15 @@ const dateToKey = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-// 💡 CORRECCIÓ DEL RANGEERROR: Aquesta funció ara valida la data i retorna null si és invàlida.
 // Funció auxiliar per convertir string YYYY-MM-DD a objecte Date
+// 💡 IMPORTANT: Hem eliminat el 'console.warn' per netejar la consola.
 const keyToDate = (key: string): Date | null => {
+  if (typeof key !== 'string') return null;
+    
   const parts = key.split('-').map(p => parseInt(p, 10));
   
   // 1. Validació bàsica de format
   if (parts.length < 3 || parts.some(isNaN)) {
-      console.warn(`KeyToDate: Skipping malformed key: ${key}`);
       return null;
   }
   
@@ -47,7 +48,6 @@ const keyToDate = (key: string): Date | null => {
 
   // 2. Validació si la Date és vàlida (getTime() retorna NaN si és Invalid Date)
   if (isNaN(date.getTime())) {
-    console.warn(`KeyToDate: Skipping invalid date from key: ${key}`);
     return null;
   }
   return date;
@@ -60,18 +60,16 @@ const getCurrentWorkYear = (today: Date): { start: Date, end: Date } => {
     
     let startYear, endYear;
     
-    // Si estem en gener (mes 0), l'any laboral va de Feb de l'any anterior a Gen de l'any actual
     if (currentMonth === 0) {
         startYear = currentYear - 1;
         endYear = currentYear;
     } else {
-        // En qualsevol altre mes, va de Feb de l'any actual a Gen de l'any següent
         startYear = currentYear;
         endYear = currentYear + 1;
     }
     
     const startDate = new Date(startYear, 1, 1); // Febrer és mes 1
-    const endDate = new Date(endYear, 1, 0);   // 0 dia del mes 1 (Febrer) és l'últim dia de Gener.
+    const endDate = new Date(endYear, 1, 0);   // Últim dia de Gener.
     
     return { start: startDate, end: endDate };
 };
@@ -127,22 +125,34 @@ const Settings = () => {
     }, [vacationDates, workDaysArbucies, workDaysSantHilari, isWorkDay, workYear]);
 
 
-    // 💡 CORRECCIÓ DEL RANGEERROR: Utilitza keyToDate amb validació i flatMap per filtrar nulls.
-    const convertToDateWithReason = (dataField: Record<string, string> | undefined): DateWithReason[] => {
+    // 💡 CORRECCIÓ FINAL PER RETROCOMPATIBILITAT
+    const convertToDateWithReason = (dataField: Record<string, string> | Record<string, any> | undefined): DateWithReason[] => {
         if (!dataField || typeof dataField !== 'object') return [];
         
-        // Use flatMap per eliminar els resultats `null` de keyToDate de forma elegant.
-        return Object.entries(dataField).flatMap(([key, reason]) => {
-            const date = keyToDate(key);
+        return Object.entries(dataField).flatMap(([key, value]) => {
             
-            // Si keyToDate retorna null (data invàlida), retornem un array buit
-            // i flatMap l'ignora.
-            if (!date) return []; 
+            let date: Date | null = null;
+            let reason: string = '';
+
+            // TENTATIVA 1: Format Nou (Key és Data 'YYYY-MM-DD', Value és Motiu 'string')
+            date = keyToDate(key); 
+            if (date) {
+                // Si la clau és una data vàlida, usem el valor com a motiu.
+                reason = String(value) || ''; 
+            } else if (/^\d+$/.test(key) && typeof value === 'string') {
+                // TENTATIVA 2: Format Antic (Key és Índex '0', '1', '2', Value és Data 'YYYY-MM-DD')
+                // Si la clau és un índex numèric i el valor és string, el valor conté la data.
+                date = keyToDate(value); 
+                reason = ''; // El motiu és buit per les dades antigues
+            }
             
-            return [{ // Retornem l'objecte vàlid
-                date: date,
-                reason: reason || '',
-            }];
+            // Si cap de les temptatives ha trobat una data vàlida, saltem l'element.
+            if (!date) {
+                // Si troba dades que no són ni data ni índex, les ignora (ex: metadata)
+                return []; 
+            }
+            
+            return [{ date, reason }];
         });
     };
 
@@ -195,6 +205,7 @@ const Settings = () => {
         setIsSaving(true);
 
         try {
+            // Totes les dades es guarden en el format NOU (Data com a clau, Motiu com a valor)
             const convertToFirebaseFormat = (datesWithReason: DateWithReason[]): Record<string, string> => {
                 return datesWithReason.reduce((acc, { date, reason }) => {
                     acc[dateToKey(date)] = reason;
@@ -378,11 +389,11 @@ const Settings = () => {
                     </div>
 
                     <div className="space-y-3">
-                        <Label>Seleccionar període de vacances (amb motiu)</Label>
+                        <Label>Seleccionar període de vacances generals (amb motiu)</Label>
                         <Popover open={isPopoverOpen && currentCenterClosure === 'Vacation'} onOpenChange={(open) => {
                             setIsPopoverOpen(open);
                             if (open) setCurrentCenterClosure('Vacation');
-                            else setCurrentReason(''); // Reseteja el motiu en tancar
+                            else setCurrentReason(''); 
                         }}>
                             <PopoverTrigger asChild>
                                 <Button variant="outline" className="w-full shadow-neo hover:shadow-neo-sm justify-start" disabled={isSaving}>
@@ -403,7 +414,7 @@ const Settings = () => {
                                 </div>
                                 <Calendar
                                 mode="multiple"
-                                selected={getDatesOnly(vacationDates)} // Només dates
+                                selected={getDatesOnly(vacationDates)} 
                                 onSelect={handleDateSelect}
                                 locale={ca}
                                 className="rounded-md border shadow-neo"
