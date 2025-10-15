@@ -41,7 +41,12 @@ const keyToDate = (key: string): Date | null => {
       return null;
   }
   
+  // NOTE: En JS, Date(Y, M, D) M va de 0 a 11. Però si passem un string 'YYYY-MM-DD' el parsing és més robust
+  // Utilitzarem el mètode d'assignació manual per evitar problemes de TimeZone, però ajustant el mes
   const date = new Date(parts[0], parts[1] - 1, parts[2]); 
+
+  // Ajust de l'hora per assegurar que es manté com a dia complet (ajusta a les 00:00:00)
+  date.setHours(0, 0, 0, 0);
 
   if (isNaN(date.getTime())) {
     return null;
@@ -49,25 +54,13 @@ const keyToDate = (key: string): Date | null => {
   return date;
 };
 
-// Funció per calcular l'any laboral (1 Feb - 31 Gen)
+// Funció per calcular l'any laboral (1 Gen - 31 Des de l'any actual)
 const getCurrentWorkYear = (today: Date): { start: Date, end: Date } => {
     const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth(); // 0 (Jan) a 11 (Dec)
-    
-    let startYear, endYear;
-    
-    if (currentMonth < 1) { // Si és Gener
-        startYear = currentYear - 1;
-        endYear = currentYear;
-    } else {
-        startYear = currentYear;
-        endYear = currentYear + 1;
-    }
-    
-    // Per a l'exercici actual, usem anys naturals per simplificar la interfície
     const startDate = new Date(currentYear, 0, 1);
     const endDate = new Date(currentYear, 11, 31);
-    
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
     return { start: startDate, end: endDate };
 };
 
@@ -93,23 +86,27 @@ const Settings = () => {
 
     const workYear = useMemo(() => getCurrentWorkYear(new Date()), []);
     
+    // Funció per verificar si un dia és laborable
     const isWorkDay = useCallback((date: Date, workDays: number[]) => {
         const dayOfWeek = date.getDay(); 
-        const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek; // Diumenge és 0, el convertim a 7
+        const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek; // Diumenge (0) a 7
         return workDays.includes(adjustedDay);
     }, []);
     
+    // 💡 CORRECCIÓ: Recàlcul de Dies Utilitzats amb useMemo
     const { usedDaysArbucies, usedDaysSantHilari } = useMemo(() => {
         let arbuciesCount = 0;
         let santHilariCount = 0;
 
         vacationDates.forEach(({ date }) => {
+            // Comprovem si la data cau dins de l'any laboral definit (actualment any natural)
             const isWithinWorkYear = (
                 (isAfter(date, workYear.start) || isSameDay(date, workYear.start)) && 
                 (isBefore(date, workYear.end) || isSameDay(date, workYear.end))
             );
 
             if (isWithinWorkYear) {
+                // Suma només si és un dia laborable del centre
                 if (isWorkDay(date, workDaysArbucies)) {
                     arbuciesCount++;
                 }
@@ -119,8 +116,9 @@ const Settings = () => {
             }
         });
 
+        // Les dependències asseguren que el càlcul es faci només quan canvien les dates o els dies laborables
         return { usedDaysArbucies: arbuciesCount, usedDaysSantHilari: santHilariCount };
-    }, [vacationDates, workDaysArbucies, workDaysSantHilari, isWorkDay, workYear]);
+    }, [vacationDates, workDaysArbucies, workDaysSantHilari, isWorkDay, workYear]); 
 
 
     // 💡 FUNCIÓ PER GARANTIR LA RETROCOMPATIBILITAT DURANT LA CÀRREGA
@@ -215,8 +213,7 @@ const Settings = () => {
                 
                 availableDaysArbucies,
                 availableDaysSantHilari,
-                usedDaysArbucies, 
-                usedDaysSantHilari, 
+                // No guardem usedDays a Firebase, es calcula en el client o en el Calendar
                 workDaysArbucies,
                 workDaysSantHilari,
             };
@@ -268,10 +265,10 @@ const Settings = () => {
     
     // Funció per eliminar una data de la llista (ara amb DateWithReason)
     const handleRemoveDate = (dateToRemove: Date, setter: React.Dispatch<React.SetStateAction<DateWithReason[]>>, currentDates: DateWithReason[]) => {
-        setter(currentDates.filter(d => d.date.getTime() !== dateToRemove.getTime()));
+        setter(currentDates.filter(d => !isSameDay(d.date, dateToRemove)));
     };
 
-    // 💡 FUNCIÓ PER ACTUALITZAR EL MOTIU (LA CLAU)
+    // FUNCIÓ PER ACTUALITZAR EL MOTIU
     const handleReasonChange = (dateToUpdate: Date, newReason: string, setter: React.Dispatch<React.SetStateAction<DateWithReason[]>>, currentDates: DateWithReason[]) => {
         setter(currentDates.map(d => {
             if (isSameDay(d.date, dateToUpdate)) {
@@ -318,7 +315,7 @@ const Settings = () => {
     }
 
 
-    // 💡 COMPONENT Reutilitzable per a la llista de dates
+    // 💡 COMPONENT Reutilitzable per a la llista de dates (Corregit el 'key')
     const DateList = ({ dates, setter, listName }: {
         dates: DateWithReason[],
         setter: React.Dispatch<React.SetStateAction<DateWithReason[]>>,
@@ -330,9 +327,10 @@ const Settings = () => {
             <div className="p-3 mt-2 rounded-xl shadow-neo-inset">
                 <p className="text-sm font-medium mb-2">{listName}: {dates.length} dies</p>
                 <div className="flex flex-wrap gap-3">
-                    {dates.sort((a, b) => a.date.getTime() - b.date.getTime()).map((d, i) => (
+                    {dates.sort((a, b) => a.date.getTime() - b.date.getTime()).map((d) => (
+                        // 💡 CLAU CORREGIDA: Utilitzem la data.getTime() per una clau única i estable
                         <div 
-                            key={i} 
+                            key={d.date.getTime()} 
                             className={`flex flex-col p-2 rounded-lg shadow-neo bg-${baseColor}-500/10 text-${baseColor}-700 relative`}
                         >
                             <div className="flex items-center justify-between mb-1">
@@ -347,6 +345,7 @@ const Settings = () => {
                             <Input
                                 type="text"
                                 value={d.reason}
+                                // 💡 CORRECCIÓ: La funció onChange està bé, però la key estable soluciona el problema de re-renderització
                                 onChange={(e) => handleReasonChange(d.date, e.target.value, setter, dates)}
                                 placeholder="Afegir motiu (opcional)"
                                 className={`h-6 text-xs p-1 mt-1 shadow-neo-inset border-0 bg-transparent placeholder:text-${baseColor}-600/70`}
@@ -398,6 +397,7 @@ const Settings = () => {
                                 <Input 
                                     id="arbucies-used" 
                                     type="number" 
+                                    // 💡 CORRECCIÓ: Utilitza la variable d'estat calculada
                                     value={usedDaysArbucies} 
                                     className="shadow-neo-inset border-0 mt-1"
                                     readOnly 
@@ -424,6 +424,7 @@ const Settings = () => {
                                 <Input 
                                     id="santhilari-used" 
                                     type="number" 
+                                    // 💡 CORRECCIÓ: Utilitza la variable d'estat calculada
                                     value={usedDaysSantHilari} 
                                     className="shadow-neo-inset border-0 mt-1"
                                     readOnly 
