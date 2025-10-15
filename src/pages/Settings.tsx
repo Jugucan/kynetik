@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { Settings as SettingsIcon, Calendar as CalendarIcon, Users as UsersIcon, Plus, Save, Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -6,10 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ca } from "date-fns/locale";
 
-// 💡 NOVES IMPORTS: Firestore
+// Importacions de Firebase (ja comprovades)
 import { db } from "@/lib/firebase";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 // import { useToast } from "@/hooks/use-toast"; // Descomenta si fas servir `useToast`
@@ -17,7 +17,7 @@ import { doc, setDoc, onSnapshot } from "firebase/firestore";
 // Referència al document de configuració global
 const SETTINGS_DOC_REF = doc(db, 'settings', 'global');
 
-// Funció auxiliar per convertir objecte Date a string YYYY-MM-DD
+// Funció auxiliar per convertir objecte Date a string YYYY-MM-DD (Ja la tenies)
 const dateToKey = (date: Date): string => {
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -25,87 +25,105 @@ const dateToKey = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-// Funció auxiliar per convertir string YYYY-MM-DD a objecte Date
+// Funció auxiliar per convertir string YYYY-MM-DD a objecte Date (Ja la tenies)
 const keyToDate = (key: string): Date => {
-  // parseISO és més segur per strings YYYY-MM-DD que new Date(string)
-  // Però per evitar problemes amb el fus horari (que va ser el teu problema inicial):
-  // Utilitzem els components (any, mes-1, dia)
   const parts = key.split('-').map(p => parseInt(p, 10));
   return new Date(parts[0], parts[1] - 1, parts[2]);
 };
 
 
 const Settings = () => {
-    // const { toast } = useToast(); // Descomenta si fas servir `useToast`
+    // const { toast } = useToast(); 
     
-    // ESTATS
+    // ESTATS PER LES DATES DE VACANCES/TANCAMENT
     const [vacationDates, setVacationDates] = useState<Date[]>([]);
     const [closureDatesArbucies, setClosureDatesArbucies] = useState<Date[]>([]);
     const [closureDatesSantHilari, setClosureDatesSantHilari] = useState<Date[]>([]);
+    
+    // 💡 NOU ESTAT: DIES DISPONIBLES PER CENTRE
+    const [availableDaysArbucies, setAvailableDaysArbucies] = useState(30);
+    const [availableDaysSantHilari, setAvailableDaysSantHilari] = useState(20);
+
+    // ESTATS DE LA UI
     const [isSaving, setIsSaving] = useState(false);
-    const [isLoading, setIsLoading] = useState(true); // 💡 NOU: Estat de càrrega
+    const [isLoading, setIsLoading] = useState(true);
+
+    
+    // ************************************************
+    // 💡 NOU CÀLCUL: DIES UTILITZATS (Càlcul automàtic)
+    // ************************************************
+    const usedDays = useMemo(() => {
+        // Simplement comptem el nombre de dies seleccionats al calendari de vacances
+        return vacationDates.length;
+    }, [vacationDates]);
+
 
     // ************************************************
-    // 💡 NOU: useEffect per CARREGAR DADES de Firebase
+    // CÀRREGA DE DADES (READ) de Firebase
     // ************************************************
     useEffect(() => {
         const unsubscribe = onSnapshot(SETTINGS_DOC_REF, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 
-                // 1. Vacances generals
+                // DATES DE TANCAMENT
                 if (data.vacations && Array.isArray(data.vacations)) {
-                    // Converteix les strings YYYY-MM-DD a objectes Date
-                    const dates = (data.vacations as string[]).map(keyToDate);
-                    setVacationDates(dates);
+                    setVacationDates((data.vacations as string[]).map(keyToDate));
                 }
-                
-                // 2. Tancament Arbúcies
                 if (data.closuresArbucies && Array.isArray(data.closuresArbucies)) {
-                    const dates = (data.closuresArbucies as string[]).map(keyToDate);
-                    setClosureDatesArbucies(dates);
+                    setClosureDatesArbucies((data.closuresArbucies as string[]).map(keyToDate));
+                }
+                if (data.closuresSantHilari && Array.isArray(data.closuresSantHilari)) {
+                    setClosureDatesSantHilari((data.closuresSantHilari as string[]).map(keyToDate));
                 }
                 
-                // 3. Tancament Sant Hilari
-                if (data.closuresSantHilari && Array.isArray(data.closuresSantHilari)) {
-                    const dates = (data.closuresSantHilari as string[]).map(keyToDate);
-                    setClosureDatesSantHilari(dates);
+                // 💡 NOUS: DIES DISPONIBLES
+                if (typeof data.availableDaysArbucies === 'number') {
+                    setAvailableDaysArbucies(data.availableDaysArbucies);
+                }
+                if (typeof data.availableDaysSantHilari === 'number') {
+                    setAvailableDaysSantHilari(data.availableDaysSantHilari);
                 }
             } else {
-                console.log("Document de configuració no trobat. Utilitzant valors buits.");
+                console.log("Document de configuració no trobat. Utilitzant valors per defecte.");
             }
             setIsLoading(false);
         }, (error) => {
             console.error("Error al carregar la configuració:", error);
-            // toast({ title: "Error de càrrega", description: "No s'han pogut carregar les dades.", variant: "destructive" });
             setIsLoading(false);
         });
 
-        // Neteja l'escoltador quan el component es desmunta
         return () => unsubscribe();
-    }, []); // Només s'executa una vegada al muntar
+    }, []); 
 
     
     // ************************************************
-    // FUNCIÓ per GUARDAR DADES a Firebase
+    // FUNCIÓ per GUARDAR DADES (WRITE) a Firebase
     // ************************************************
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
 
         try {
-            // 1. Converteix totes les dates seleccionades (objectes Date) a strings YYYY-MM-DD
+            // Converteix les dates a strings
             const processedVacations = vacationDates.map(dateToKey);
             const processedClosuresArbucies = closureDatesArbucies.map(dateToKey);
             const processedClosuresSantHilari = closureDatesSantHilari.map(dateToKey);
 
             const dataToSave = {
+                // DATES
                 vacations: processedVacations, 
                 closuresArbucies: processedClosuresArbucies, 
                 closuresSantHilari: processedClosuresSantHilari,
+                
+                // 💡 NOUS: DIES DISPONIBLES
+                availableDaysArbucies,
+                availableDaysSantHilari,
+                
+                // 💡 NOU: DIES UTILITZATS (Guardem el valor calculat)
+                usedDays, 
             };
 
-            // 2. Envia les dades a Firestore
             await setDoc(SETTINGS_DOC_REF, dataToSave, { merge: true });
 
             // toast({ title: "Guardat!", description: "La configuració s'ha actualitzada.", });
@@ -126,24 +144,15 @@ const Settings = () => {
 
 
     const holidays2025 = [
-        { name: "Any Nou", date: "1 Gen" },
-        { name: "Reis", date: "6 Gen" },
-        { name: "Divendres Sant", date: "18 Abr" },
-        { name: "Dilluns de Pasqua", date: "21 Abr" },
-        { name: "Festa del Treball", date: "1 Mai" },
-        { name: "Sant Joan", date: "24 Jun" },
-        { name: "Assumpció", date: "15 Ago" },
-        { name: "Diada", date: "11 Set" },
-        { name: "Mercè", date: "24 Set" },
-        { name: "Hispanitat", date: "12 Oct" },
-        { name: "Tots Sants", date: "1 Nov" },
-        { name: "Constitució", date: "6 Des" },
-        { name: "Immaculada", date: "8 Des" },
-        { name: "Nadal", date: "25 Des" },
-        { name: "Sant Esteve", date: "26 Des" },
+        // ... (la teva llista de festius)
+        { name: "Any Nou", date: "1 Gen" }, { name: "Reis", date: "6 Gen" }, { name: "Divendres Sant", date: "18 Abr" },
+        { name: "Dilluns de Pasqua", date: "21 Abr" }, { name: "Festa del Treball", date: "1 Mai" }, { name: "Sant Joan", date: "24 Jun" },
+        { name: "Assumpció", date: "15 Ago" }, { name: "Diada", date: "11 Set" }, { name: "Mercè", date: "24 Set" },
+        { name: "Hispanitat", date: "12 Oct" }, { name: "Tots Sants", date: "1 Nov" }, { name: "Constitució", date: "6 Des" },
+        { name: "Immaculada", date: "8 Des" }, { name: "Nadal", date: "25 Des" }, { name: "Sant Esteve", date: "26 Des" },
     ];
     
-    // 💡 NOU: Si està carregant, mostra un missatge
+    
     if (isLoading) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -164,7 +173,6 @@ const Settings = () => {
                 </div>
             </div>
 
-            {/* 💡 IMPORTANT: El botó final ha de cridar a handleSave, assegura't que es fa */}
             <form onSubmit={handleSave} className="grid gap-6"> 
                 
                 <NeoCard>
@@ -173,26 +181,27 @@ const Settings = () => {
                         <h2 className="text-xl font-semibold">Dies de vacances generals</h2>
                     </div>
                     
-                    {/* ... (Els inputs de dies disponibles i utilitzats es mantenen) ... */}
+                    {/* INPUTS DE DIES DISPONIBLES I UTILITZATS */}
                     <div className="grid md:grid-cols-2 gap-6 mb-6">
                         <div className="space-y-4">
                             <div>
                                 <Label htmlFor="arbucies-vacation">Dies disponibles Arbúcies</Label>
                                 <Input 
-                                id="arbucies-vacation" 
-                                type="number" 
-                                defaultValue="30"
-                                className="shadow-neo-inset border-0 mt-1"
+                                    id="arbucies-vacation" 
+                                    type="number" 
+                                    value={availableDaysArbucies} // 💡 Llegeix de l'estat
+                                    onChange={(e) => setAvailableDaysArbucies(parseInt(e.target.value, 10) || 0)} // 💡 Actualitza l'estat
+                                    className="shadow-neo-inset border-0 mt-1"
                                 />
                             </div>
                             <div>
                                 <Label htmlFor="arbucies-used">Dies utilitzats</Label>
                                 <Input 
-                                id="arbucies-used" 
-                                type="number" 
-                                value="5"
-                                className="shadow-neo-inset border-0 mt-1"
-                                readOnly
+                                    id="arbucies-used" 
+                                    type="number" 
+                                    value={usedDays} // 💡 VALOR CALCULAT
+                                    className="shadow-neo-inset border-0 mt-1"
+                                    readOnly // No es pot editar, es calcula
                                 />
                             </div>
                         </div>
@@ -201,20 +210,21 @@ const Settings = () => {
                             <div>
                                 <Label htmlFor="santhilari-vacation">Dies disponibles Sant Hilari</Label>
                                 <Input 
-                                id="santhilari-vacation" 
-                                type="number" 
-                                defaultValue="20"
-                                className="shadow-neo-inset border-0 mt-1"
+                                    id="santhilari-vacation" 
+                                    type="number" 
+                                    value={availableDaysSantHilari} // 💡 Llegeix de l'estat
+                                    onChange={(e) => setAvailableDaysSantHilari(parseInt(e.target.value, 10) || 0)} // 💡 Actualitza l'estat
+                                    className="shadow-neo-inset border-0 mt-1"
                                 />
                             </div>
                             <div>
                                 <Label htmlFor="santhilari-used">Dies utilitzats</Label>
                                 <Input 
-                                id="santhilari-used" 
-                                type="number" 
-                                value="3"
-                                className="shadow-neo-inset border-0 mt-1"
-                                readOnly
+                                    id="santhilari-used" 
+                                    type="number" 
+                                    value={usedDays} // 💡 VALOR CALCULAT
+                                    className="shadow-neo-inset border-0 mt-1"
+                                    readOnly // No es pot editar, es calcula
                                 />
                             </div>
                         </div>
@@ -261,6 +271,7 @@ const Settings = () => {
                     </div>
                 </NeoCard>
 
+                {/* ... (La secció de tancaments per centre es manté igual) ... */}
                 <NeoCard>
                     <div className="flex items-center gap-2 mb-4">
                         <CalendarIcon className="w-5 h-5 text-destructive" />
@@ -346,6 +357,7 @@ const Settings = () => {
                     </div>
                 </NeoCard>
                 
+                {/* ... (La secció de Festius Oficials es manté igual) ... */}
                 <NeoCard>
                     <div className="flex items-center gap-2 mb-4">
                         <CalendarIcon className="w-5 h-5 text-accent" />
@@ -361,6 +373,7 @@ const Settings = () => {
                     </div>
                 </NeoCard>
 
+                {/* ... (La secció de Dies de treball es manté igual) ... */}
                 <NeoCard>
                     <div className="flex items-center gap-2 mb-4">
                         <UsersIcon className="w-5 h-5 text-primary" />
@@ -423,10 +436,10 @@ const Settings = () => {
                     </div>
                 </NeoCard>
 
-
+                {/* BOTÓ DE GUARDAR */}
                 <div className="flex justify-end">
                     <Button 
-                        type="submit" // 💡 Important: type="submit" crida a handleSave del formulari
+                        type="submit" 
                         disabled={isSaving}
                         className="shadow-neo hover:shadow-neo-sm"
                     >
