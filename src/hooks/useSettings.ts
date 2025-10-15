@@ -6,38 +6,23 @@ import { doc, onSnapshot } from 'firebase/firestore';
 
 // Defineix la interfície per a les dades de configuració
 export interface SettingsData {
-  vacations: string[]; // Ara seran array de strings YYYY-MM-DD
-  closuresArbucies: string[];
-  closuresSantHilari: string[];
+  // Ara són Record<string, string> (Map de data -> motiu)
+  vacations: Record<string, string>;
+  closuresArbucies: Record<string, string>;
+  closuresSantHilari: Record<string, string>;
   loading: boolean;
-  // Afegeix camps addicionals si calen per a altres pàgines, com workDays/availableDays
-  workDaysArbucies?: number[]; 
-  workDaysSantHilari?: number[];
 }
 
 const defaultSettings: SettingsData = {
-    vacations: [],
-    closuresArbucies: [],
-    closuresSantHilari: [],
+    vacations: {},
+    closuresArbucies: {},
+    closuresSantHilari: {},
     loading: true,
-    workDaysArbucies: [],
-    workDaysSantHilari: [],
-};
-
-// Funció per convertir l'objecte de Firebase {'YYYY-MM-DD': 'reason'} en array de strings ['YYYY-MM-DD']
-const convertMapToArray = (dataField: Record<string, string> | any): string[] => {
-  // Comprova si és un objecte (el nou format) i no un array (l'antic)
-  if (dataField && typeof dataField === 'object' && !Array.isArray(dataField)) {
-    return Object.keys(dataField); // Extreu les claus (que són les dates en format string)
-  }
-  // Si encara és l'antic format (array de strings) o és null, retorna un array buit o el que sigui
-  return Array.isArray(dataField) ? dataField : [];
 };
 
 export const useSettings = (): SettingsData => {
   const [settings, setSettings] = useState<SettingsData>(defaultSettings);
   
-  // ⚠️ IMPORTANT: Utilitzem el mateix camí que a Settings.tsx
   const docRef = doc(db, 'settings', 'global'); 
 
   useEffect(() => {
@@ -45,22 +30,19 @@ export const useSettings = (): SettingsData => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         
-        // Aplica el nou conversor per solucionar el TypeError a Calendar.tsx
+        // CORRECCIÓ: Ara llegim els camps com a Objectes/Maps
         setSettings({
-            vacations: convertMapToArray(data.vacations),
-            closuresArbucies: convertMapToArray(data.closuresArbucies),
-            closuresSantHilari: convertMapToArray(data.closuresSantHilari),
+            // Utilitzem un fallback a {} si el camp no existeix o no és un objecte.
+            vacations: (data.vacations && typeof data.vacations === 'object') ? data.vacations : {},
+            closuresArbucies: (data.closuresArbucies && typeof data.closuresArbucies === 'object') ? data.closuresArbucies : {},
+            closuresSantHilari: (data.closuresSantHilari && typeof data.closuresSantHilari === 'object') ? data.closuresSantHilari : {},
             loading: false,
-            // Afegeix els altres camps que Settings.tsx està guardant
-            workDaysArbucies: data.workDaysArbucies || [],
-            workDaysSantHilari: data.workDaysSantHilari || [],
         });
       } else {
-        // Document no existeix
         setSettings(prev => ({ ...prev, loading: false }));
       }
     }, (error) => {
-        console.error("Error al carregar la configuració des de useSettings:", error);
+        console.error("Error loading settings from Firebase:", error);
         setSettings(prev => ({ ...prev, loading: false }));
     });
 
