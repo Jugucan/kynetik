@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format, isSameDay, isAfter, isBefore } from "date-fns";
 import { ca } from "date-fns/locale";
 
-// Importacions de Firebase (ja comprovades)
+// Importacions de Firebase
 import { db } from "@/lib/firebase";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 
@@ -42,7 +42,7 @@ const keyToDate = (key: string): Date | null => {
   
   const date = new Date(parts[0], parts[1] - 1, parts[2]); 
 
-  // Ajust de l'hora per assegurar que es manté com a dia complet (ajusta a les 00:00:00)
+  // Ajust de l'hora per assegurar que es manté com a dia complet
   date.setHours(0, 0, 0, 0);
 
   if (isNaN(date.getTime())) {
@@ -51,7 +51,7 @@ const keyToDate = (key: string): Date | null => {
   return date;
 };
 
-// Funció per calcular l'any laboral (1 Gen - 31 Des de l'any actual)
+// Funció per calcular l'any laboral
 const getCurrentWorkYear = (today: Date): { start: Date, end: Date } => {
     const currentYear = today.getFullYear();
     const startDate = new Date(currentYear, 0, 1);
@@ -63,16 +63,12 @@ const getCurrentWorkYear = (today: Date): { start: Date, end: Date } => {
 
 const Settings = () => {
     
-    // ************************************************
-    // ESTATS PRINCIPALS (per forçar el re-render)
-    // ************************************************
+    // ESTATS PRINCIPALS
     const [vacationDates, setVacationDates] = useState<DateWithReason[]>([]);
     const [closureDatesArbucies, setClosureDatesArbucies] = useState<DateWithReason[]>([]);
     const [closureDatesSantHilari, setClosureDatesSantHilari] = useState<DateWithReason[]>([]);
     
-    // ************************************************
-    // REFS (per garantir l'estat fresc en les funcions asíncrones)
-    // ************************************************
+    // REFS per garantir l'estat fresc
     const vacationDatesRef = useRef<DateWithReason[]>([]);
     const closureDatesArbuciesRef = useRef<DateWithReason[]>([]);
     const closureDatesSantHilariRef = useRef<DateWithReason[]>([]);
@@ -84,7 +80,6 @@ const Settings = () => {
     const [availableDaysArbucies, setAvailableDaysArbucies] = useState(30);
     const [availableDaysSantHilari, setAvailableDaysSantHilari] = useState(20);
 
-    // Darrere l'escena: 1=Dilluns... 7=Diumenge
     const [workDaysArbucies, setWorkDaysArbucies] = useState<number[]>([1, 2, 4]); 
     const [workDaysSantHilari, setWorkDaysSantHilari] = useState<number[]>([3, 5]);
 
@@ -96,11 +91,11 @@ const Settings = () => {
     // Funció per verificar si un dia és laborable
     const isWorkDay = useCallback((date: Date, workDays: number[]) => {
         const dayOfWeek = date.getDay(); 
-        const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek; // Diumenge (0) a 7
+        const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
         return workDays.includes(adjustedDay);
     }, []);
     
-    // Recàlcul de Dies Utilitzats amb useMemo
+    // Recàlcul de Dies Utilitzats
     const { usedDaysArbucies, usedDaysSantHilari } = useMemo(() => {
         let arbuciesCount = 0;
         let santHilariCount = 0;
@@ -147,9 +142,7 @@ const Settings = () => {
     };
 
 
-    // ************************************************
-    // FUNCIÓ per GUARDAR DADES (WRITE) a Firebase
-    // ************************************************
+    // FUNCIÓ per GUARDAR DADES a Firebase
     const saveToFirebase = useCallback(async (
         newVacations: DateWithReason[] | null = null, 
         newClosuresArbucies: DateWithReason[] | null = null,
@@ -165,7 +158,7 @@ const Settings = () => {
                 }, {} as Record<string, string>);
             };
 
-            // Llegeix dels arguments O del Ref (l'estat més fresc garantit)
+            // Llegeix dels arguments O del Ref
             const currentVacations = newVacations !== null ? newVacations : vacationDatesRef.current;
             const currentClosuresArbucies = newClosuresArbucies !== null ? newClosuresArbucies : closureDatesArbuciesRef.current;
             const currentClosuresSantHilari = newClosuresSantHilari !== null ? newClosuresSantHilari : closureDatesSantHilariRef.current;
@@ -174,25 +167,22 @@ const Settings = () => {
                 vacations: convertToFirebaseFormat(currentVacations), 
                 closuresArbucies: convertToFirebaseFormat(currentClosuresArbucies), 
                 closuresSantHilari: convertToFirebaseFormat(currentClosuresSantHilari),
-                
-                // Els camps següents SEMPRE s'agafen de l'últim estat de React (són primitius)
                 availableDaysArbucies,
                 availableDaysSantHilari,
                 workDaysArbucies,
                 workDaysSantHilari,
             };
 
-            console.log("Dades finals preparades per a Firebase:", dataToSave); 
+            console.log("📤 Guardant a Firebase:", dataToSave); 
 
             await setDoc(SETTINGS_DOC_REF, dataToSave, { merge: true });
 
-            console.log("Dades guardades automàticament a Firebase.");
+            console.log("✅ Dades guardades correctament a Firebase");
             
         } catch (error) {
-            console.error("Error al guardar a Firebase:", error);
+            console.error("❌ Error al guardar a Firebase:", error);
         }
     }, [
-        // 💡 Dependències: Només variables primitives i arrays estables (workDays)
         availableDaysArbucies, 
         availableDaysSantHilari, 
         workDaysArbucies, 
@@ -200,40 +190,43 @@ const Settings = () => {
     ]);
     
     
-    // Funció per guardar les dades que es guarden manualment (botó principal)
+    // Funció per guardar manualment (botó principal)
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
-        // Crida sense arguments. saveToFirebase llegirà dels Ref (l'estat més fresc).
         await saveToFirebase();
         setIsSaving(false);
     };
 
 
-    // ************************************************
-    // CÀRREGA DE DADES (READ) de Firebase
-    // ************************************************
+    // CÀRREGA DE DADES de Firebase
     useEffect(() => {
+        console.log("🔄 Configurant listener de Firebase...");
+        
         const unsubscribe = onSnapshot(SETTINGS_DOC_REF, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
+                console.log("📥 Dades rebudes de Firebase:", data);
                 
-                // DATES DE TANCAMENT
+                // DATES
                 const newVacations = convertToDateWithReason(data.vacations);
                 const newClosuresArbucies = convertToDateWithReason(data.closuresArbucies);
                 const newClosuresSantHilari = convertToDateWithReason(data.closuresSantHilari);
                 
-                // 1. Actualitza l'estat (per re-renderitzar)
+                console.log("📅 Vacances processades:", newVacations.length, "dies");
+                console.log("📅 Tancaments Arbúcies:", newClosuresArbucies.length, "dies");
+                console.log("📅 Tancaments Sant Hilari:", newClosuresSantHilari.length, "dies");
+                
+                // Actualitza estat i ref
                 setVacationDates(newVacations);
                 setClosureDatesArbucies(newClosuresArbucies);
                 setClosureDatesSantHilari(newClosuresSantHilari);
                 
-                // 2. Actualitza el Ref (per guardar correctament)
                 vacationDatesRef.current = newVacations;
                 closureDatesArbuciesRef.current = newClosuresArbucies;
                 closureDatesSantHilariRef.current = newClosuresSantHilari;
                 
-                // Altres dades (es mantenen igual)
+                // Altres dades
                 if (typeof data.availableDaysArbucies === 'number') {
                     setAvailableDaysArbucies(data.availableDaysArbucies);
                 }
@@ -248,11 +241,11 @@ const Settings = () => {
                 }
                 
             } else {
-                console.log("Document de configuració no trobat. Utilitzant valors per defecte.");
+                console.log("⚠️ Document de configuració no trobat. Utilitzant valors per defecte.");
             }
             setIsLoading(false);
         }, (error) => {
-            console.error("Error al carregar la configuració:", error);
+            console.error("❌ Error al carregar la configuració:", error);
             setIsLoading(false);
         });
 
@@ -261,9 +254,11 @@ const Settings = () => {
 
 
     
-    // Funció per gestionar la selecció al calendari (mode multiple)
+    // Funció per gestionar la selecció al calendari
     const handleDateSelect = async (selectedDates: Date[] | undefined) => {
         if (!selectedDates) return;
+        
+        console.log("📅 Dates seleccionades:", selectedDates.length);
         
         const setter = currentCenterClosure === 'Arbucies' ? setClosureDatesArbucies 
             : currentCenterClosure === 'SantHilari' ? setClosureDatesSantHilari 
@@ -276,7 +271,7 @@ const Settings = () => {
             : currentCenterClosure === 'SantHilari' ? closureDatesSantHilariRef
             : vacationDatesRef;
             
-        // 1. Mapeja les dates seleccionades a l'estructura DateWithReason
+        // Mapeja les dates seleccionades
         const finalDates = selectedDates.map(newDate => {
             const existing = currentDates.find(d => isSameDay(d.date, newDate));
             if (existing) {
@@ -285,12 +280,11 @@ const Settings = () => {
             return { date: newDate, reason: currentReason || '' }; 
         });
 
-        // 2. Actualitza l'estat local i el Ref
+        // Actualitza estat i ref
         setter(finalDates);
-        refToUpdate.current = finalDates; // 👈 CLAU
+        refToUpdate.current = finalDates;
 
-        // 3. GUARDA IMMMEDIATAMENT A FIREBASE
-        // Passem només l'array modificat. La resta es llegeix del Ref.
+        // GUARDA A FIREBASE
         if (currentCenterClosure === 'Vacation') {
             await saveToFirebase(finalDates, null, null);
         } else if (currentCenterClosure === 'Arbucies') {
@@ -299,27 +293,35 @@ const Settings = () => {
             await saveToFirebase(null, null, finalDates);
         }
 
-        // Tanca el popover
         setCurrentReason('');
         setIsPopoverOpen(false);
     };
     
-    // Funció per eliminar una data de la llista (per X)
-    const handleRemoveDate = async (dateToRemove: Date, setter: React.Dispatch<React.SetStateAction<DateWithReason[]>>, currentDates: DateWithReason[], center: 'Vacation' | 'Arbucies' | 'SantHilari') => {
+    // ⚠️ FUNCIÓ CORREGIDA: Eliminar una data
+    const handleRemoveDate = async (
+        dateToRemove: Date, 
+        setter: React.Dispatch<React.SetStateAction<DateWithReason[]>>, 
+        currentDates: DateWithReason[], 
+        center: 'Vacation' | 'Arbucies' | 'SantHilari'
+    ) => {
+        
+        console.log("🗑️ Eliminant data:", format(dateToRemove, "dd/MM/yyyy"));
+        console.log("📋 Dates abans d'eliminar:", currentDates.length);
         
         // 1. Crea el NOU array sense la data
         const newDates = currentDates.filter(d => !isSameDay(d.date, dateToRemove));
+        
+        console.log("📋 Dates després d'eliminar:", newDates.length);
         
         const refToUpdate = center === 'Arbucies' ? closureDatesArbuciesRef
             : center === 'SantHilari' ? closureDatesSantHilariRef
             : vacationDatesRef;
 
-        // 2. Actualitza l'estat local i el Ref
+        // 2. Actualitza estat i ref
         setter(newDates); 
-        refToUpdate.current = newDates; // 👈 CLAU
+        refToUpdate.current = newDates;
 
-        // 3. GUARDA IMMMEDIATAMENT A FIREBASE
-        // Passem només l'array modificat. La resta es llegeix del Ref.
+        // 3. ✅ CORRECCIÓ: Passa el NOU array (newDates) en lloc de l'antic
         if (center === 'Vacation') {
             await saveToFirebase(newDates, null, null);
         } else if (center === 'Arbucies') {
@@ -327,10 +329,18 @@ const Settings = () => {
         } else if (center === 'SantHilari') {
             await saveToFirebase(null, null, newDates);
         }
+        
+        console.log("✅ Data eliminada i guardada a Firebase");
     };
 
-    // FUNCIÓ PER ACTUALITZAR EL MOTIU (funciona de manera similar)
-    const handleReasonChange = (dateToUpdate: Date, newReason: string, setter: React.Dispatch<React.SetStateAction<DateWithReason[]>>, currentDates: DateWithReason[], center: 'Vacation' | 'Arbucies' | 'SantHilari') => {
+    // Actualitzar el motiu
+    const handleReasonChange = (
+        dateToUpdate: Date, 
+        newReason: string, 
+        setter: React.Dispatch<React.SetStateAction<DateWithReason[]>>, 
+        currentDates: DateWithReason[], 
+        center: 'Vacation' | 'Arbucies' | 'SantHilari'
+    ) => {
         
         const updatedDates = currentDates.map(d => {
             if (isSameDay(d.date, dateToUpdate)) {
@@ -343,11 +353,9 @@ const Settings = () => {
             : center === 'SantHilari' ? closureDatesSantHilariRef
             : vacationDatesRef;
 
-        // Actualitza l'estat i el Ref
         setter(updatedDates);
-        refToUpdate.current = updatedDates; // 👈 CLAU
+        refToUpdate.current = updatedDates;
         
-        // Guarda a Firebase de manera asíncrona, sense esperar
         if (center === 'Vacation') {
              saveToFirebase(updatedDates, null, null);
         } else if (center === 'Arbucies') {
@@ -357,7 +365,7 @@ const Settings = () => {
         }
     };
     
-    // Funció per gestionar el canvi de checkbox (Dies de treball)
+    // Canvi de dies de treball
     const handleWorkDayChange = (dayIndex: number, center: 'Arbucies' | 'SantHilari') => {
         const setter = center === 'Arbucies' ? setWorkDaysArbucies : setWorkDaysSantHilari;
         const currentDays = center === 'Arbucies' ? workDaysArbucies : workDaysSantHilari;
@@ -369,7 +377,6 @@ const Settings = () => {
         }
     };
 
-    // ... (resta de constants i llistes es manté igual) ...
     const holidays2025 = [
         { name: "Any Nou", date: "1 Gen" }, { name: "Reis", date: "6 Gen" }, { name: "Divendres Sant", date: "18 Abr" },
         { name: "Dilluns de Pasqua", date: "21 Abr" }, { name: "Festa del Treball", date: "1 Mai" }, { name: "Sant Joan", date: "24 Jun" },
@@ -378,10 +385,8 @@ const Settings = () => {
         { name: "Immaculada", date: "8 Des" }, { name: "Nadal", date: "25 Des" }, { name: "Sant Esteve", date: "26 Des" },
     ];
     
-    // Day Index: 1=Dilluns, ..., 7=Diumenge
     const dayNamesList = ["Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", "Dissabte", "Diumenge"];
     
-    // Funció que retorna només les dates (per al Calendar)
     const getDatesOnly = (datesWithReason: DateWithReason[]): Date[] => datesWithReason.map(d => d.date);
 
 
@@ -394,7 +399,7 @@ const Settings = () => {
         );
     }
 
-    // NOU SUBCOMPONENT per a l'Input del motiu
+    // Subcomponent per a l'Input del motiu
     const ReasonInput = ({ date, reason, setter, dates, baseColor, center }: { 
         date: Date, 
         reason: string, 
@@ -428,7 +433,7 @@ const Settings = () => {
         );
     };
 
-    // COMPONENT Reutilitzable per a la llista de dates
+    // Component per a la llista de dates
     const DateList = ({ dates, setter, listName }: {
         dates: DateWithReason[],
         setter: React.Dispatch<React.SetStateAction<DateWithReason[]>>,
@@ -493,7 +498,6 @@ const Settings = () => {
                         Període laboral: {format(workYear.start, "dd/MM/yyyy")} - {format(workYear.end, "dd/MM/yyyy")}
                     </p>
                     <div className="grid md:grid-cols-2 gap-6 mb-6">
-                        {/* INPUTS DE DIES DISPONIBLES / UTILITZATS */}
                         <div className="space-y-4">
                             <div>
                                 <Label htmlFor="arbucies-vacation">Dies disponibles Arbúcies</Label>
@@ -547,7 +551,6 @@ const Settings = () => {
                         </div>
                     </div>
 
-                    {/* POPUP SELECCIÓ VACANCES */}
                     <div className="space-y-3">
                         <Label>Seleccionar període de vacances generals</Label>
                         <Popover open={isPopoverOpen && currentCenterClosure === 'Vacation'} onOpenChange={(open) => {
@@ -575,7 +578,6 @@ const Settings = () => {
                             </PopoverContent>
                         </Popover>
                         
-                        {/* Llista de dates de vacances seleccionades amb Input editable */}
                         <DateList dates={vacationDates} setter={setVacationDates} listName="Vacances" />
                     </div>
                 </NeoCard>
@@ -589,7 +591,6 @@ const Settings = () => {
                     </div>
 
                     <div className="space-y-4">
-                        {/* ARBÚCIES */}
                         <div>
                             <Label className="mb-2 block">Arbúcies</Label>
                             <Popover open={isPopoverOpen && currentCenterClosure === 'Arbucies'} onOpenChange={(open) => {
@@ -616,11 +617,9 @@ const Settings = () => {
                                     />
                                 </PopoverContent>
                             </Popover>
-                            {/* Llista de dates de tancament Arbúcies amb Input editable */}
                             <DateList dates={closureDatesArbucies} setter={setClosureDatesArbucies} listName="Tancament Arbúcies" />
                         </div>
 
-                        {/* SANT HILARI */}
                         <div>
                             <Label className="mb-2 block">Sant Hilari</Label>
                             <Popover open={isPopoverOpen && currentCenterClosure === 'SantHilari'} onOpenChange={(open) => {
@@ -647,7 +646,6 @@ const Settings = () => {
                                     />
                                 </PopoverContent>
                             </Popover>
-                            {/* Llista de dates de tancament Sant Hilari amb Input editable */}
                             <DateList dates={closureDatesSantHilari} setter={setClosureDatesSantHilari} listName="Tancament Sant Hilari" />
                         </div>
                     </div>
@@ -669,7 +667,7 @@ const Settings = () => {
                             <Label className="mb-3 block">Arbúcies</Label>
                             <div className="space-y-2">
                                 {dayNamesList.map((name, index) => {
-                                    const dayIndex = index + 1; // 1 (Dilluns) a 7 (Diumenge)
+                                    const dayIndex = index + 1;
                                     return (
                                         <label key={dayIndex} className="flex items-center gap-2 cursor-pointer">
                                             <input 
@@ -689,7 +687,7 @@ const Settings = () => {
                             <Label className="mb-3 block">Sant Hilari</Label>
                             <div className="space-y-2">
                                 {dayNamesList.map((name, index) => {
-                                    const dayIndex = index + 1; // 1 (Dilluns) a 7 (Diumenge)
+                                    const dayIndex = index + 1;
                                     return (
                                         <label key={dayIndex} className="flex items-center gap-2 cursor-pointer">
                                             <input 
@@ -724,8 +722,6 @@ const Settings = () => {
                     </div>
                 </NeoCard>
 
-
-                {/* BOTÓ DE GUARDAR */}
                 <div className="flex justify-end">
                     <Button 
                         type="submit" 
