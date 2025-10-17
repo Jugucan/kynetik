@@ -184,8 +184,11 @@ const Settings = () => {
         return () => unsubscribe();
     }, []); 
 
+    // ✅ CORRECCIÓ 1: El calendari NO es tanca automàticament
     const handleDateSelect = async (selectedDates: Date[] | undefined) => {
         if (!selectedDates || isInitialLoad) return;
+        
+        console.log("📅 Dates seleccionades:", selectedDates.length);
         
         let newVacations = vacationDates;
         let newClosuresArbucies = closureDatesArbucies;
@@ -214,8 +217,9 @@ const Settings = () => {
         await saveToFirebase(newVacations, newClosuresArbucies, newClosuresSantHilari,
             availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari);
 
-        setCurrentReason('');
-        setIsPopoverOpen(false);
+        // ❌ ELIMINAT: ja NO tanquem el popover automàticament
+        // setCurrentReason('');
+        // setIsPopoverOpen(false);
     };
     
     const handleRemoveDate = async (dateToRemove: Date, center: 'Vacation' | 'Arbucies' | 'SantHilari') => {
@@ -244,7 +248,8 @@ const Settings = () => {
         console.log("✅ Eliminada");
     };
 
-    const handleReasonChange = (dateToUpdate: Date, newReason: string, center: 'Vacation' | 'Arbucies' | 'SantHilari') => {
+    // ✅ CORRECCIÓ 2: Debounce per al motiu (espera 1 segon abans de guardar)
+    const handleReasonChange = useCallback((dateToUpdate: Date, newReason: string, center: 'Vacation' | 'Arbucies' | 'SantHilari') => {
         if (isInitialLoad) return;
         
         let newVacations = vacationDates;
@@ -262,9 +267,8 @@ const Settings = () => {
             setClosureDatesSantHilari(newClosuresSantHilari);
         }
         
-        saveToFirebase(newVacations, newClosuresArbucies, newClosuresSantHilari,
-            availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari);
-    };
+        // ✅ NO guardem immediatament, el component ReasonInput s'encarregarà amb debounce
+    }, [vacationDates, closureDatesArbucies, closureDatesSantHilari, isInitialLoad]);
     
     const handleWorkDayChange = (dayIndex: number, center: 'Arbucies' | 'SantHilari') => {
         const setter = center === 'Arbucies' ? setWorkDaysArbucies : setWorkDaysSantHilari;
@@ -297,13 +301,15 @@ const Settings = () => {
             </div>
         );
     }
-const ReasonInput = ({ date, reason, center }: { 
+// ✅ CORRECCIÓ 2: ReasonInput amb debounce i useRef per mantenir el focus
+    const ReasonInput = ({ date, reason, center }: { 
         date: Date, 
         reason: string,
         center: 'Vacation' | 'Arbucies' | 'SantHilari'
     }) => {
         
         const [currentReasonValue, setCurrentReasonValue] = useState(reason);
+        const timeoutRef = useRef<NodeJS.Timeout | null>(null);
         
         useEffect(() => {
              setCurrentReasonValue(reason);
@@ -312,8 +318,42 @@ const ReasonInput = ({ date, reason, center }: {
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             const newReason = e.target.value;
             setCurrentReasonValue(newReason);
-            handleReasonChange(date, newReason, center);
+            
+            // ✅ Neteja el timeout anterior
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+            
+            // ✅ Espera 1 segon després de deixar d'escriure per guardar
+            timeoutRef.current = setTimeout(() => {
+                handleReasonChange(date, newReason, center);
+                
+                // Guarda a Firebase després del debounce
+                let newVacations = vacationDates;
+                let newClosuresArbucies = closureDatesArbucies;
+                let newClosuresSantHilari = closureDatesSantHilari;
+                
+                if (center === 'Vacation') {
+                    newVacations = vacationDates.map(d => isSameDay(d.date, date) ? { ...d, reason: newReason } : d);
+                } else if (center === 'Arbucies') {
+                    newClosuresArbucies = closureDatesArbucies.map(d => isSameDay(d.date, date) ? { ...d, reason: newReason } : d);
+                } else {
+                    newClosuresSantHilari = closureDatesSantHilari.map(d => isSameDay(d.date, date) ? { ...d, reason: newReason } : d);
+                }
+                
+                saveToFirebase(newVacations, newClosuresArbucies, newClosuresSantHilari,
+                    availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari);
+            }, 1000);
         };
+        
+        // ✅ Neteja el timeout quan el component es desmunta
+        useEffect(() => {
+            return () => {
+                if (timeoutRef.current) {
+                    clearTimeout(timeoutRef.current);
+                }
+            };
+        }, []);
 
         const baseColor = center === 'Vacation' ? 'blue' : 'gray';
 
@@ -444,8 +484,12 @@ const ReasonInput = ({ date, reason, center }: {
                         <Label>Seleccionar període de vacances generals</Label>
                         <Popover open={isPopoverOpen && currentCenterClosure === 'Vacation'} onOpenChange={(open) => {
                             setIsPopoverOpen(open);
-                            if (open) setCurrentCenterClosure('Vacation');
-                            else setCurrentReason(''); 
+                            if (open) {
+                                setCurrentCenterClosure('Vacation');
+                            } else {
+                                setCurrentReason('');
+                                setCurrentCenterClosure(null);
+                            }
                         }}>
                             <PopoverTrigger asChild>
                                 <Button variant="outline" className="w-full shadow-neo hover:shadow-neo-sm justify-start" disabled={isSaving}>
@@ -454,16 +498,28 @@ const ReasonInput = ({ date, reason, center }: {
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-3" align="start">
-                                <p className="text-sm text-muted-foreground mb-3">
-                                    Selecciona les dates. El motiu es pot afegir després.
-                                </p>
-                                <Calendar
-                                mode="multiple"
-                                selected={getDatesOnly(vacationDates)} 
-                                onSelect={handleDateSelect}
-                                locale={ca}
-                                className="rounded-md border shadow-neo"
-                                />
+                                <div className="space-y-3">
+                                    <p className="text-sm text-muted-foreground">
+                                        Selecciona les dates que vulguis. Prem "Tancar" quan acabis.
+                                    </p>
+                                    <Calendar
+                                    mode="multiple"
+                                    selected={getDatesOnly(vacationDates)} 
+                                    onSelect={handleDateSelect}
+                                    locale={ca}
+                                    className="rounded-md border shadow-neo"
+                                    />
+                                    <Button 
+                                        onClick={() => {
+                                            setIsPopoverOpen(false);
+                                            setCurrentCenterClosure(null);
+                                        }}
+                                        className="w-full"
+                                        size="sm"
+                                    >
+                                        Tancar
+                                    </Button>
+                                </div>
                             </PopoverContent>
                         </Popover>
                         
@@ -484,8 +540,12 @@ const ReasonInput = ({ date, reason, center }: {
                             <Label className="mb-2 block">Arbúcies</Label>
                             <Popover open={isPopoverOpen && currentCenterClosure === 'Arbucies'} onOpenChange={(open) => {
                                 setIsPopoverOpen(open);
-                                if (open) setCurrentCenterClosure('Arbucies');
-                                else setCurrentReason('');
+                                if (open) {
+                                    setCurrentCenterClosure('Arbucies');
+                                } else {
+                                    setCurrentReason('');
+                                    setCurrentCenterClosure(null);
+                                }
                             }}>
                                 <PopoverTrigger asChild>
                                     <Button variant="outline" className="w-full shadow-neo hover:shadow-neo-sm justify-start" disabled={isSaving}>
@@ -494,16 +554,28 @@ const ReasonInput = ({ date, reason, center }: {
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-3" align="start">
-                                    <p className="text-sm text-muted-foreground mb-3">
-                                        Selecciona les dates. El motiu es pot afegir després.
-                                    </p>
-                                    <Calendar
-                                        mode="multiple"
-                                        selected={getDatesOnly(closureDatesArbucies)}
-                                        onSelect={handleDateSelect}
-                                        locale={ca}
-                                        className="rounded-md border shadow-neo"
-                                    />
+                                    <div className="space-y-3">
+                                        <p className="text-sm text-muted-foreground">
+                                            Selecciona les dates que vulguis. Prem "Tancar" quan acabis.
+                                        </p>
+                                        <Calendar
+                                            mode="multiple"
+                                            selected={getDatesOnly(closureDatesArbucies)}
+                                            onSelect={handleDateSelect}
+                                            locale={ca}
+                                            className="rounded-md border shadow-neo"
+                                        />
+                                        <Button 
+                                            onClick={() => {
+                                                setIsPopoverOpen(false);
+                                                setCurrentCenterClosure(null);
+                                            }}
+                                            className="w-full"
+                                            size="sm"
+                                        >
+                                            Tancar
+                                        </Button>
+                                    </div>
                                 </PopoverContent>
                             </Popover>
                             <DateList dates={closureDatesArbucies} listName="Tancament Arbúcies" center="Arbucies" />
@@ -513,8 +585,12 @@ const ReasonInput = ({ date, reason, center }: {
                             <Label className="mb-2 block">Sant Hilari</Label>
                             <Popover open={isPopoverOpen && currentCenterClosure === 'SantHilari'} onOpenChange={(open) => {
                                 setIsPopoverOpen(open);
-                                if (open) setCurrentCenterClosure('SantHilari');
-                                else setCurrentReason('');
+                                if (open) {
+                                    setCurrentCenterClosure('SantHilari');
+                                } else {
+                                    setCurrentReason('');
+                                    setCurrentCenterClosure(null);
+                                }
                             }}>
                                 <PopoverTrigger asChild>
                                     <Button variant="outline" className="w-full shadow-neo hover:shadow-neo-sm justify-start" disabled={isSaving}>
@@ -523,16 +599,28 @@ const ReasonInput = ({ date, reason, center }: {
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-3" align="start">
-                                    <p className="text-sm text-muted-foreground mb-3">
-                                        Selecciona les dates. El motiu es pot afegir després.
-                                    </p>
-                                    <Calendar
-                                        mode="multiple"
-                                        selected={getDatesOnly(closureDatesSantHilari)}
-                                        onSelect={handleDateSelect}
-                                        locale={ca}
-                                        className="rounded-md border shadow-neo"
-                                    />
+                                    <div className="space-y-3">
+                                        <p className="text-sm text-muted-foreground">
+                                            Selecciona les dates que vulguis. Prem "Tancar" quan acabis.
+                                        </p>
+                                        <Calendar
+                                            mode="multiple"
+                                            selected={getDatesOnly(closureDatesSantHilari)}
+                                            onSelect={handleDateSelect}
+                                            locale={ca}
+                                            className="rounded-md border shadow-neo"
+                                        />
+                                        <Button 
+                                            onClick={() => {
+                                                setIsPopoverOpen(false);
+                                                setCurrentCenterClosure(null);
+                                            }}
+                                            className="w-full"
+                                            size="sm"
+                                        >
+                                            Tancar
+                                        </Button>
+                                    </div>
                                 </PopoverContent>
                             </Popover>
                             <DateList dates={closureDatesSantHilari} listName="Tancament Sant Hilari" center="SantHilari" />
