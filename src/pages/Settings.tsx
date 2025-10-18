@@ -36,7 +36,7 @@ const keyToDate = (key: string): Date | null => {
   return date;
 };
 
-// 🛑 NOU: Algoritme de Gauss per calcular la data de Pasqua
+// Algoritme de Gauss per calcular la data de Pasqua
 const getEasterDate = (year: number): Date => {
     const a = year % 19;
     const b = Math.floor(year / 100);
@@ -56,7 +56,7 @@ const getEasterDate = (year: number): Date => {
     return new Date(year, month - 1, day); 
 };
 
-// 🛑 NOU: Funció per obtenir els festius nacionals i autonòmics (Catalunya)
+// Funció per obtenir els festius nacionals i autonòmics (Catalunya) per a un any
 const getOfficialHolidays = (year: number): DateWithReason[] => {
     
     const easter = getEasterDate(year);
@@ -83,7 +83,7 @@ const getOfficialHolidays = (year: number): DateWithReason[] => {
         new Date(year, 7, 15), 
         // Diada Nacional de Catalunya (Any en curs)
         new Date(year, 8, 11),
-        // Mercè (Festiu local BCN, afegit per context)
+        // Mercè (Festiu local BCN, afegit per context, si cal canviar-lo)
         new Date(year, 8, 24), 
         // Festa Nacional d'Espanya (Any en curs)
         new Date(year, 9, 12), 
@@ -119,7 +119,7 @@ const getOfficialHolidays = (year: number): DateWithReason[] => {
         reason: format(date, "EEEE", { locale: ca }), 
     }));
 };
-// 🛑 FINAL DE LES NOVES FUNCIONS
+
 
 const getCurrentWorkYear = (today: Date): { start: Date, end: Date } => {
     const currentYear = today.getFullYear();
@@ -138,14 +138,10 @@ const getCurrentWorkYear = (today: Date): { start: Date, end: Date } => {
     const currentFebFirst = new Date(currentYear, startMonth, startDay);
     currentFebFirst.setHours(0, 0, 0, 0);
 
-    // Si la data actual és abans de l'1 de Febrer de l'any actual (o és el 31 de Gener),
-    // l'any laboral actiu va de l'1 de Febrer de l'any anterior al 31 de Gener de l'any actual.
     if (isBefore(today, currentFebFirst) || isSameDay(today, new Date(currentYear, endMonth, endDay))) {
         startYear = currentYear - 1;
         endYear = currentYear;
     } else {
-        // Si la data actual és posterior a l'1 de Febrer,
-        // l'any laboral actiu va de l'1 de Febrer de l'any actual al 31 de Gener de l'any següent.
         startYear = currentYear;
         endYear = currentYear + 1;
     }
@@ -172,12 +168,11 @@ const Settings = () => {
     const [vacationDates, setVacationDates] = useState<DateWithReason[]>([]);
     const [closureDatesArbucies, setClosureDatesArbucies] = useState<DateWithReason[]>([]);
     const [closureDatesSantHilari, setClosureDatesSantHilari] = useState<DateWithReason[]>([]);
-    // 🛑 NOU: Estat per als Festius Oficials
     const [officialHolidays, setOfficialHolidays] = useState<DateWithReason[]>([]); 
 
     const [currentReason, setCurrentReason] = useState('');
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-    const [currentCenterClosure, setCurrentCenterClosure] = useState<'Arbucies' | 'SantHilari' | 'Vacation' | 'Holiday' | null>(null); // 🛑 NOU: 'Holiday'
+    const [currentCenterClosure, setCurrentCenterClosure] = useState<'Arbucies' | 'SantHilari' | 'Vacation' | 'Holiday' | null>(null);
 
     const [availableDaysArbucies, setAvailableDaysArbucies] = useState(30);
     const [availableDaysSantHilari, setAvailableDaysSantHilari] = useState(20);
@@ -231,7 +226,7 @@ const Settings = () => {
         vacationsToSave: DateWithReason[],
         closuresArbuciesToSave: DateWithReason[],
         closuresSantHilariToSave: DateWithReason[],
-        holidaysToSave: DateWithReason[], // 🛑 NOU: Festius
+        holidaysToSave: DateWithReason[],
         availableArbucies: number,
         availableSantHilari: number,
         workArbucies: number[],
@@ -242,7 +237,7 @@ const Settings = () => {
                 vacations: convertToFirebaseFormat(vacationsToSave), 
                 closuresArbucies: convertToFirebaseFormat(closuresArbuciesToSave), 
                 closuresSantHilari: convertToFirebaseFormat(closuresSantHilariToSave),
-                officialHolidays: convertToFirebaseFormat(holidaysToSave), // 🛑 NOU: Festius
+                officialHolidays: convertToFirebaseFormat(holidaysToSave),
                 availableDaysArbucies: availableArbucies,
                 availableDaysSantHilari: availableSantHilari,
                 workDaysArbucies: workArbucies,
@@ -250,7 +245,7 @@ const Settings = () => {
             };
 
             console.log("📤 Guardant a Firebase:", dataToSave); 
-            await setDoc(SETTINGS_DOC_REF, dataToSave, { merge: true }); // Usem merge: true per no sobrescriure tot si cal
+            await setDoc(SETTINGS_DOC_REF, dataToSave, { merge: true }); 
             console.log("✅ Dades guardades correctament a Firebase");
             
         } catch (error) {
@@ -262,7 +257,7 @@ const Settings = () => {
         e.preventDefault();
         setIsSaving(true);
         await saveToFirebase(
-            vacationDates, closureDatesArbucies, closureDatesSantHilari, officialHolidays, // 🛑 NOU: Festius
+            vacationDates, closureDatesArbucies, closureDatesSantHilari, officialHolidays,
             availableDaysArbucies, availableDaysSantHilari,
             workDaysArbucies, workDaysSantHilari
         );
@@ -280,15 +275,12 @@ const Settings = () => {
                 const newVacations = convertToDateWithReason(data.vacations);
                 const newClosuresArbucies = convertToDateWithReason(data.closuresArbucies);
                 const newClosuresSantHilari = convertToDateWithReason(data.closuresSantHilari);
-                // 🛑 NOU: Festius
                 const newHolidays = convertToDateWithReason(data.officialHolidays);
                 
-                // 🛑 NOU: Lògica d'inicialització de festius
+                // Lògica d'inicialització de festius
                 if (newHolidays.length === 0) {
-                    // Si Firebase està buit, calculem els festius de l'any laboral (el que acaba)
                     const calculatedHolidays = getOfficialHolidays(workYear.end.getFullYear());
                     setOfficialHolidays(calculatedHolidays);
-                    // 🚨 No cal guardar-los immediatament a Firebase, es guardarà al primer 'Desar canvis'
                 } else {
                     setOfficialHolidays(newHolidays);
                 }
@@ -315,9 +307,9 @@ const Settings = () => {
         });
 
         return () => unsubscribe();
-    }, [workYear]); // 🛑 NOU: workYear com a dependència per recalcular si l'any laboral canvia
+    }, [workYear]); 
 
-    // ✅ CORRECCIÓ 1: El calendari NO es tanca automàticament
+    // **FUNCIÓ CLAU RECUPERADA I CORREGIDA**
     const handleDateSelect = async (selectedDates: Date[] | undefined) => {
         if (!selectedDates || isInitialLoad) return;
         
@@ -327,6 +319,7 @@ const Settings = () => {
         let setter: React.Dispatch<React.SetStateAction<DateWithReason[]>>;
         let currentList: DateWithReason[] = [];
 
+        // 1. Determina quina llista s'ha d'actualitzar
         if (currentCenterClosure === 'Vacation') {
             currentList = vacationDates;
             setter = setVacationDates;
@@ -336,26 +329,33 @@ const Settings = () => {
         } else if (currentCenterClosure === 'SantHilari') {
             currentList = closureDatesSantHilari;
             setter = setClosureDatesSantHilari;
-        } else if (currentCenterClosure === 'Holiday') { // 🛑 NOU: Festius
+        } else if (currentCenterClosure === 'Holiday') {
             currentList = officialHolidays;
             setter = setOfficialHolidays;
         } else {
             return;
         }
         
+        // 2. Converteix la selecció a DateWithReason (manté el motiu si ja existeix)
         listToUpdate = selectedDates.map(newDate => {
             const existing = currentList.find(d => isSameDay(d.date, newDate));
             return existing || { date: newDate, reason: currentReason || '' };
         });
         
+        // 3. Actualitza l'estat local
         setter(listToUpdate);
 
-        // 🛑 NOU: Passem els festius
-        await saveToFirebase(vacationDates, closureDatesArbucies, closureDatesSantHilari, officialHolidays,
-            availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari);
+        // 4. Guarda a Firebase (Passant totes les llistes actualitzades)
+        await saveToFirebase(
+            currentCenterClosure === 'Vacation' ? listToUpdate : vacationDates,
+            currentCenterClosure === 'Arbucies' ? listToUpdate : closureDatesArbucies,
+            currentCenterClosure === 'SantHilari' ? listToUpdate : closureDatesSantHilari,
+            currentCenterClosure === 'Holiday' ? listToUpdate : officialHolidays,
+            availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari
+        );
     };
     
-    // 🛑 NOU: Actualitzada per als Festius
+    // **FUNCIÓ CLAU RECUPERADA I CORREGIDA**
     const handleRemoveDate = async (dateToRemove: Date, center: 'Vacation' | 'Arbucies' | 'SantHilari' | 'Holiday') => {
         if (isInitialLoad) return;
         
@@ -364,7 +364,7 @@ const Settings = () => {
         let newVacations = vacationDates;
         let newClosuresArbucies = closureDatesArbucies;
         let newClosuresSantHilari = closureDatesSantHilari;
-        let newHolidays = officialHolidays; // 🛑 NOU
+        let newHolidays = officialHolidays;
 
         if (center === 'Vacation') {
             newVacations = vacationDates.filter(d => !isSameDay(d.date, dateToRemove));
@@ -375,26 +375,25 @@ const Settings = () => {
         } else if (center === 'SantHilari') {
             newClosuresSantHilari = closureDatesSantHilari.filter(d => !isSameDay(d.date, dateToRemove));
             setClosureDatesSantHilari(newClosuresSantHilari);
-        } else if (center === 'Holiday') { // 🛑 NOU
+        } else if (center === 'Holiday') {
              newHolidays = officialHolidays.filter(d => !isSameDay(d.date, dateToRemove));
             setOfficialHolidays(newHolidays);
         }
         
-        // 🛑 NOU: Passem els festius
         await saveToFirebase(newVacations, newClosuresArbucies, newClosuresSantHilari, newHolidays,
             availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari);
         
         console.log("✅ Eliminada");
     };
 
-    // 🛑 NOU: Actualitzada per als Festius
+    // **FUNCIÓ CLAU RECUPERADA I CORREGIDA**
     const handleReasonChange = useCallback((dateToUpdate: Date, newReason: string, center: 'Vacation' | 'Arbucies' | 'SantHilari' | 'Holiday') => {
         if (isInitialLoad) return;
         
         let newVacations = vacationDates;
         let newClosuresArbucies = closureDatesArbucies;
         let newClosuresSantHilari = closureDatesSantHilari;
-        let newHolidays = officialHolidays; // 🛑 NOU
+        let newHolidays = officialHolidays;
         
         if (center === 'Vacation') {
             newVacations = vacationDates.map(d => isSameDay(d.date, dateToUpdate) ? { ...d, reason: newReason } : d);
@@ -405,13 +404,13 @@ const Settings = () => {
         } else if (center === 'SantHilari') {
             newClosuresSantHilari = closureDatesSantHilari.map(d => isSameDay(d.date, dateToUpdate) ? { ...d, reason: newReason } : d);
             setClosureDatesSantHilari(newClosuresSantHilari);
-        } else if (center === 'Holiday') { // 🛑 NOU
+        } else if (center === 'Holiday') {
             newHolidays = officialHolidays.map(d => isSameDay(d.date, dateToUpdate) ? { ...d, reason: newReason } : d);
             setOfficialHolidays(newHolidays);
         }
         
-        // ✅ NO guardem immediatament, el component ReasonInput s'encarregarà amb debounce
-    }, [vacationDates, closureDatesArbucies, closureDatesSantHilari, officialHolidays, isInitialLoad]); // 🛑 NOU: officialHolidays com a dependència
+        // NO guardem immediatament, el component ReasonInput s'encarregarà amb debounce
+    }, [vacationDates, closureDatesArbucies, closureDatesSantHilari, officialHolidays, isInitialLoad]);
     
     const handleWorkDayChange = (dayIndex: number, center: 'Arbucies' | 'SantHilari') => {
         const setter = center === 'Arbucies' ? setWorkDaysArbucies : setWorkDaysSantHilari;
@@ -424,9 +423,6 @@ const Settings = () => {
         }
     };
 
-    // 🛑 ELIMINAT: Ja no necessitem la llista de festius hardcodejats
-    // const holidays2025 = [...]
-    
     const dayNamesList = ["Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", "Dissabte", "Diumenge"];
     
     const getDatesOnly = (datesWithReason: DateWithReason[]): Date[] => datesWithReason.map(d => d.date);
@@ -439,11 +435,11 @@ const Settings = () => {
             </div>
         );
     }
-// ✅ CORRECCIÓ 2: ReasonInput amb debounce i useRef per mantenir el focus
+
     const ReasonInput = ({ date, reason, center }: { 
         date: Date, 
         reason: string,
-        center: 'Vacation' | 'Arbucies' | 'SantHilari' | 'Holiday' // 🛑 NOU: 'Holiday'
+        center: 'Vacation' | 'Arbucies' | 'SantHilari' | 'Holiday'
     }) => {
         
         const [currentReasonValue, setCurrentReasonValue] = useState(reason);
@@ -457,12 +453,10 @@ const Settings = () => {
             const newReason = e.target.value;
             setCurrentReasonValue(newReason);
             
-            // ✅ Neteja el timeout anterior
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
             }
             
-            // ✅ Espera 1 segon després de deixar d'escriure per guardar
             timeoutRef.current = setTimeout(() => {
                 handleReasonChange(date, newReason, center);
                 
@@ -470,7 +464,7 @@ const Settings = () => {
                 let newVacations = vacationDates;
                 let newClosuresArbucies = closureDatesArbucies;
                 let newClosuresSantHilari = closureDatesSantHilari;
-                let newHolidays = officialHolidays; // 🛑 NOU
+                let newHolidays = officialHolidays;
                 
                 if (center === 'Vacation') {
                     newVacations = vacationDates.map(d => isSameDay(d.date, date) ? { ...d, reason: newReason } : d);
@@ -478,17 +472,15 @@ const Settings = () => {
                     newClosuresArbucies = closureDatesArbucies.map(d => isSameDay(d.date, date) ? { ...d, reason: newReason } : d);
                 } else if (center === 'SantHilari') {
                     newClosuresSantHilari = closureDatesSantHilari.map(d => isSameDay(d.date, date) ? { ...d, reason: newReason } : d);
-                } else if (center === 'Holiday') { // 🛑 NOU
+                } else if (center === 'Holiday') {
                     newHolidays = officialHolidays.map(d => isSameDay(d.date, date) ? { ...d, reason: newReason } : d);
                 }
                 
-                // 🛑 NOU: Passem els festius
                 saveToFirebase(newVacations, newClosuresArbucies, newClosuresSantHilari, newHolidays,
                     availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari);
             }, 1000);
         };
         
-        // ✅ Neteja el timeout quan el component es desmunta
         useEffect(() => {
             return () => {
                 if (timeoutRef.current) {
@@ -497,7 +489,7 @@ const Settings = () => {
             };
         }, []);
 
-        const baseColor = center === 'Vacation' ? 'blue' : center === 'Holiday' ? 'accent' : 'gray'; // 🛑 NOU: Color per a 'Holiday'
+        const baseColor = center === 'Vacation' ? 'blue' : center === 'Holiday' ? 'accent' : 'gray';
 
         return (
             <Input
@@ -512,10 +504,12 @@ const Settings = () => {
 
     const DateList = ({ dates, listName, center }: {
         dates: DateWithReason[],
-        listName: 'Vacances' | 'Tancament Arbúcies' | 'Tancament Sant Hilari' | 'Festius Oficials', // 🛑 NOU: 'Festius Oficials'
-        center: 'Vacation' | 'Arbucies' | 'SantHilari' | 'Holiday' // 🛑 NOU: 'Holiday'
+        listName: 'Vacances' | 'Tancament Arbúcies' | 'Tancament Sant Hilari' | 'Festius Oficials',
+        center: 'Vacation' | 'Arbucies' | 'SantHilari' | 'Holiday'
     }) => {
-        const baseColor = listName.includes('Vacances') ? 'blue' : listName.includes('Festius') ? 'accent' : 'gray'; // 🛑 NOU: Color
+        const baseColor = listName.includes('Vacances') ? 'blue' : listName.includes('Festius') ? 'accent' : 'gray';
+        
+        // Filtra les dates per al període laboral actual
         const dateList = dates
             .filter(d => 
                 (isAfter(d.date, workYear.start) || isSameDay(d.date, workYear.start)) && 
@@ -574,7 +568,105 @@ const Settings = () => {
                     <p className="text-sm text-muted-foreground mb-4">
                         Període laboral: {format(workYear.start, "dd/MM/yyyy")} - {format(workYear.end, "dd/MM/yyyy")}
                     </p>
-                    {/* ... (Contingut de Vacances) ... */}
+                    <div className="grid md:grid-cols-2 gap-6 mb-6">
+                        <div className="space-y-4">
+                            <div>
+                                <Label htmlFor="arbucies-vacation">Dies disponibles Arbúcies</Label>
+                                <Input 
+                                    id="arbucies-vacation" 
+                                    type="number" 
+                                    value={availableDaysArbucies} 
+                                    onChange={(e) => setAvailableDaysArbucies(parseInt(e.target.value, 10) || 0)} 
+                                    className="shadow-neo-inset border-0 mt-1"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="arbucies-used">Dies utilitzats</Label>
+                                <Input 
+                                    id="arbucies-used" 
+                                    type="number" 
+                                    value={usedDaysArbucies} 
+                                    className="shadow-neo-inset border-0 mt-1"
+                                    readOnly 
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Calculat sobre els dies laborables d'Arbúcies.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <Label htmlFor="santhilari-vacation">Dies disponibles Sant Hilari</Label>
+                                <Input 
+                                    id="santhilari-vacation" 
+                                    type="number" 
+                                    value={availableDaysSantHilari} 
+                                    onChange={(e) => setAvailableDaysSantHilari(parseInt(e.target.value, 10) || 0)} 
+                                    className="shadow-neo-inset border-0 mt-1"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="santhilari-used">Dies utilitzats</Label>
+                                <Input 
+                                    id="santhilari-used" 
+                                    type="number" 
+                                    value={usedDaysSantHilari} 
+                                    className="shadow-neo-inset border-0 mt-1"
+                                    readOnly 
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Calculat sobre els dies laborables de Sant Hilari.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <Label>Seleccionar període de vacances generals</Label>
+                        <Popover open={isPopoverOpen && currentCenterClosure === 'Vacation'} onOpenChange={(open) => {
+                            setIsPopoverOpen(open);
+                            if (open) {
+                                setCurrentCenterClosure('Vacation');
+                            } else {
+                                setCurrentReason('');
+                                setCurrentCenterClosure(null);
+                            }
+                        }}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-full shadow-neo hover:shadow-neo-sm justify-start" disabled={isSaving}>
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    Afegir vacances
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-3" align="start">
+                                <div className="space-y-3">
+                                    <p className="text-sm text-muted-foreground">
+                                        Selecciona les dates que vulguis. Prem "Tancar" quan acabis.
+                                    </p>
+                                    <Calendar
+                                    mode="multiple"
+                                    selected={getDatesOnly(vacationDates)} 
+                                    onSelect={handleDateSelect}
+                                    locale={ca}
+                                    className="rounded-md border shadow-neo"
+                                    />
+                                    <Button 
+                                        onClick={() => {
+                                            setIsPopoverOpen(false);
+                                            setCurrentCenterClosure(null);
+                                        }}
+                                        className="w-full"
+                                        size="sm"
+                                    >
+                                        Tancar
+                                    </Button>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                        
+                        <DateList dates={vacationDates} listName="Vacances" center="Vacation" />
+                    </div>
                 </NeoCard>
 
                 <hr className="my-6 border-t border-gray-200" /> 
@@ -585,12 +677,102 @@ const Settings = () => {
                         <h2 className="text-xl font-semibold">Dies de tancament per centres</h2>
                     </div>
 
-                    {/* ... (Contingut de Tancament Arbúcies i Sant Hilari) ... */}
+                    <div className="space-y-4">
+                        <div>
+                            <Label className="mb-2 block">Arbúcies</Label>
+                            <Popover open={isPopoverOpen && currentCenterClosure === 'Arbucies'} onOpenChange={(open) => {
+                                setIsPopoverOpen(open);
+                                if (open) {
+                                    setCurrentCenterClosure('Arbucies');
+                                } else {
+                                    setCurrentReason('');
+                                    setCurrentCenterClosure(null);
+                                }
+                            }}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" className="w-full shadow-neo hover:shadow-neo-sm justify-start" disabled={isSaving}>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Afegir dies de tancament Arbúcies
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-3" align="start">
+                                    <div className="space-y-3">
+                                        <p className="text-sm text-muted-foreground">
+                                            Selecciona les dates que vulguis. Prem "Tancar" quan acabis.
+                                        </p>
+                                        <Calendar
+                                            mode="multiple"
+                                            selected={getDatesOnly(closureDatesArbucies)}
+                                            onSelect={handleDateSelect}
+                                            locale={ca}
+                                            className="rounded-md border shadow-neo"
+                                        />
+                                        <Button 
+                                            onClick={() => {
+                                                setIsPopoverOpen(false);
+                                                setCurrentCenterClosure(null);
+                                            }}
+                                            className="w-full"
+                                            size="sm"
+                                        >
+                                            Tancar
+                                        </Button>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                            <DateList dates={closureDatesArbucies} listName="Tancament Arbúcies" center="Arbucies" />
+                        </div>
+
+                        <div>
+                            <Label className="mb-2 block">Sant Hilari</Label>
+                            <Popover open={isPopoverOpen && currentCenterClosure === 'SantHilari'} onOpenChange={(open) => {
+                                setIsPopoverOpen(open);
+                                if (open) {
+                                    setCurrentCenterClosure('SantHilari');
+                                } else {
+                                    setCurrentReason('');
+                                    setCurrentCenterClosure(null);
+                                }
+                            }}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" className="w-full shadow-neo hover:shadow-neo-sm justify-start" disabled={isSaving}>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Afegir dies de tancament Sant Hilari
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-3" align="start">
+                                    <div className="space-y-3">
+                                        <p className="text-sm text-muted-foreground">
+                                            Selecciona les dates que vulguis. Prem "Tancar" quan acabis.
+                                        </p>
+                                        <Calendar
+                                            mode="multiple"
+                                            selected={getDatesOnly(closureDatesSantHilari)}
+                                            onSelect={handleDateSelect}
+                                            locale={ca}
+                                            className="rounded-md border shadow-neo"
+                                        />
+                                        <Button 
+                                            onClick={() => {
+                                                setIsPopoverOpen(false);
+                                                setCurrentCenterClosure(null);
+                                            }}
+                                            className="w-full"
+                                            size="sm"
+                                        >
+                                            Tancar
+                                        </Button>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                            <DateList dates={closureDatesSantHilari} listName="Tancament Sant Hilari" center="SantHilari" />
+                        </div>
+                    </div>
                 </NeoCard>
 
                 <hr className="my-6 border-t border-gray-200" /> 
 
-                {/* 🛑 NOU: Secció de Festius Oficials */}
+                {/* Secció de Festius Oficials */}
                 <NeoCard>
                     <div className="flex items-center gap-2 mb-4">
                         <CalendarIcon className="w-5 h-5 text-accent" />
@@ -643,7 +825,6 @@ const Settings = () => {
                         <DateList dates={officialHolidays} listName="Festius Oficials" center="Holiday" />
                     </div>
                 </NeoCard>
-                {/* 🛑 FINAL NOU: Secció de Festius Oficials */}
 
                 <hr className="my-6 border-t border-gray-200" /> 
 
@@ -652,7 +833,51 @@ const Settings = () => {
                         <UsersIcon className="w-5 h-5 text-primary" />
                         <h2 className="text-xl font-semibold">Dies de treball</h2>
                     </div>
-                    {/* ... (Contingut de Dies de Treball) ... */}
+                    <p className="text-sm text-muted-foreground mb-4">
+                        Defineix els dies laborables (Dilluns=1, Diumenge=7).
+                    </p>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <Label className="mb-3 block">Arbúcies</Label>
+                            <div className="space-y-2">
+                                {dayNamesList.map((name, index) => {
+                                    const dayIndex = index + 1;
+                                    return (
+                                        <label key={dayIndex} className="flex items-center gap-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={workDaysArbucies.includes(dayIndex)} 
+                                                onChange={() => handleWorkDayChange(dayIndex, 'Arbucies')} 
+                                                className="rounded shadow-neo-inset" 
+                                            />
+                                            <span>{name}</span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label className="mb-3 block">Sant Hilari</Label>
+                            <div className="space-y-2">
+                                {dayNamesList.map((name, index) => {
+                                    const dayIndex = index + 1;
+                                    return (
+                                        <label key={dayIndex} className="flex items-center gap-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={workDaysSantHilari.includes(dayIndex)} 
+                                                onChange={() => handleWorkDayChange(dayIndex, 'SantHilari')} 
+                                                className="rounded shadow-neo-inset" 
+                                            />
+                                            <span>{name}</span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
                 </NeoCard>
 
                 <div className="flex justify-end">
