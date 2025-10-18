@@ -36,14 +36,51 @@ const keyToDate = (key: string): Date | null => {
   return date;
 };
 
+// =================================================================
+// 🚀 INICI DE LA CORRECCIÓ: MODIFICACIÓ DE LA LÒGICA DE L'ANY LABORAL
+// =================================================================
+
 const getCurrentWorkYear = (today: Date): { start: Date, end: Date } => {
     const currentYear = today.getFullYear();
-    const startDate = new Date(currentYear, 0, 1);
-    const endDate = new Date(currentYear, 11, 31);
+    let startYear = currentYear;
+    let endYear = currentYear;
+
+    // Febrer és el mes 1 (0 = Gen, 1 = Feb)
+    const startMonth = 1; // Febrer
+    const startDay = 1;   // Dia 1
+
+    // Gener és el mes 0
+    const endMonth = 0;   // Gener
+    const endDay = 31;    // Dia 31
+
+    // Data de referència: 1 de Febrer de l'any actual
+    const currentFebFirst = new Date(currentYear, startMonth, startDay);
+    currentFebFirst.setHours(0, 0, 0, 0);
+
+    // Si la data actual és abans de l'1 de Febrer de l'any actual (o és el 31 de Gener),
+    // l'any laboral actiu va de l'1 de Febrer de l'any anterior al 31 de Gener de l'any actual.
+    if (isBefore(today, currentFebFirst) || isSameDay(today, new Date(currentYear, endMonth, endDay))) {
+        startYear = currentYear - 1;
+        endYear = currentYear;
+    } else {
+        // Si la data actual és posterior a l'1 de Febrer,
+        // l'any laboral actiu va de l'1 de Febrer de l'any actual al 31 de Gener de l'any següent.
+        startYear = currentYear;
+        endYear = currentYear + 1;
+    }
+
+    const startDate = new Date(startYear, startMonth, startDay); // 1 de Febrer (de startYear)
+    const endDate = new Date(endYear, endMonth, endDay);         // 31 de Gener (de endYear)
+
     startDate.setHours(0, 0, 0, 0);
     endDate.setHours(0, 0, 0, 0);
+
     return { start: startDate, end: endDate };
 };
+
+// =================================================================
+// 🛑 FINAL DE LA CORRECCIÓ
+// =================================================================
 
 const convertToFirebaseFormat = (datesWithReason: DateWithReason[]): Record<string, string> => {
     if (datesWithReason.length === 0) return {};
@@ -74,17 +111,20 @@ const Settings = () => {
 
     const workYear = useMemo(() => getCurrentWorkYear(new Date()), []);
     
+    // Aquesta funció és clau per calcular els "Dies utilitzats"
     const isWorkDay = useCallback((date: Date, workDays: number[]) => {
         const dayOfWeek = date.getDay(); 
         const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
         return workDays.includes(adjustedDay);
     }, []);
     
+    // El càlcul dels dies utilitzats ara utilitzarà el workYear corregit
     const { usedDaysArbucies, usedDaysSantHilari } = useMemo(() => {
         let arbuciesCount = 0;
         let santHilariCount = 0;
 
         vacationDates.forEach(({ date }) => {
+            // Aquesta lògica de filtratge utilitza el workYear corregit
             const isWithinWorkYear = (
                 (isAfter(date, workYear.start) || isSameDay(date, workYear.start)) && 
                 (isBefore(date, workYear.end) || isSameDay(date, workYear.end))
