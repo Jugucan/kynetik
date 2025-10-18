@@ -1,16 +1,17 @@
-// src/hooks/useSettings.ts (Codi Corregit)
+// src/hooks/useSettings.ts (Codi Corregit + Festius Oficials)
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase'; 
 import { doc, onSnapshot } from 'firebase/firestore'; 
 
-// Defineix la interfície per a les dades de configuració (NOU FORMAT)
+// Defineix la interfície per a les dades de configuració
 export interface SettingsData {
-  // CLAU: Les dades ara són Objectes (Map de data -> motiu)
+  // Les dades són Objectes (Map de data -> motiu)
   vacations: Record<string, string>;
   closuresArbucies: Record<string, string>;
   closuresSantHilari: Record<string, string>;
-  // Afegeix workDays i availableDays, ja que el Calendar.tsx també les pot necessitar
+  officialHolidays: Record<string, string>; // 🎉 NOU: Festius oficials
+  // Altres dades
   workDaysArbucies: number[];
   workDaysSantHilari: number[];
   availableDaysArbucies: number;
@@ -19,10 +20,10 @@ export interface SettingsData {
 }
 
 const defaultSettings: SettingsData = {
-    // Valors per defecte canviats a Objectes buits
     vacations: {},
     closuresArbucies: {},
     closuresSantHilari: {},
+    officialHolidays: {}, // 🎉 NOU
     workDaysArbucies: [1, 2, 4], 
     workDaysSantHilari: [3, 5],
     availableDaysArbucies: 30,
@@ -30,9 +31,8 @@ const defaultSettings: SettingsData = {
     loading: true,
 };
 
-// Funció auxiliar per convertir string YYYY-MM-DD a objecte Date (Extreta de Settings.tsx)
+// Funció auxiliar per convertir string YYYY-MM-DD a objecte Date
 export const keyToDate = (key: string): Date | null => {
-    // [La funció completa, si la vols exportar/usar en altres llocs]
     if (typeof key !== 'string') return null;
     
     const parts = key.split('-').map(p => parseInt(p, 10));
@@ -45,7 +45,6 @@ export const keyToDate = (key: string): Date | null => {
     return isNaN(date.getTime()) ? null : date;
 };
 
-
 export const useSettings = (): SettingsData => {
   const [settings, setSettings] = useState<SettingsData>(defaultSettings);
   
@@ -56,11 +55,12 @@ export const useSettings = (): SettingsData => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         
-        // CORRECCIÓ CLAU: Assegura que els camps de data són objectes, si no, usa un objecte buit
+        // Assegura que els camps de data són objectes
         setSettings({
             vacations: (data.vacations && typeof data.vacations === 'object' && !Array.isArray(data.vacations)) ? data.vacations : {},
             closuresArbucies: (data.closuresArbucies && typeof data.closuresArbucies === 'object' && !Array.isArray(data.closuresArbucies)) ? data.closuresArbucies : {},
             closuresSantHilari: (data.closuresSantHilari && typeof data.closuresSantHilari === 'object' && !Array.isArray(data.closuresSantHilari)) ? data.closuresSantHilari : {},
+            officialHolidays: (data.officialHolidays && typeof data.officialHolidays === 'object' && !Array.isArray(data.officialHolidays)) ? data.officialHolidays : {}, // 🎉 NOU
             
             // Càrrega d'altres dades
             workDaysArbucies: (data.workDaysArbucies && Array.isArray(data.workDaysArbucies)) ? data.workDaysArbucies : defaultSettings.workDaysArbucies,
