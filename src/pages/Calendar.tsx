@@ -3,46 +3,19 @@ import { NeoCard } from "@/components/NeoCard";
 import { DaySessionsModal } from "@/components/DaySessionsModal";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { programColors, weekSchedule, Session } from "@/lib/programColors";
-// 💡 IMPORTANT: El hook ja no necessita 'keyToDate' si no la fas servir directament aquí,
-// però assegura't que useSettings.ts té la nova estructura (Pas 1)
 import { useSettings } from "@/hooks/useSettings"; 
 
-// ******************************************************************************
-// FUNCIÓ PER GENERAR LA CLAU DE DATA EN FORMAT LOCAL 'YYYY-MM-DD'
-// (Aquesta és essencial i ja era correcta aquí)
-// ******************************************************************************
+// Funció per generar la clau de data en format local 'YYYY-MM-DD'
 const dateToKey = (date: Date): string => {
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const day = date.getDate().toString().padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
-// ******************************************************************************
-
-// Llista de festius de prova (extreta del teu Settings.tsx, només per a la simulació de festius)
-// NOTA: Això s'hauria de carregar de Firebase si fos dinàmic, però ho deixem local com al teu codi original.
-const holidays2025 = [
-    { name: "Any Nou", date: "2025-01-01" }, // Hem de passar-ho a YYYY-MM-DD
-    { name: "Reis", date: "2025-01-06" }, 
-    { name: "Divendres Sant", date: "2025-04-18" },
-    { name: "Dilluns de Pasqua", date: "2025-04-21" }, 
-    { name: "Festa del Treball", date: "2025-05-01" }, 
-    { name: "Sant Joan", date: "2025-06-24" },
-    { name: "Assumpció", date: "2025-08-15" }, 
-    { name: "Diada", date: "2025-09-11" }, 
-    { name: "Mercè", date: "2025-09-24" },
-    { name: "Hispanitat", date: "2025-10-12" }, 
-    { name: "Tots Sants", date: "2025-11-01" }, 
-    { name: "Constitució", date: "2025-12-06" },
-    { name: "Immaculada", date: "2025-12-08" }, 
-    { name: "Nadal", date: "2025-12-25" }, 
-    { name: "Sant Esteve", date: "2025-12-26" },
-];
-
 
 const Calendar = () => {
-  // 💡 NOU: Obtenim les dades de configuració. Ara són Objectes/Maps!
-  const { vacations, closuresArbucies, closuresSantHilari, loading } = useSettings(); 
+  // 🎉 NOU: Ara també carreguem officialHolidays de Firebase
+  const { vacations, closuresArbucies, closuresSantHilari, officialHolidays, loading } = useSettings(); 
 
   // ESTAT PER GESTIONAR EL MES QUE ES VEU
   const [currentViewDate, setCurrentViewDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -52,7 +25,7 @@ const Calendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // FUNCIONS PER CANVIAR DE MES (Sense canvis)
+  // FUNCIONS PER CANVIAR DE MES
   const goToPreviousMonth = useCallback(() => {
     setCurrentViewDate(prevDate => {
       return new Date(prevDate.getFullYear(), prevDate.getMonth() - 1, 1);
@@ -65,7 +38,7 @@ const Calendar = () => {
     });
   }, []);
 
-  // Càlcul del mes i any per al títol (Sense canvis)
+  // Càlcul del mes i any per al títol
   const currentMonthText = useMemo(() => {
     return currentViewDate.toLocaleDateString("ca-ES", { 
       month: "long", 
@@ -73,7 +46,6 @@ const Calendar = () => {
     });
   }, [currentViewDate]);
 
-  
   const getSessionsForDate = (date: Date): Session[] => {
     const dateKey = dateToKey(date);
     
@@ -112,38 +84,103 @@ const Calendar = () => {
     setIsModalOpen(true);
   };
 
+  // 🎉 NOU: Comprovar si és festiu oficial (des de Firebase)
   const isHoliday = (date: Date) => {
     const dateKey = dateToKey(date);
-    // Compte: al teu fitxer Settings.tsx tenies els mesos abreujats (1 Gen),
-    // però aquí comprovem el format YYYY-MM-DD. Assumim que holidays2025 té el format YYYY-MM-DD.
-    return holidays2025.some((h: { date: string, name: string }) => h.date === dateKey);
+    return officialHolidays && officialHolidays.hasOwnProperty(dateKey);
   };
 
-  // ******************************************************************************
-  // 💡 CORRECCIÓ CLAU 💡: Utilitzem hasOwnProperty()
-  // ******************************************************************************
+  // Comprovar si és vacances
   const isVacation = (date: Date) => {
     const dateKey = dateToKey(date);
-    // Ara 'vacations' és un objecte Map, comprovem si la clau (dateKey) existeix.
     return vacations && vacations.hasOwnProperty(dateKey); 
   };
   
+  // Comprovar si és tancament
   const isClosure = (date: Date) => {
     const dateKey = dateToKey(date);
-    // Comprovem si la clau existeix a l'Objecte Arbúcies O a l'Objecte Sant Hilari
     return (closuresArbucies && closuresArbucies.hasOwnProperty(dateKey)) || 
            (closuresSantHilari && closuresSantHilari.hasOwnProperty(dateKey)); 
   };
-  // ******************************************************************************
 
-
+  // 🎉 NOU: Obtenir el nom del festiu des de Firebase
   const getHolidayName = (date: Date) => {
     const dateKey = dateToKey(date);
-    const holiday = holidays2025.find((h: { date: string, name: string }) => h.date === dateKey);
-    return holiday?.name || "";
+    return officialHolidays && officialHolidays[dateKey] ? officialHolidays[dateKey] : "";
   };
 
-  // GENERACIÓ DEL CALENDARI (Sense canvis importants, ja que utilitza les funcions corregides)
+  // 🎉 NOU: Obtenir el motiu de les vacances
+  const getVacationReason = (date: Date) => {
+    const dateKey = dateToKey(date);
+    return vacations && vacations[dateKey] ? vacations[dateKey] : "";
+  };
+
+  // 🎉 NOU: Obtenir el motiu del tancament
+  const getClosureReason = (date: Date) => {
+    const dateKey = dateToKey(date);
+    if (closuresArbucies && closuresArbucies[dateKey]) {
+      return `Arbúcies: ${closuresArbucies[dateKey]}`;
+    }
+    if (closuresSantHilari && closuresSantHilari[dateKey]) {
+      return `Sant Hilari: ${closuresSantHilari[dateKey]}`;
+    }
+    return "";
+  };
+
+  // 🎉 NOU: Calcular properes festes i tancaments des de Firebase
+  const upcomingEvents = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const events: Array<{ date: Date; type: 'holiday' | 'vacation' | 'closure'; name: string; reason: string }> = [];
+    
+    // Afegir festius oficials
+    if (officialHolidays) {
+      Object.entries(officialHolidays).forEach(([dateKey, reason]) => {
+        const date = new Date(dateKey);
+        if (date >= today) {
+          events.push({ date, type: 'holiday', name: reason, reason: 'Festiu oficial' });
+        }
+      });
+    }
+    
+    // Afegir vacances
+    if (vacations) {
+      Object.entries(vacations).forEach(([dateKey, reason]) => {
+        const date = new Date(dateKey);
+        if (date >= today) {
+          events.push({ date, type: 'vacation', name: 'Vacances', reason: reason || 'Vacances generals' });
+        }
+      });
+    }
+    
+    // Afegir tancaments Arbúcies
+    if (closuresArbucies) {
+      Object.entries(closuresArbucies).forEach(([dateKey, reason]) => {
+        const date = new Date(dateKey);
+        if (date >= today) {
+          events.push({ date, type: 'closure', name: 'Tancament Arbúcies', reason: reason || 'Tancament' });
+        }
+      });
+    }
+    
+    // Afegir tancaments Sant Hilari
+    if (closuresSantHilari) {
+      Object.entries(closuresSantHilari).forEach(([dateKey, reason]) => {
+        const date = new Date(dateKey);
+        if (date >= today) {
+          events.push({ date, type: 'closure', name: 'Tancament Sant Hilari', reason: reason || 'Tancament' });
+        }
+      });
+    }
+    
+    // Ordenar per data i agafar els primers 5
+    return events
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, 5);
+  }, [officialHolidays, vacations, closuresArbucies, closuresSantHilari]);
+
+  // GENERACIÓ DEL CALENDARI
   const year = currentViewDate.getFullYear();
   const month = currentViewDate.getMonth();
   
@@ -152,7 +189,7 @@ const Calendar = () => {
   const daysInCurrentMonth = lastDayOfMonth.getDate();
   
   const firstDayOfWeek = firstDayOfMonth.getDay();
-  const adjustedFirstDay = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // Ajust de diumenge (0) a dilluns (6)
+  const adjustedFirstDay = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
   
   const calendarDays: Array<{ day: number | null; date: Date | null; sessions: Session[]; holiday: boolean; vacation: boolean; closure: boolean }> = [];
   
@@ -172,7 +209,6 @@ const Calendar = () => {
 
   const dayNames = ["Dl", "Dt", "Dc", "Dj", "Dv", "Ds", "Dg"];
   
-  // 💡 NOU: Mostra estat de càrrega
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -239,6 +275,15 @@ const Calendar = () => {
                     ? "bg-gray-500/20 border-2 border-gray-500/50"
                     : ""
                 }`}
+                title={
+                  dayInfo.holiday 
+                    ? `Festiu: ${getHolidayName(dayInfo.date!)}`
+                    : dayInfo.vacation
+                    ? `Vacances: ${getVacationReason(dayInfo.date!)}`
+                    : dayInfo.closure
+                    ? `Tancament: ${getClosureReason(dayInfo.date!)}`
+                    : ""
+                }
               >
                 {dayInfo.day && (
                   <>
@@ -330,33 +375,30 @@ const Calendar = () => {
           </NeoCard>
         </div>
 
+        {/* 🎉 NOU: Properes festes i tancaments (dinàmic des de Firebase) */}
         <NeoCard>
           <h3 className="font-semibold mb-4">Properes festes i tancaments</h3>
-          {/* NOTA: Aquesta llista de futures festes és estàtica al teu codi original,
-             si volguessis carregar-les de forma dinàmica des de Firebase, hauries d'adaptar-la. */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset">
-              <div>
-                <p className="font-medium">Divendres Sant</p>
-                <p className="text-sm text-muted-foreground">Festiu general</p>
-              </div>
-              <span className="text-sm font-medium text-primary">29 Mar</span>
+          {upcomingEvents.length > 0 ? (
+            <div className="space-y-3">
+              {upcomingEvents.map((event, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset">
+                  <div>
+                    <p className="font-medium">{event.name}</p>
+                    <p className="text-sm text-muted-foreground">{event.reason}</p>
+                  </div>
+                  <span className={`text-sm font-medium ${
+                    event.type === 'holiday' ? 'text-yellow-600' :
+                    event.type === 'vacation' ? 'text-blue-600' :
+                    'text-gray-600'
+                  }`}>
+                    {event.date.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
+                  </span>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset">
-              <div>
-                <p className="font-medium">Dilluns de Pasqua</p>
-                <p className="text-sm text-muted-foreground">Festiu general</p>
-              </div>
-              <span className="text-sm font-medium text-primary">1 Abr</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset">
-              <div>
-                <p className="font-medium">Tancament Arbúcies</p>
-                <p className="text-sm text-muted-foreground">Manteniment</p>
-              </div>
-              <span className="text-sm font-medium text-destructive">10-12 Abr</span>
-            </div>
-          </div>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">No hi ha properes festes o tancaments programats.</p>
+          )}
         </NeoCard>
       </div>
 
