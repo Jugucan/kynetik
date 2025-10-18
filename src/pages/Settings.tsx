@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { Settings as SettingsIcon, Calendar as CalendarIcon, Users as UsersIcon, Plus, Save, Loader2, X } from "lucide-react";
+import { Settings as SettingsIcon, Calendar as CalendarIcon, Users as UsersIcon, Plus, Save, Loader2, X, RefreshCw, Edit2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -37,50 +37,119 @@ const keyToDate = (key: string): Date | null => {
 };
 
 // =================================================================
-// 🚀 INICI DE LA CORRECCIÓ: MODIFICACIÓ DE LA LÒGICA DE L'ANY LABORAL
+// 🎉 NOVA FUNCIÓ: CÀLCUL AUTOMÀTIC DE SETMANA SANTA
 // =================================================================
+// Aquesta funció calcula la data de Pasqua utilitzant l'algorisme de Butcher
+const calculateEaster = (year: number): Date => {
+    const a = year % 19;
+    const b = Math.floor(year / 100);
+    const c = year % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31);
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    
+    return new Date(year, month - 1, day);
+};
 
+// =================================================================
+// 🎉 NOVA FUNCIÓ: GENERAR TOTS ELS FESTIUS AUTOMÀTICAMENT
+// =================================================================
+const generateHolidays = (workYearStart: Date, workYearEnd: Date): DateWithReason[] => {
+    const holidays: DateWithReason[] = [];
+    
+    // L'any laboral va de febrer a gener de l'any següent
+    const startYear = workYearStart.getFullYear();
+    const endYear = workYearEnd.getFullYear();
+    
+    // Funció auxiliar per afegir un festiu si està dins del període laboral
+    const addHolidayIfInRange = (date: Date, reason: string) => {
+        if ((isAfter(date, workYearStart) || isSameDay(date, workYearStart)) && 
+            (isBefore(date, workYearEnd) || isSameDay(date, workYearEnd))) {
+            holidays.push({ date, reason });
+        }
+    };
+    
+    // Processar festius per a cada any del període laboral
+    [startYear, endYear].forEach(year => {
+        // FESTIUS FIXOS
+        addHolidayIfInRange(new Date(year, 0, 1), "Any Nou");
+        addHolidayIfInRange(new Date(year, 0, 6), "Reis");
+        addHolidayIfInRange(new Date(year, 4, 1), "Festa del Treball");
+        addHolidayIfInRange(new Date(year, 5, 24), "Sant Joan");
+        addHolidayIfInRange(new Date(year, 7, 15), "Assumpció");
+        addHolidayIfInRange(new Date(year, 8, 11), "Diada de Catalunya");
+        addHolidayIfInRange(new Date(year, 8, 24), "La Mercè");
+        addHolidayIfInRange(new Date(year, 9, 12), "Hispanitat");
+        addHolidayIfInRange(new Date(year, 10, 1), "Tots Sants");
+        addHolidayIfInRange(new Date(year, 11, 6), "Constitució");
+        addHolidayIfInRange(new Date(year, 11, 8), "Immaculada");
+        addHolidayIfInRange(new Date(year, 11, 25), "Nadal");
+        addHolidayIfInRange(new Date(year, 11, 26), "Sant Esteve");
+        
+        // FESTIUS VARIABLES (Setmana Santa)
+        const easter = calculateEaster(year);
+        
+        // Divendres Sant (2 dies abans de Pasqua)
+        const goodFriday = new Date(easter);
+        goodFriday.setDate(easter.getDate() - 2);
+        addHolidayIfInRange(goodFriday, "Divendres Sant");
+        
+        // Dilluns de Pasqua (1 dia després de Pasqua)
+        const easterMonday = new Date(easter);
+        easterMonday.setDate(easter.getDate() + 1);
+        addHolidayIfInRange(easterMonday, "Dilluns de Pasqua");
+        
+        // FESTIUS LOCALS - Arbúcies
+        addHolidayIfInRange(new Date(year, 7, 16), "Festa Major Arbúcies");
+        
+        // FESTIUS LOCALS - Sant Hilari
+        addHolidayIfInRange(new Date(year, 0, 13), "Sant Hilari (Festa Major)");
+    });
+    
+    // Ordenar per data
+    return holidays.sort((a, b) => a.date.getTime() - b.date.getTime());
+};
+
+// =================================================================
+// FUNCIÓ EXISTENT: CÀLCUL DE L'ANY LABORAL
+// =================================================================
 const getCurrentWorkYear = (today: Date): { start: Date, end: Date } => {
     const currentYear = today.getFullYear();
     let startYear = currentYear;
     let endYear = currentYear;
 
-    // Febrer és el mes 1 (0 = Gen, 1 = Feb)
     const startMonth = 1; // Febrer
-    const startDay = 1;   // Dia 1
+    const startDay = 1;
+    const endMonth = 0; // Gener
+    const endDay = 31;
 
-    // Gener és el mes 0
-    const endMonth = 0;   // Gener
-    const endDay = 31;    // Dia 31
-
-    // Data de referència: 1 de Febrer de l'any actual
     const currentFebFirst = new Date(currentYear, startMonth, startDay);
     currentFebFirst.setHours(0, 0, 0, 0);
 
-    // Si la data actual és abans de l'1 de Febrer de l'any actual (o és el 31 de Gener),
-    // l'any laboral actiu va de l'1 de Febrer de l'any anterior al 31 de Gener de l'any actual.
     if (isBefore(today, currentFebFirst) || isSameDay(today, new Date(currentYear, endMonth, endDay))) {
         startYear = currentYear - 1;
         endYear = currentYear;
     } else {
-        // Si la data actual és posterior a l'1 de Febrer,
-        // l'any laboral actiu va de l'1 de Febrer de l'any actual al 31 de Gener de l'any següent.
         startYear = currentYear;
         endYear = currentYear + 1;
     }
 
-    const startDate = new Date(startYear, startMonth, startDay); // 1 de Febrer (de startYear)
-    const endDate = new Date(endYear, endMonth, endDay);         // 31 de Gener (de endYear)
+    const startDate = new Date(startYear, startMonth, startDay);
+    const endDate = new Date(endYear, endMonth, endDay);
 
     startDate.setHours(0, 0, 0, 0);
     endDate.setHours(0, 0, 0, 0);
 
     return { start: startDate, end: endDate };
 };
-
-// =================================================================
-// 🛑 FINAL DE LA CORRECCIÓ
-// =================================================================
 
 const convertToFirebaseFormat = (datesWithReason: DateWithReason[]): Record<string, string> => {
     if (datesWithReason.length === 0) return {};
@@ -89,11 +158,15 @@ const convertToFirebaseFormat = (datesWithReason: DateWithReason[]): Record<stri
         return acc;
     }, {} as Record<string, string>);
 };
+
 const Settings = () => {
-    
     const [vacationDates, setVacationDates] = useState<DateWithReason[]>([]);
     const [closureDatesArbucies, setClosureDatesArbucies] = useState<DateWithReason[]>([]);
     const [closureDatesSantHilari, setClosureDatesSantHilari] = useState<DateWithReason[]>([]);
+    
+    // 🎉 NOU: Estat per als festius oficials
+    const [officialHolidays, setOfficialHolidays] = useState<DateWithReason[]>([]);
+    const [isEditingHoliday, setIsEditingHoliday] = useState<Date | null>(null);
 
     const [currentReason, setCurrentReason] = useState('');
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -111,20 +184,17 @@ const Settings = () => {
 
     const workYear = useMemo(() => getCurrentWorkYear(new Date()), []);
     
-    // Aquesta funció és clau per calcular els "Dies utilitzats"
     const isWorkDay = useCallback((date: Date, workDays: number[]) => {
         const dayOfWeek = date.getDay(); 
         const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
         return workDays.includes(adjustedDay);
     }, []);
     
-    // El càlcul dels dies utilitzats ara utilitzarà el workYear corregit
     const { usedDaysArbucies, usedDaysSantHilari } = useMemo(() => {
         let arbuciesCount = 0;
         let santHilariCount = 0;
 
         vacationDates.forEach(({ date }) => {
-            // Aquesta lògica de filtratge utilitza el workYear corregit
             const isWithinWorkYear = (
                 (isAfter(date, workYear.start) || isSameDay(date, workYear.start)) && 
                 (isBefore(date, workYear.end) || isSameDay(date, workYear.end))
@@ -150,10 +220,12 @@ const Settings = () => {
         });
     };
 
+    // 🎉 NOVA FUNCIÓ: Guardar festius a Firebase
     const saveToFirebase = async (
         vacationsToSave: DateWithReason[],
         closuresArbuciesToSave: DateWithReason[],
         closuresSantHilariToSave: DateWithReason[],
+        holidaysToSave: DateWithReason[], // 🎉 NOU PARÀMETRE
         availableArbucies: number,
         availableSantHilari: number,
         workArbucies: number[],
@@ -164,6 +236,7 @@ const Settings = () => {
                 vacations: convertToFirebaseFormat(vacationsToSave), 
                 closuresArbucies: convertToFirebaseFormat(closuresArbuciesToSave), 
                 closuresSantHilari: convertToFirebaseFormat(closuresSantHilariToSave),
+                officialHolidays: convertToFirebaseFormat(holidaysToSave), // 🎉 NOU CAMP
                 availableDaysArbucies: availableArbucies,
                 availableDaysSantHilari: availableSantHilari,
                 workDaysArbucies: workArbucies,
@@ -184,10 +257,56 @@ const Settings = () => {
         setIsSaving(true);
         await saveToFirebase(
             vacationDates, closureDatesArbucies, closureDatesSantHilari,
+            officialHolidays, // 🎉 NOU
             availableDaysArbucies, availableDaysSantHilari,
             workDaysArbucies, workDaysSantHilari
         );
         setIsSaving(false);
+    };
+
+    // 🎉 NOVA FUNCIÓ: Regenerar festius automàticament
+    const handleRegenerateHolidays = async () => {
+        const newHolidays = generateHolidays(workYear.start, workYear.end);
+        setOfficialHolidays(newHolidays);
+        
+        await saveToFirebase(
+            vacationDates, closureDatesArbucies, closureDatesSantHilari,
+            newHolidays, // 🎉 Guardar els nous festius
+            availableDaysArbucies, availableDaysSantHilari,
+            workDaysArbucies, workDaysSantHilari
+        );
+    };
+
+    // 🎉 NOVA FUNCIÓ: Eliminar un festiu
+    const handleRemoveHoliday = async (dateToRemove: Date) => {
+        if (isInitialLoad) return;
+        
+        const newHolidays = officialHolidays.filter(d => !isSameDay(d.date, dateToRemove));
+        setOfficialHolidays(newHolidays);
+        
+        await saveToFirebase(
+            vacationDates, closureDatesArbucies, closureDatesSantHilari,
+            newHolidays,
+            availableDaysArbucies, availableDaysSantHilari,
+            workDaysArbucies, workDaysSantHilari
+        );
+    };
+
+    // 🎉 NOVA FUNCIÓ: Editar el motiu d'un festiu
+    const handleEditHolidayReason = async (dateToUpdate: Date, newReason: string) => {
+        if (isInitialLoad) return;
+        
+        const newHolidays = officialHolidays.map(d => 
+            isSameDay(d.date, dateToUpdate) ? { ...d, reason: newReason } : d
+        );
+        setOfficialHolidays(newHolidays);
+        
+        await saveToFirebase(
+            vacationDates, closureDatesArbucies, closureDatesSantHilari,
+            newHolidays,
+            availableDaysArbucies, availableDaysSantHilari,
+            workDaysArbucies, workDaysSantHilari
+        );
     };
 
     useEffect(() => {
@@ -201,17 +320,39 @@ const Settings = () => {
                 const newVacations = convertToDateWithReason(data.vacations);
                 const newClosuresArbucies = convertToDateWithReason(data.closuresArbucies);
                 const newClosuresSantHilari = convertToDateWithReason(data.closuresSantHilari);
+                const newHolidays = convertToDateWithReason(data.officialHolidays); // 🎉 NOU
                 
-                console.log("📅 Vacances:", newVacations.length, "Arbúcies:", newClosuresArbucies.length, "Sant Hilari:", newClosuresSantHilari.length);
+                console.log("📅 Vacances:", newVacations.length, "Arbúcies:", newClosuresArbucies.length, "Sant Hilari:", newClosuresSantHilari.length, "Festius:", newHolidays.length);
                 
                 setVacationDates(newVacations);
                 setClosureDatesArbucies(newClosuresArbucies);
                 setClosureDatesSantHilari(newClosuresSantHilari);
                 
+                // 🎉 NOU: Si no hi ha festius guardats, generar-los automàticament
+                if (newHolidays.length === 0) {
+                    const generatedHolidays = generateHolidays(getCurrentWorkYear(new Date()).start, getCurrentWorkYear(new Date()).end);
+                    setOfficialHolidays(generatedHolidays);
+                    // Guardar-los a Firebase
+                    saveToFirebase(
+                        newVacations, newClosuresArbucies, newClosuresSantHilari,
+                        generatedHolidays,
+                        data.availableDaysArbucies || 30,
+                        data.availableDaysSantHilari || 20,
+                        data.workDaysArbucies || [1, 2, 4],
+                        data.workDaysSantHilari || [3, 5]
+                    );
+                } else {
+                    setOfficialHolidays(newHolidays);
+                }
+                
                 if (typeof data.availableDaysArbucies === 'number') setAvailableDaysArbucies(data.availableDaysArbucies);
                 if (typeof data.availableDaysSantHilari === 'number') setAvailableDaysSantHilari(data.availableDaysSantHilari);
                 if (data.workDaysArbucies && Array.isArray(data.workDaysArbucies)) setWorkDaysArbucies(data.workDaysArbucies);
                 if (data.workDaysSantHilari && Array.isArray(data.workDaysSantHilari)) setWorkDaysSantHilari(data.workDaysSantHilari);
+            } else {
+                // 🎉 NOU: Si el document no existeix, generar festius per primera vegada
+                const generatedHolidays = generateHolidays(getCurrentWorkYear(new Date()).start, getCurrentWorkYear(new Date()).end);
+                setOfficialHolidays(generatedHolidays);
             }
             setIsLoading(false);
             setIsInitialLoad(false);
@@ -224,7 +365,6 @@ const Settings = () => {
         return () => unsubscribe();
     }, []); 
 
-    // ✅ CORRECCIÓ 1: El calendari NO es tanca automàticament
     const handleDateSelect = async (selectedDates: Date[] | undefined) => {
         if (!selectedDates || isInitialLoad) return;
         
@@ -255,11 +395,8 @@ const Settings = () => {
         }
 
         await saveToFirebase(newVacations, newClosuresArbucies, newClosuresSantHilari,
+            officialHolidays, // 🎉 NOU
             availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari);
-
-        // ❌ ELIMINAT: ja NO tanquem el popover automàticament
-        // setCurrentReason('');
-        // setIsPopoverOpen(false);
     };
     
     const handleRemoveDate = async (dateToRemove: Date, center: 'Vacation' | 'Arbucies' | 'SantHilari') => {
@@ -283,12 +420,12 @@ const Settings = () => {
         }
 
         await saveToFirebase(newVacations, newClosuresArbucies, newClosuresSantHilari,
+            officialHolidays, // 🎉 NOU
             availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari);
         
         console.log("✅ Eliminada");
     };
 
-    // ✅ CORRECCIÓ 2: Debounce per al motiu (espera 1 segon abans de guardar)
     const handleReasonChange = useCallback((dateToUpdate: Date, newReason: string, center: 'Vacation' | 'Arbucies' | 'SantHilari') => {
         if (isInitialLoad) return;
         
@@ -306,8 +443,6 @@ const Settings = () => {
             newClosuresSantHilari = closureDatesSantHilari.map(d => isSameDay(d.date, dateToUpdate) ? { ...d, reason: newReason } : d);
             setClosureDatesSantHilari(newClosuresSantHilari);
         }
-        
-        // ✅ NO guardem immediatament, el component ReasonInput s'encarregarà amb debounce
     }, [vacationDates, closureDatesArbucies, closureDatesSantHilari, isInitialLoad]);
     
     const handleWorkDayChange = (dayIndex: number, center: 'Arbucies' | 'SantHilari') => {
@@ -320,14 +455,6 @@ const Settings = () => {
             setter([...currentDays, dayIndex].sort((a, b) => a - b));
         }
     };
-
-    const holidays2025 = [
-        { name: "Any Nou", date: "1 Gen" }, { name: "Reis", date: "6 Gen" }, { name: "Divendres Sant", date: "18 Abr" },
-        { name: "Dilluns de Pasqua", date: "21 Abr" }, { name: "Festa del Treball", date: "1 Mai" }, { name: "Sant Joan", date: "24 Jun" },
-        { name: "Assumpció", date: "15 Ago" }, { name: "Diada", date: "11 Set" }, { name: "Mercè", date: "24 Set" },
-        { name: "Hispanitat", date: "12 Oct" }, { name: "Tots Sants", date: "1 Nov" }, { name: "Constitució", date: "6 Des" },
-        { name: "Immaculada", date: "8 Des" }, { name: "Nadal", date: "25 Des" }, { name: "Sant Esteve", date: "26 Des" },
-    ];
     
     const dayNamesList = ["Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", "Dissabte", "Diumenge"];
     
@@ -341,7 +468,7 @@ const Settings = () => {
             </div>
         );
     }
-// ✅ CORRECCIÓ 2: ReasonInput amb debounce i useRef per mantenir el focus
+
     const ReasonInput = ({ date, reason, center }: { 
         date: Date, 
         reason: string,
@@ -359,16 +486,13 @@ const Settings = () => {
             const newReason = e.target.value;
             setCurrentReasonValue(newReason);
             
-            // ✅ Neteja el timeout anterior
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
             }
             
-            // ✅ Espera 1 segon després de deixar d'escriure per guardar
             timeoutRef.current = setTimeout(() => {
                 handleReasonChange(date, newReason, center);
                 
-                // Guarda a Firebase després del debounce
                 let newVacations = vacationDates;
                 let newClosuresArbucies = closureDatesArbucies;
                 let newClosuresSantHilari = closureDatesSantHilari;
@@ -382,11 +506,11 @@ const Settings = () => {
                 }
                 
                 saveToFirebase(newVacations, newClosuresArbucies, newClosuresSantHilari,
+                    officialHolidays, // 🎉 NOU
                     availableDaysArbucies, availableDaysSantHilari, workDaysArbucies, workDaysSantHilari);
             }, 1000);
         };
         
-        // ✅ Neteja el timeout quan el component es desmunta
         useEffect(() => {
             return () => {
                 if (timeoutRef.current) {
@@ -443,6 +567,47 @@ const Settings = () => {
                 </div>
             </div>
         ) : null;
+    };
+
+    // 🎉 NOVA FUNCIÓ: Component per mostrar festius oficials
+    const HolidayReasonInput = ({ date, reason }: { date: Date, reason: string }) => {
+        const [currentReasonValue, setCurrentReasonValue] = useState(reason);
+        const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+        
+        useEffect(() => {
+            setCurrentReasonValue(reason);
+        }, [reason]);
+
+        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            const newReason = e.target.value;
+            setCurrentReasonValue(newReason);
+            
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+            
+            timeoutRef.current = setTimeout(() => {
+                handleEditHolidayReason(date, newReason);
+            }, 1000);
+        };
+        
+        useEffect(() => {
+            return () => {
+                if (timeoutRef.current) {
+                    clearTimeout(timeoutRef.current);
+                }
+            };
+        }, []);
+
+        return (
+            <Input
+                type="text"
+                value={currentReasonValue}
+                onChange={handleChange}
+                placeholder="Nom del festiu"
+                className="h-6 text-xs p-1 mt-1 shadow-neo-inset border-0 bg-transparent placeholder:text-accent-600/70"
+            />
+        );
     };
 
     return (
@@ -724,19 +889,58 @@ const Settings = () => {
 
                 <hr className="my-6 border-t border-gray-200" /> 
 
+                {/* 🎉 NOVA SECCIÓ: FESTIUS OFICIALS AMB EDICIÓ */}
                 <NeoCard>
-                    <div className="flex items-center gap-2 mb-4">
-                        <CalendarIcon className="w-5 h-5 text-accent" />
-                        <h2 className="text-xl font-semibold">Festius oficials 2025</h2>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <CalendarIcon className="w-5 h-5 text-accent" />
+                            <h2 className="text-xl font-semibold">Festius oficials</h2>
+                        </div>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRegenerateHolidays}
+                            className="shadow-neo hover:shadow-neo-sm"
+                        >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Regenerar festius
+                        </Button>
                     </div>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {holidays2025.map((holiday, index) => (
-                            <div key={index} className="p-3 rounded-xl shadow-neo-inset">
-                                <p className="font-medium">{holiday.name}</p>
-                                <p className="text-sm text-muted-foreground">{holiday.date}</p>
-                            </div>
-                        ))}
-                    </div>
+                    
+                    <p className="text-sm text-muted-foreground mb-4">
+                        Període: {format(workYear.start, "dd/MM/yyyy")} - {format(workYear.end, "dd/MM/yyyy")} ({officialHolidays.length} festius)
+                    </p>
+                    
+                    {officialHolidays.length > 0 ? (
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {officialHolidays.map((holiday) => (
+                                <div 
+                                    key={holiday.date.getTime()} 
+                                    className="flex flex-col p-3 rounded-xl shadow-neo-inset bg-accent-500/10"
+                                >
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="font-semibold text-sm text-accent-700">
+                                            {format(holiday.date, "dd MMM yyyy", { locale: ca })}
+                                        </span>
+                                        <X 
+                                            className="h-3 w-3 ml-2 text-red-500 hover:text-red-700 cursor-pointer transition-colors"
+                                            onClick={() => handleRemoveHoliday(holiday.date)}
+                                            title="Eliminar festiu"
+                                        />
+                                    </div>
+                                    <HolidayReasonInput 
+                                        date={holiday.date}
+                                        reason={holiday.reason}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground italic">
+                            No hi ha festius configurats. Prem "Regenerar festius" per crear-los automàticament.
+                        </p>
+                    )}
                 </NeoCard>
 
                 <div className="flex justify-end">
