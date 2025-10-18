@@ -380,21 +380,41 @@ const Calendar = () => {
           <h3 className="font-semibold mb-4">Properes festes i tancaments</h3>
           {upcomingEvents.length > 0 ? (
             <div className="space-y-3">
-              {upcomingEvents.map((event, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset">
-                  <div>
-                    <p className="font-medium">{event.name}</p>
-                    <p className="text-sm text-muted-foreground">{event.reason}</p>
+              {upcomingEvents.map((event, idx) => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const daysUntil = Math.ceil((event.date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                
+                let daysText = "";
+                if (daysUntil === 0) {
+                  daysText = "Avui";
+                } else if (daysUntil === 1) {
+                  daysText = "Demà";
+                } else {
+                  daysText = `Falten ${daysUntil} dies`;
+                }
+                
+                return (
+                  <div key={idx} className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset">
+                    <div className="flex-1">
+                      <p className="font-medium">{event.name}</p>
+                      <p className="text-sm text-muted-foreground">{event.reason}</p>
+                    </div>
+                    <div className="text-right ml-3">
+                      <span className={`block text-sm font-medium ${
+                        event.type === 'holiday' ? 'text-yellow-600' :
+                        event.type === 'vacation' ? 'text-blue-600' :
+                        'text-gray-600'
+                      }`}>
+                        {event.date.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
+                      </span>
+                      <span className="block text-xs text-muted-foreground mt-0.5">
+                        {daysText}
+                      </span>
+                    </div>
                   </div>
-                  <span className={`text-sm font-medium ${
-                    event.type === 'holiday' ? 'text-yellow-600' :
-                    event.type === 'vacation' ? 'text-blue-600' :
-                    'text-gray-600'
-                  }`}>
-                    {event.date.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground italic">No hi ha properes festes o tancaments programats.</p>
