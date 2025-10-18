@@ -914,7 +914,7 @@ const Settings = () => {
                     
                     {officialHolidays.length > 0 ? (
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {officialHolidays.map((holiday) => (
+                            {officialHolidays.sort((a, b) => a.date.getTime() - b.date.getTime()).map((holiday) => (
                                 <div 
                                     key={holiday.date.getTime()} 
                                     className="flex flex-col p-3 rounded-xl shadow-neo-inset bg-accent-500/10"
