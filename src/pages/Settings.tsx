@@ -53,71 +53,100 @@ const getEasterDate = (year: number): Date => {
     const month = Math.floor((h + l - 7 * m + 114) / 31);
     const day = ((h + l - 7 * m + 114) % 31) + 1;
     
+    // Mesos: 0=Gen, 1=Feb, ..., 3=Abril.
     return new Date(year, month - 1, day); 
 };
 
-// Funció per obtenir els festius nacionals i autonòmics (Catalunya) per a un any
-const getOfficialHolidays = (year: number): DateWithReason[] => {
+/**
+ * Funció per obtenir els festius nacionals i autonòmics (Catalunya) per a un any.
+ * El càlcul es basa en l'any que *finalitza* el període laboral (l'any `endYear`).
+ * * @param endYear L'any en què finalitza el període laboral (e.g., 2026 per al període 2025-2026).
+ * @returns Llista de DateWithReason amb tots els festius de l'any laboral.
+ */
+const getOfficialHolidays = (endYear: number): DateWithReason[] => {
     
-    const easter = getEasterDate(year);
-    
-    // Dilluns de Pasqua
-    const easterMonday = new Date(easter);
-    easterMonday.setDate(easter.getDate() + 1);
-    
-    // Divendres Sant (2 dies abans de Pasqua)
-    const goodFriday = new Date(easter);
-    goodFriday.setDate(easter.getDate() - 2);
+    const startYear = endYear - 1; // L'any que comença el període (Febrer)
 
-    // Festius Fixos (Mesos: 0=Gen, 1=Feb, ...)
-    const holidays = [
-        // Any Nou (Any en curs)
-        new Date(year, 0, 1), 
-        // Reis (Any en curs)
-        new Date(year, 0, 6), 
-        // Festa del Treball (Any en curs)
-        new Date(year, 4, 1), 
-        // Sant Joan (Any en curs)
-        new Date(year, 5, 24), 
-        // Assumpció (Any en curs)
-        new Date(year, 7, 15), 
-        // Diada Nacional de Catalunya (Any en curs)
-        new Date(year, 8, 11),
-        // Mercè (Festiu local BCN, afegit per context, si cal canviar-lo)
-        new Date(year, 8, 24), 
-        // Festa Nacional d'Espanya (Any en curs)
-        new Date(year, 9, 12), 
-        // Tots Sants (Any en curs)
-        new Date(year, 10, 1), 
-        // Dia de la Constitució (Any en curs)
-        new Date(year, 11, 6), 
-        // La Immaculada Concepció (Any en curs)
-        new Date(year, 11, 8), 
-        // Nadal (Any en curs)
-        new Date(year, 11, 25), 
-        // Sant Esteve (Any en curs)
-        new Date(year, 11, 26), 
-    ].map(date => {
-        date.setHours(0, 0, 0, 0); 
-        return date;
-    });
+    // Pasqua es calcula en funció de l'any on cau (que pot ser startYear o endYear)
+    const easterStartYear = getEasterDate(startYear);
+    const easterEndYear = getEasterDate(endYear);
+
+    // Llistat de festius fixes que cauen principalment a startYear
+    const holidaysStartYear: DateWithReason[] = [
+        // Maig
+        { date: new Date(startYear, 4, 1), reason: "Festa del Treball" }, 
+        // Juny
+        { date: new Date(startYear, 5, 24), reason: "Sant Joan" }, 
+        // Agost
+        { date: new Date(startYear, 7, 15), reason: "Assumpció" }, 
+        // Setembre
+        { date: new Date(startYear, 8, 11), reason: "Diada Nacional de Catalunya" },
+        { date: new Date(startYear, 8, 24), reason: "La Mercè (Local BCN)" }, 
+        // Octubre
+        { date: new Date(startYear, 9, 12), reason: "Festa Nacional d'Espanya" }, 
+        // Novembre
+        { date: new Date(startYear, 10, 1), reason: "Tots Sants" }, 
+        // Desembre
+        { date: new Date(startYear, 11, 6), reason: "Dia de la Constitució" }, 
+        { date: new Date(startYear, 11, 8), reason: "La Immaculada Concepció" }, 
+        { date: new Date(startYear, 11, 25), reason: "Nadal" }, 
+        { date: new Date(startYear, 11, 26), reason: "Sant Esteve" }, 
+    ].filter(h => h.date.getMonth() >= 1); // Exclou gener de l'any d'inici (període laboral comença al febrer)
+
+    // Llistat de festius fixes que cauen a l'endYear (Gener)
+    const holidaysEndYear: DateWithReason[] = [
+        { date: new Date(endYear, 0, 1), reason: "Any Nou" },
+        { date: new Date(endYear, 0, 6), reason: "Reis" },
+    ].filter(h => h.date.getMonth() === 0); // Només inclou gener de l'any final
 
     // Festius Mòbils
-    holidays.push(goodFriday, easterMonday);
+    const movableHolidays: DateWithReason[] = [];
 
-    // Afegir Festius de l'any següent (que entren en el període laboral Feb-Gen)
-    holidays.push(new Date(year + 1, 0, 1)); // 1 Gen de l'any següent
-    holidays.push(new Date(year + 1, 0, 6)); // 6 Gen de l'any següent
+    // Incloure Divendres Sant i Dilluns de Pasqua, calculant quin cau dins del període (startYear o endYear)
+    // Pasqua pot caure en Març (mes 2) o Abril (mes 3)
+    
+    // Pasqua de l'Any d'inici (startYear)
+    if (easterStartYear.getMonth() >= 1) { // Si cau de Febrer a Desembre (p.ex. Pasqua d'Abril 2025 per a període 2025-2026)
+        const goodFridayStart = new Date(easterStartYear);
+        goodFridayStart.setDate(easterStartYear.getDate() - 2);
+        const easterMondayStart = new Date(easterStartYear);
+        easterMondayStart.setDate(easterStartYear.getDate() + 1);
+        
+        movableHolidays.push(
+            { date: goodFridayStart, reason: "Divendres Sant" },
+            { date: easterMondayStart, reason: "Dilluns de Pasqua" }
+        );
+    }
+    
+    // Pasqua de l'Any final (endYear)
+    if (easterEndYear.getMonth() === 0) { // Si cau al Gener (poc probable, però per seguretat)
+        const goodFridayEnd = new Date(easterEndYear);
+        goodFridayEnd.setDate(easterEndYear.getDate() - 2);
+        const easterMondayEnd = new Date(easterEndYear);
+        easterMondayEnd.setDate(easterEndYear.getDate() + 1);
+        
+        movableHolidays.push(
+            { date: goodFridayEnd, reason: "Divendres Sant" },
+            { date: easterMondayEnd, reason: "Dilluns de Pasqua" }
+        );
+    }
 
-    // Retorna llista única i formatada
-    const uniqueDates = holidays.filter((date, index, self) => 
-        index === self.findIndex(d => d.getTime() === date.getTime())
-    );
+    // Combinar, formatar i garantir la unicitat
+    const allHolidays = [...holidaysStartYear, ...holidaysEndYear, ...movableHolidays];
+    
+    // Assegurar hores a 0 i unicitat
+    const uniqueDatesMap = allHolidays.reduce((map, item) => {
+        item.date.setHours(0, 0, 0, 0);
+        const key = dateToKey(item.date);
+        // Prioritzem el motiu més descriptiu si hi ha duplicats inesperats
+        if (!map.has(key)) {
+            map.set(key, item);
+        }
+        return map;
+    }, new Map<string, DateWithReason>());
 
-    return uniqueDates.map(date => ({
-        date: date,
-        reason: format(date, "EEEE", { locale: ca }), 
-    }));
+    // Retorna ordenat per data
+    return Array.from(uniqueDatesMap.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
 };
 
 
@@ -278,7 +307,8 @@ const Settings = () => {
                 const newHolidays = convertToDateWithReason(data.officialHolidays);
                 
                 // Lògica d'inicialització de festius
-                if (newHolidays.length === 0) {
+                if (newHolidays.length === 0 || !data.officialHolidays) {
+                    // Calculem els festius basats en l'any de finalització (endYear)
                     const calculatedHolidays = getOfficialHolidays(workYear.end.getFullYear());
                     setOfficialHolidays(calculatedHolidays);
                 } else {
@@ -309,7 +339,6 @@ const Settings = () => {
         return () => unsubscribe();
     }, [workYear]); 
 
-    // **FUNCIÓ CLAU RECUPERADA I CORREGIDA**
     const handleDateSelect = async (selectedDates: Date[] | undefined) => {
         if (!selectedDates || isInitialLoad) return;
         
@@ -339,7 +368,17 @@ const Settings = () => {
         // 2. Converteix la selecció a DateWithReason (manté el motiu si ja existeix)
         listToUpdate = selectedDates.map(newDate => {
             const existing = currentList.find(d => isSameDay(d.date, newDate));
-            return existing || { date: newDate, reason: currentReason || '' };
+            // Per als festius (Holiday), usem el motiu per defecte del càlcul si és nou
+            let reason = existing?.reason || currentReason || '';
+            
+            if (currentCenterClosure === 'Holiday' && !existing) {
+                 // Intentem trobar el nom del festiu si és un dels automàtics per evitar que surti buit
+                const autoHolidays = getOfficialHolidays(workYear.end.getFullYear());
+                const autoHolidayMatch = autoHolidays.find(h => isSameDay(h.date, newDate));
+                reason = autoHolidayMatch?.reason || 'Festiu Personalitzat';
+            }
+
+            return { date: newDate, reason: reason };
         });
         
         // 3. Actualitza l'estat local
@@ -355,7 +394,6 @@ const Settings = () => {
         );
     };
     
-    // **FUNCIÓ CLAU RECUPERADA I CORREGIDA**
     const handleRemoveDate = async (dateToRemove: Date, center: 'Vacation' | 'Arbucies' | 'SantHilari' | 'Holiday') => {
         if (isInitialLoad) return;
         
@@ -386,7 +424,6 @@ const Settings = () => {
         console.log("✅ Eliminada");
     };
 
-    // **FUNCIÓ CLAU RECUPERADA I CORREGIDA**
     const handleReasonChange = useCallback((dateToUpdate: Date, newReason: string, center: 'Vacation' | 'Arbucies' | 'SantHilari' | 'Holiday') => {
         if (isInitialLoad) return;
         
@@ -528,7 +565,7 @@ const Settings = () => {
                         >
                             <div className="flex items-center justify-between mb-1">
                                 <span className="font-semibold text-sm">
-                                    {format(d.date, "dd MMM", { locale: ca })}
+                                    {format(d.date, "dd MMM", { locale: ca })} - {d.reason}
                                 </span>
                                 <X 
                                     className="h-3 w-3 ml-2 text-red-500 hover:text-red-700 cursor-pointer transition-colors"
