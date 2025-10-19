@@ -9,11 +9,5 @@ export const programColors = {
 
 export type ProgramCode = keyof typeof programColors;
 
-export interface Session {
-  time: string;
-  program: ProgramCode;
-}
-
-// NOTA: weekSchedule i holidays2025 ja no s'utilitzen aquí.
-// Ara els horaris es gestionen a través de la pàgina "Horaris" i es guarden a Firebase.
-// Els festius també es gestionen a "Configuració" i es guarden a Firebase.
+// NOTA: Els horaris (weekSchedule) ara es gestionen a través de la pàgina "Horaris" i es guarden a Firebase.
+// Els festius (holidays2025) també es gestionen a "Configuració" i es guarden a Firebase.
