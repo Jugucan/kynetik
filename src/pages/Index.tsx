@@ -2,11 +2,25 @@ import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { DayInfoModal } from "@/components/DayInfoModal";
 import { Calendar, Users, TrendingUp, Cake, PartyPopper } from "lucide-react";
-import { programColors, weekSchedule, holidays2025, Session } from "@/lib/programColors";
+import { programColors } from "@/lib/programColors";
+import { useSettings } from "@/hooks/useSettings";
+import { useSchedules } from "@/hooks/useSchedules";
+
+// Definició de Session
+interface Session {
+  time: string;
+  program: string;
+  center?: string;
+}
 
 const Index = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // 🎉 Carregar dades des de Firebase
+  const { vacations, closuresArbucies, closuresSantHilari, officialHolidays } = useSettings();
+  const { getActiveSchedule } = useSchedules();
+  const activeSchedule = getActiveSchedule();
 
   const activePrograms = [
     { name: "BodyPump 120", code: "BP", days: 45, color: "bg-red-500" },
@@ -22,21 +36,34 @@ const Index = () => {
     { name: "Anna López", date: "18 Mar", status: "upcoming", age: 25, center: "Arbúcies", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Anna" },
   ];
 
-  // Mock vacances i tancaments (haurien de venir de configuració)
-  const vacations = ["2025-03-24", "2025-03-25", "2025-03-26", "2025-03-27", "2025-03-28"];
-  const closures = ["2025-03-15"]; // Tancament centre
+  const dateToKey = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
+  // 🎉 Obtenir sessions des de l'horari actiu de Firebase
   const getSessionsForDate = (date: Date): Session[] => {
-    const dateKey = date.toISOString().split("T")[0];
-    
-    // Check if it's a holiday or vacation - no sessions
-    if (isHoliday(date) || isVacation(date)) {
+    // Si és festiu, vacances o tancament, no hi ha sessions
+    if (isHoliday(date) || isVacation(date) || isClosure(date)) {
       return [];
     }
     
-    const dayOfWeek = date.getDay();
-    const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
-    return weekSchedule[adjustedDay] || [];
+    // Obtenir sessions de l'horari actiu
+    if (activeSchedule) {
+      const dayOfWeek = date.getDay();
+      const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
+      const scheduleSessions = activeSchedule.sessions[adjustedDay] || [];
+      
+      return scheduleSessions.map(s => ({
+        time: s.time,
+        program: s.program,
+        center: s.center,
+      }));
+    }
+    
+    return [];
   };
 
   const handleDayClick = (date: Date) => {
@@ -44,19 +71,23 @@ const Index = () => {
     setIsModalOpen(true);
   };
 
+  // 🎉 Comprovar si és festiu oficial (des de Firebase)
   const isHoliday = (date: Date) => {
-    const dateKey = date.toISOString().split("T")[0];
-    return holidays2025.some((h) => h.date === dateKey);
+    const dateKey = dateToKey(date);
+    return officialHolidays && officialHolidays.hasOwnProperty(dateKey);
   };
 
+  // 🎉 Comprovar si és vacances (des de Firebase)
   const isVacation = (date: Date) => {
-    const dateKey = date.toISOString().split("T")[0];
-    return vacations.includes(dateKey);
+    const dateKey = dateToKey(date);
+    return vacations && vacations.hasOwnProperty(dateKey);
   };
 
+  // 🎉 Comprovar si és tancament (des de Firebase)
   const isClosure = (date: Date) => {
-    const dateKey = date.toISOString().split("T")[0];
-    return closures.includes(dateKey);
+    const dateKey = dateToKey(date);
+    return (closuresArbucies && closuresArbucies.hasOwnProperty(dateKey)) || 
+           (closuresSantHilari && closuresSantHilari.hasOwnProperty(dateKey));
   };
 
   return (
@@ -187,7 +218,7 @@ const Index = () => {
           ))}
         </div>
 
-        {/* Dies del mes - Generar calendari correcte */}
+        {/* Dies del mes */}
         <div className="grid grid-cols-7 gap-2">
           {(() => {
             const now = new Date();
@@ -254,9 +285,9 @@ const Index = () => {
                         <div
                           key={idx}
                           className={`w-5 h-5 rounded ${
-                            programColors[session.program].color
+                            programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'
                           } text-white text-[8px] flex items-center justify-center font-bold`}
-                          title={`${session.time} - ${programColors[session.program].name}`}
+                          title={`${session.time} - ${programColors[session.program as keyof typeof programColors]?.name || session.program}`}
                         >
                           {session.program}
                         </div>
