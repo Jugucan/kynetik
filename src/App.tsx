@@ -10,6 +10,7 @@ import Calendar from "./pages/Calendar";
 import Users from "./pages/Users";
 import Programs from "./pages/Programs";
 import Mixtos from "./pages/Mixtos";
+import Schedules from "./pages/Schedules"; // 🎉 NOU
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -34,6 +35,7 @@ const App = () => (
                 <Route path="/users" element={<Users />} />
                 <Route path="/programs" element={<Programs />} />
                 <Route path="/mixtos" element={<Mixtos />} />
+                <Route path="/schedules" element={<Schedules />} /> {/* 🎉 NOU */}
                 <Route path="/settings" element={<Settings />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
