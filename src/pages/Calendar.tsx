@@ -99,6 +99,9 @@ const Calendar = () => {
     });
   }, [currentViewDate]);
 
+  // 🎉 NOU: Calcular el període de facturació del mes visualitzat
+  const viewBillingPeriod = useMemo(() => getBillingPeriod(currentViewDate), [currentViewDate]);
+
   // 🎉 NOU: Obtenir sessions des de l'horari actiu
   const getSessionsForDate = (date: Date): Session[] => {
     const dateKey = dateToKey(date);
