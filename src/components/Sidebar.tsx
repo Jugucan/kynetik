@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Home, Calendar, Users, Dumbbell, Shuffle, Settings } from "lucide-react";
+import { Home, Calendar, Users, Dumbbell, Shuffle, Clock, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +18,7 @@ const menuItems = [
   { title: "Usuaris", icon: Users, path: "/users" },
   { title: "Programes", icon: Dumbbell, path: "/programs" },
   { title: "Mixtos", icon: Shuffle, path: "/mixtos" },
+  { title: "Horaris", icon: Clock, path: "/schedules" }, // 🎉 NOU
   { title: "Configuració", icon: Settings, path: "/settings" },
 ];
 
