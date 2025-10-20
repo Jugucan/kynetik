@@ -77,8 +77,8 @@ const Calendar = () => {
 
   const loading = settingsLoading || schedulesLoading;
 
-  // Calcular el període de facturació actual
-  const billingPeriod = useMemo(() => getBillingPeriod(new Date()), []);
+  // 🎉 NOU: Calcular el període de facturació del mes visualitzat
+  const viewBillingPeriod = useMemo(() => getBillingPeriod(currentViewDate), [currentViewDate]);
 
   const goToPreviousMonth = useCallback(() => {
     setCurrentViewDate(prevDate => {
@@ -99,10 +99,7 @@ const Calendar = () => {
     });
   }, [currentViewDate]);
 
-  // 🎉 NOU: Calcular el període de facturació del mes visualitzat
-  const viewBillingPeriod = useMemo(() => getBillingPeriod(currentViewDate), [currentViewDate]);
-
-  // 🎉 NOU: Obtenir sessions des de l'horari actiu
+  // Obtenir sessions des de l'horari actiu
   const getSessionsForDate = (date: Date): Session[] => {
     const dateKey = dateToKey(date);
     
@@ -191,17 +188,17 @@ const Calendar = () => {
     return "";
   };
 
-  // 🎉 NOU: Calcular sessions realitzades per centre en el període de facturació (26 al 25)
+  // 🎉 ACTUALITZAT: Calcular sessions realitzades del mes VISUALITZAT (26 al 25)
   const sessionStats = useMemo(() => {
     let arbuciesSessions = 0;
     let santHilariSessions = 0;
     let arbuciesDays = 0;
     let santHilariDays = 0;
 
-    // Recórrer tots els dies del període de facturació
-    const currentDate = new Date(billingPeriod.start);
+    // Recórrer tots els dies del període de facturació del mes visualitzat
+    const currentDate = new Date(viewBillingPeriod.start);
     
-    while (currentDate <= billingPeriod.end) {
+    while (currentDate <= viewBillingPeriod.end) {
       const sessions = getSessionsForDate(currentDate);
       
       if (sessions.length > 0) {
@@ -231,7 +228,7 @@ const Calendar = () => {
       arbucies: { sessions: arbuciesSessions, days: arbuciesDays },
       santHilari: { sessions: santHilariSessions, days: santHilariDays },
     };
-  }, [billingPeriod, activeSchedule, customSessions, vacations, closuresArbucies, closuresSantHilari, officialHolidays]);
+  }, [viewBillingPeriod, activeSchedule, customSessions, vacations, closuresArbucies, closuresSantHilari, officialHolidays]);
 
   const upcomingEvents = useMemo(() => {
     const today = new Date();
@@ -320,11 +317,12 @@ const Calendar = () => {
 
   return (
     <div className="space-y-6">
+      {/* 🎉 CANVIAT: Nom del mes més gran i visible */}
       <div className="flex items-center gap-3">
         <CalendarIcon className="w-8 h-8 text-primary" />
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold text-foreground">Calendari</h1>
-          <p className="text-muted-foreground capitalize">{currentMonthText}</p>
+          <p className="text-2xl font-semibold text-primary capitalize mt-1">{currentMonthText}</p>
         </div>
       </div>
 
@@ -440,12 +438,12 @@ const Calendar = () => {
           </div>
         </NeoCard>
 
-        {/* 🎉 NOU: Estadístiques del període de facturació (26 al 25) */}
+        {/* 🎉 ACTUALITZAT: Estadístiques del període visualitzat (26 al 25) */}
         <div className="grid md:grid-cols-2 gap-6">
           <NeoCard>
             <h3 className="font-semibold mb-3">Arbúcies</h3>
             <p className="text-xs text-muted-foreground mb-3">
-              Període: {billingPeriod.start.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })} - {billingPeriod.end.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
+              Període: {viewBillingPeriod.start.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })} - {viewBillingPeriod.end.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
             </p>
             <div className="space-y-2">
               <div className="flex justify-between">
@@ -462,7 +460,7 @@ const Calendar = () => {
           <NeoCard>
             <h3 className="font-semibold mb-3">Sant Hilari</h3>
             <p className="text-xs text-muted-foreground mb-3">
-              Període: {billingPeriod.start.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })} - {billingPeriod.end.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
+              Període: {viewBillingPeriod.start.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })} - {viewBillingPeriod.end.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
             </p>
             <div className="space-y-2">
               <div className="flex justify-between">
