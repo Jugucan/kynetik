@@ -64,9 +64,20 @@ const getBillingPeriod = (referenceDate: Date): { start: Date; end: Date } => {
 
 const Calendar = () => {
   const { vacations, closuresArbucies, closuresSantHilari, officialHolidays, loading: settingsLoading } = useSettings();
-  const { getActiveSchedule, loading: schedulesLoading } = useSchedules();
+  const { schedules, loading: schedulesLoading } = useSchedules();
   
-  const activeSchedule = useMemo(() => getActiveSchedule(), [getActiveSchedule]);
+  // 🎉 NOU: Funció per trobar l'horari actiu en una data específica
+  const getScheduleForDate = useCallback((date: Date) => {
+    const dateStr = dateToKey(date);
+    
+    // Buscar l'horari que correspon a aquesta data
+    return schedules.find(schedule => {
+      const startDate = schedule.startDate;
+      const endDate = schedule.endDate || '9999-12-31'; // Si no té endDate, està actiu fins al futur
+      
+      return dateStr >= startDate && dateStr <= endDate;
+    });
+  }, [schedules]);
 
   const [currentViewDate, setCurrentViewDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   
@@ -99,7 +110,7 @@ const Calendar = () => {
     });
   }, [currentViewDate]);
 
-  // Obtenir sessions des de l'horari actiu
+  // 🎉 ACTUALITZAT: Obtenir sessions segons l'horari actiu en aquella data
   const getSessionsForDate = (date: Date): Session[] => {
     const dateKey = dateToKey(date);
     
@@ -113,11 +124,13 @@ const Calendar = () => {
       return [];
     }
     
-    // Obtenir sessions de l'horari actiu
-    if (activeSchedule) {
+    // 🎉 NOU: Obtenir l'horari que estava actiu en aquesta data específica
+    const scheduleForDate = getScheduleForDate(date);
+    
+    if (scheduleForDate) {
       const dayOfWeek = date.getDay();
       const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
-      const scheduleSessions = activeSchedule.sessions[adjustedDay] || [];
+      const scheduleSessions = scheduleForDate.sessions[adjustedDay] || [];
       
       // Convertir ScheduleSession a Session
       return scheduleSessions.map(s => ({
@@ -188,7 +201,7 @@ const Calendar = () => {
     return "";
   };
 
-  // 🎉 ACTUALITZAT: Calcular sessions realitzades del mes VISUALITZAT (26 al 25)
+  // 🎉 ACTUALITZAT: Calcular sessions considerant els horaris històrics
   const sessionStats = useMemo(() => {
     let arbuciesSessions = 0;
     let santHilariSessions = 0;
@@ -228,7 +241,7 @@ const Calendar = () => {
       arbucies: { sessions: arbuciesSessions, days: arbuciesDays },
       santHilari: { sessions: santHilariSessions, days: santHilariDays },
     };
-  }, [viewBillingPeriod, activeSchedule, customSessions, vacations, closuresArbucies, closuresSantHilari, officialHolidays]);
+  }, [viewBillingPeriod, schedules, customSessions, vacations, closuresArbucies, closuresSantHilari, officialHolidays, getScheduleForDate]);
 
   const upcomingEvents = useMemo(() => {
     const today = new Date();
