@@ -1,10 +1,12 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { DaySessionsModal } from "@/components/DaySessionsModal";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { programColors } from "@/lib/programColors";
 import { useSettings } from "@/hooks/useSettings";
 import { useSchedules, ScheduleSession } from "@/hooks/useSchedules";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 // Definició de Session (compatible amb els horaris)
 export interface Session {
@@ -414,9 +416,17 @@ const Calendar = () => {
                           <div
                             key={idx}
                             className={`w-7 h-7 rounded ${
-                              programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'
-                            } text-white text-[10px] flex items-center justify-center font-bold shadow-sm`}
-                            title={`${session.time} - ${programColors[session.program as keyof typeof programColors]?.name || session.program} - ${session.center || 'N/A'}`}
+                              session.isDeleted 
+                                ? 'bg-gray-300 dark:bg-gray-600 opacity-50' 
+                                : programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'
+                            } text-white text-[10px] flex items-center justify-center font-bold shadow-sm ${
+                              session.isDeleted ? 'line-through' : ''
+                            }`}
+                            title={
+                              session.isDeleted
+                                ? `ELIMINADA: ${session.time} - ${session.program} - ${session.deleteReason || 'Sense motiu'}`
+                                : `${session.time} - ${programColors[session.program as keyof typeof programColors]?.name || session.program} - ${session.center || 'N/A'}`
+                            }
                           >
                             {session.program}
                           </div>
