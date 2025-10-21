@@ -222,15 +222,22 @@ export const DaySessionsModal = ({
       const customSessionsDoc = await getDoc(CUSTOM_SESSIONS_DOC);
       const existingCustomSessions = customSessionsDoc.exists() ? customSessionsDoc.data() : {};
       
-      const sessionsToSave = sortedSessions.map(s => ({
-        time: s.time,
-        program: s.program,
-        center: s.center || 'Arbucies',
-        isCustom: s.isCustom || false,
-        isDeleted: s.isDeleted || false,
-        deleteReason: s.deleteReason,
-        addReason: s.addReason,
-      }));
+      // 🎉 NOU: Netejar valors undefined abans de guardar a Firebase
+      const sessionsToSave = sortedSessions.map(s => {
+        const cleanSession: any = {
+          time: s.time,
+          program: s.program,
+          center: s.center || 'Arbucies',
+          isCustom: s.isCustom || false,
+          isDeleted: s.isDeleted || false,
+        };
+        
+        // Només afegir camps opcionals si tenen valor
+        if (s.deleteReason) cleanSession.deleteReason = s.deleteReason;
+        if (s.addReason) cleanSession.addReason = s.addReason;
+        
+        return cleanSession;
+      });
       
       await setDoc(CUSTOM_SESSIONS_DOC, {
         ...existingCustomSessions,
