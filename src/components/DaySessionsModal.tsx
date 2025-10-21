@@ -15,19 +15,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, Save, Edit2, X } from "lucide-react";
+import { Trash2, Plus, Save, Edit2, X, RotateCcw } from "lucide-react";
 import { programColors } from "@/lib/programColors";
 import { Textarea } from "@/components/ui/textarea";
 import { db } from "@/lib/firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 
-// 🎉 Definició actualitzada de Session amb centre i motiu
+// Definició de Session amb estat d'eliminació
 interface Session {
   time: string;
   program: string;
   center?: string;
-  isCustom?: boolean; // Per saber si és una sessió modificada/afegida manualment
-  originalIndex?: number; // Per rastrejar la sessió original
+  isCustom?: boolean;
+  isDeleted?: boolean;
+  deleteReason?: string;
+  addReason?: string;
+  originalIndex?: number;
 }
 
 interface SessionChange {
@@ -67,33 +70,48 @@ export const DaySessionsModal = ({
   const [localSessions, setLocalSessions] = useState<Session[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [deleteReason, setDeleteReason] = useState("");
+  const [addReason, setAddReason] = useState("");
   const [modifyReason, setModifyReason] = useState("");
   const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
   const [sessionToModify, setSessionToModify] = useState<number | null>(null);
+  const [isAddingNew, setIsAddingNew] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Carregar sessions quan s'obre el modal
   useEffect(() => {
     if (isOpen && sessions) {
-      // Marcar les sessions originals amb el seu índex
       const sessionsWithIndex = sessions.map((s, idx) => ({
         ...s,
         originalIndex: idx,
         isCustom: s.isCustom || false,
+        isDeleted: s.isDeleted || false,
       }));
       setLocalSessions(sessionsWithIndex);
     }
   }, [isOpen, sessions]);
 
+  // Ordenar sessions per hora
+  const sortSessionsByTime = (sessions: Session[]): Session[] => {
+    return [...sessions].sort((a, b) => {
+      const timeA = a.time.split(':').map(Number);
+      const timeB = b.time.split(':').map(Number);
+      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    });
+  };
+
   const handleAddSession = () => {
+    setIsAddingNew(true);
+    setAddReason("");
     const newSession: Session = {
       time: "09:00",
       program: "BP",
       center: "Arbucies",
       isCustom: true,
+      isDeleted: false,
     };
-    setLocalSessions([...localSessions, newSession]);
-    setEditingIndex(localSessions.length);
+    const newSessions = [...localSessions, newSession];
+    setLocalSessions(newSessions);
+    setEditingIndex(newSessions.length - 1);
   };
 
   const handleStartEdit = (index: number) => {
@@ -102,49 +120,46 @@ export const DaySessionsModal = ({
   };
 
   const handleCancelEdit = () => {
+    // Si estava afegint una sessió nova, eliminar-la
+    if (isAddingNew) {
+      const newSessions = localSessions.slice(0, -1);
+      setLocalSessions(newSessions);
+      setIsAddingNew(false);
+    }
+    
     setEditingIndex(null);
     setSessionToModify(null);
     setModifyReason("");
+    setAddReason("");
   };
 
   const handleRemoveSession = (index: number) => {
     setSessionToDelete(index);
   };
 
-  const confirmDeleteSession = async () => {
-    if (sessionToDelete !== null && date) {
-      const dateKey = dateToKey(date);
-      const deletedSession = localSessions[sessionToDelete];
-      
-      // Guardar el canvi a Firebase
-      try {
-        const changesDoc = await getDoc(SESSION_CHANGES_DOC);
-        const existingChanges = changesDoc.exists() ? changesDoc.data() : {};
-        
-        const dayChanges = existingChanges[dateKey] || [];
-        dayChanges.push({
-          sessionIndex: sessionToDelete,
-          reason: deleteReason,
-          action: 'deleted',
-          originalSession: deletedSession,
-          timestamp: new Date().toISOString(),
-        });
-        
-        await setDoc(SESSION_CHANGES_DOC, {
-          ...existingChanges,
-          [dateKey]: dayChanges,
-        }, { merge: true });
-        
-      } catch (error) {
-        console.error("Error guardant canvi:", error);
-      }
-      
-      // Eliminar la sessió localment
-      const newSessions = localSessions.filter((_, i) => i !== sessionToDelete);
+  const confirmDeleteSession = () => {
+    if (sessionToDelete !== null) {
+      // Marcar com eliminada en lloc de eliminar-la
+      const newSessions = [...localSessions];
+      newSessions[sessionToDelete] = {
+        ...newSessions[sessionToDelete],
+        isDeleted: true,
+        deleteReason: deleteReason,
+      };
       setLocalSessions(newSessions);
       setSessionToDelete(null);
       setDeleteReason("");
     }
+  };
+
+  const handleRestoreSession = (index: number) => {
+    const newSessions = [...localSessions];
+    newSessions[index] = {
+      ...newSessions[index],
+      isDeleted: false,
+      deleteReason: undefined,
+    };
+    setLocalSessions(newSessions);
   };
 
   const cancelDelete = () => {
@@ -161,7 +176,7 @@ export const DaySessionsModal = ({
     newSessions[index] = {
       ...newSessions[index],
       [field]: value,
-      isCustom: true, // Marcar com modificada
+      isCustom: true,
     };
     setLocalSessions(newSessions);
   };
@@ -173,6 +188,12 @@ export const DaySessionsModal = ({
     const dateKey = dateToKey(date);
     
     try {
+      // Guardar el motiu d'afegir si és una sessió nova
+      if (isAddingNew && addReason.trim()) {
+        const newSession = localSessions[localSessions.length - 1];
+        newSession.addReason = addReason;
+      }
+      
       // Si hi ha una sessió en procés de modificació, guardar el motiu
       if (sessionToModify !== null && modifyReason.trim()) {
         const changesDoc = await getDoc(SESSION_CHANGES_DOC);
@@ -194,16 +215,21 @@ export const DaySessionsModal = ({
         }, { merge: true });
       }
       
+      // Ordenar sessions per hora abans de guardar
+      const sortedSessions = sortSessionsByTime(localSessions);
+      
       // Guardar les sessions personalitzades
       const customSessionsDoc = await getDoc(CUSTOM_SESSIONS_DOC);
       const existingCustomSessions = customSessionsDoc.exists() ? customSessionsDoc.data() : {};
       
-      // Convertir sessions a format guardat
-      const sessionsToSave = localSessions.map(s => ({
+      const sessionsToSave = sortedSessions.map(s => ({
         time: s.time,
         program: s.program,
         center: s.center || 'Arbucies',
         isCustom: s.isCustom || false,
+        isDeleted: s.isDeleted || false,
+        deleteReason: s.deleteReason,
+        addReason: s.addReason,
       }));
       
       await setDoc(CUSTOM_SESSIONS_DOC, {
@@ -212,12 +238,14 @@ export const DaySessionsModal = ({
       }, { merge: true });
       
       // Actualitzar al calendari
-      onUpdateSessions(date, localSessions);
+      onUpdateSessions(date, sortedSessions);
       
       // Tancar modal
       setEditingIndex(null);
       setSessionToModify(null);
       setModifyReason("");
+      setAddReason("");
+      setIsAddingNew(false);
       onClose();
       
     } catch (error) {
@@ -231,7 +259,7 @@ export const DaySessionsModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             Sessions del {date.toLocaleDateString("ca-ES", { 
@@ -296,23 +324,47 @@ export const DaySessionsModal = ({
                 </div>
               ) : (
                 localSessions.map((session, index) => (
-                  <div key={index} className="p-3 rounded-lg shadow-neo-inset space-y-3">
+                  <div 
+                    key={index} 
+                    className={`p-3 rounded-lg shadow-neo-inset space-y-3 transition-all ${
+                      session.isDeleted ? 'opacity-50 bg-gray-100 dark:bg-gray-800' : ''
+                    }`}
+                  >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
                         <div 
                           className={`w-3 h-3 rounded-full ${
-                            programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'
+                            session.isDeleted 
+                              ? 'bg-gray-400' 
+                              : programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'
                           }`}
                         />
-                        <span className="font-semibold">Sessió {index + 1}</span>
-                        {session.isCustom && (
+                        <span className={`font-semibold ${session.isDeleted ? 'line-through' : ''}`}>
+                          Sessió {index + 1}
+                        </span>
+                        {session.isDeleted && (
+                          <span className="text-xs bg-red-500/20 text-red-700 px-2 py-0.5 rounded">
+                            Eliminada
+                          </span>
+                        )}
+                        {session.isCustom && !session.isDeleted && (
                           <span className="text-xs bg-blue-500/20 text-blue-700 px-2 py-0.5 rounded">
-                            Modificada
+                            {session.addReason ? 'Afegida' : 'Modificada'}
                           </span>
                         )}
                       </div>
                       
-                      {editingIndex !== index && (
+                      {session.isDeleted ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRestoreSession(index)}
+                          className="text-green-600 hover:text-green-700"
+                        >
+                          <RotateCcw className="w-4 h-4 mr-1" />
+                          Recuperar
+                        </Button>
+                      ) : editingIndex !== index ? (
                         <div className="flex gap-1">
                           <Button
                             variant="ghost"
@@ -330,7 +382,7 @@ export const DaySessionsModal = ({
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                      )}
+                      ) : null}
                     </div>
 
                     {editingIndex === index ? (
@@ -389,7 +441,25 @@ export const DaySessionsModal = ({
                           </div>
                         </div>
                         
-                        {!session.isCustom && sessionToModify === index && (
+                        {/* Motiu per sessions noves */}
+                        {isAddingNew && editingIndex === localSessions.length - 1 && (
+                          <div>
+                            <Label htmlFor="add-reason">
+                              Motiu de la sessió extra (opcional)
+                            </Label>
+                            <Textarea
+                              id="add-reason"
+                              placeholder="Exemple: Substitució, recuperació de classe, hora extra..."
+                              value={addReason}
+                              onChange={(e) => setAddReason(e.target.value)}
+                              className="mt-1"
+                              rows={2}
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Motiu per modificacions */}
+                        {!isAddingNew && !session.isCustom && sessionToModify === index && (
                           <div>
                             <Label htmlFor={`modify-reason-${index}`}>
                               Motiu del canvi (opcional)
@@ -417,26 +487,52 @@ export const DaySessionsModal = ({
                         </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-3 gap-3 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Hora:</span>
-                          <p className="font-medium">{session.time}</p>
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-3 gap-3 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Hora:</span>
+                            <p className={`font-medium ${session.isDeleted ? 'line-through' : ''}`}>
+                              {session.time}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Programa:</span>
+                            <p className={`font-medium ${session.isDeleted ? 'line-through' : ''}`}>
+                              {session.program}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Centre:</span>
+                            <p className={`font-medium ${session.isDeleted ? 'line-through' : ''}`}>
+                              {session.center || 'N/A'}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <span className="text-muted-foreground">Programa:</span>
-                          <p className="font-medium">{session.program}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Centre:</span>
-                          <p className="font-medium">{session.center || 'N/A'}</p>
-                        </div>
+                        
+                        {/* Mostrar motiu d'eliminació */}
+                        {session.isDeleted && session.deleteReason && (
+                          <div className="p-2 rounded bg-red-500/10 border border-red-500/20">
+                            <p className="text-xs text-red-700">
+                              <strong>Motiu:</strong> {session.deleteReason}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* Mostrar motiu d'afegir */}
+                        {session.addReason && !session.isDeleted && (
+                          <div className="p-2 rounded bg-blue-500/10 border border-blue-500/20">
+                            <p className="text-xs text-blue-700">
+                              <strong>Motiu:</strong> {session.addReason}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 ))
               )}
 
-              {localSessions.length > 0 && (
+              {localSessions.length > 0 && !isAddingNew && (
                 <Button
                   variant="outline"
                   onClick={handleAddSession}
