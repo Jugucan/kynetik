@@ -6,7 +6,7 @@ import { programColors } from "@/lib/programColors";
 import { useSettings } from "@/hooks/useSettings";
 import { useSchedules, ScheduleSession } from "@/hooks/useSchedules";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 
 // Definició de Session (compatible amb els horaris)
 export interface Session {
@@ -147,6 +147,7 @@ const Calendar = () => {
 
   const handleUpdateSessions = (date: Date, sessions: Session[]) => {
     const dateKey = dateToKey(date);
+    console.log("📝 Actualitzant sessions locals per:", dateKey, sessions.length, "sessions");
     setCustomSessions((prev) => ({
       ...prev,
       [dateKey]: sessions,
@@ -203,24 +204,26 @@ const Calendar = () => {
     return "";
   };
 
-  // 🎉 ACTUALITZAT: Calcular sessions considerant els horaris històrics
+  // 🎉 ACTUALITZAT: Calcular sessions considerant eliminacions
   const sessionStats = useMemo(() => {
     let arbuciesSessions = 0;
     let santHilariSessions = 0;
     let arbuciesDays = 0;
     let santHilariDays = 0;
 
-    // Recórrer tots els dies del període de facturació del mes visualitzat
     const currentDate = new Date(viewBillingPeriod.start);
     
     while (currentDate <= viewBillingPeriod.end) {
       const sessions = getSessionsForDate(currentDate);
       
-      if (sessions.length > 0) {
+      // Filtrar sessions eliminades per al càlcul
+      const activeSessions = sessions.filter(s => !s.isDeleted);
+      
+      if (activeSessions.length > 0) {
         let hasArbucies = false;
         let hasSantHilari = false;
         
-        sessions.forEach(session => {
+        activeSessions.forEach(session => {
           if (session.center === 'Arbucies') {
             arbuciesSessions++;
             hasArbucies = true;
@@ -230,12 +233,10 @@ const Calendar = () => {
           }
         });
         
-        // Comptar dies treballats (un dia pot tenir sessions als 2 centres)
         if (hasArbucies) arbuciesDays++;
         if (hasSantHilari) santHilariDays++;
       }
       
-      // Avançar al següent dia
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
