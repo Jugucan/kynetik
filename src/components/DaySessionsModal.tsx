@@ -244,6 +244,9 @@ export const DaySessionsModal = ({
         [dateKey]: sessionsToSave,
       }, { merge: true });
       
+      console.log("✅ Sessions guardades a Firebase per al dia:", dateKey);
+      console.log("📊 Sessions guardades:", sessionsToSave);
+      
       // Actualitzar al calendari
       onUpdateSessions(date, sortedSessions);
       
