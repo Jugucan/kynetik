@@ -113,20 +113,21 @@ const Calendar = () => {
   }, [currentViewDate]);
 
   // 🎉 ACTUALITZAT: Obtenir sessions segons l'horari actiu en aquella data
-  const getSessionsForDate = (date: Date): Session[] => {
+  const getSessionsForDate = useCallback((date: Date): Session[] => {
     const dateKey = dateToKey(date);
     
-    // Si hi ha sessions personalitzades (manuals), usar-les
+    // 🎉 PRIORITAT 1: Si hi ha sessions personalitzades per aquest dia, usar-les SEMPRE
     if (customSessions[dateKey]) {
+      console.log("📌 Usant sessions personalitzades per:", dateKey);
       return customSessions[dateKey];
     }
     
-    // Si és festiu, vacances o tancament, no hi ha sessions (tret que siguin manuals)
+    // PRIORITAT 2: Si és festiu, vacances o tancament, no hi ha sessions
     if (isHoliday(date) || isVacation(date) || isClosure(date)) {
       return [];
     }
     
-    // 🎉 NOU: Obtenir l'horari que estava actiu en aquesta data específica
+    // PRIORITAT 3: Obtenir l'horari que estava actiu en aquesta data específica
     const scheduleForDate = getScheduleForDate(date);
     
     if (scheduleForDate) {
@@ -139,11 +140,13 @@ const Calendar = () => {
         time: s.time,
         program: s.program,
         center: s.center,
+        isCustom: false,
+        isDeleted: false,
       }));
     }
     
     return [];
-  };
+  }, [customSessions, getScheduleForDate, isHoliday, isVacation, isClosure]);
 
   const handleUpdateSessions = (date: Date, sessions: Session[]) => {
     const dateKey = dateToKey(date);
