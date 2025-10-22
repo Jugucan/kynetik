@@ -187,22 +187,7 @@ const Calendar = () => {
     setIsModalOpen(true);
   };
 
-  const isHoliday = (date: Date) => {
-    const dateKey = dateToKey(date);
-    return officialHolidays && officialHolidays.hasOwnProperty(dateKey);
-  };
-
-  const isVacation = (date: Date) => {
-    const dateKey = dateToKey(date);
-    return vacations && vacations.hasOwnProperty(dateKey); 
-  };
-  
-  const isClosure = (date: Date) => {
-    const dateKey = dateToKey(date);
-    return (closuresArbucies && closuresArbucies.hasOwnProperty(dateKey)) || 
-           (closuresSantHilari && closuresSantHilari.hasOwnProperty(dateKey)); 
-  };
-
+  // Funcions auxiliars per obtenir noms/motius
   const getHolidayName = (date: Date) => {
     const dateKey = dateToKey(date);
     return officialHolidays && officialHolidays[dateKey] ? officialHolidays[dateKey] : "";
