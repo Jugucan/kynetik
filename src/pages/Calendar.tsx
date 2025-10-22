@@ -112,6 +112,23 @@ const Calendar = () => {
     });
   }, [currentViewDate]);
 
+  // Definir funcions de comprovació ABANS de getSessionsForDate
+  const isHoliday = useCallback((date: Date) => {
+    const dateKey = dateToKey(date);
+    return officialHolidays && officialHolidays.hasOwnProperty(dateKey);
+  }, [officialHolidays]);
+
+  const isVacation = useCallback((date: Date) => {
+    const dateKey = dateToKey(date);
+    return vacations && vacations.hasOwnProperty(dateKey);
+  }, [vacations]);
+  
+  const isClosure = useCallback((date: Date) => {
+    const dateKey = dateToKey(date);
+    return (closuresArbucies && closuresArbucies.hasOwnProperty(dateKey)) || 
+           (closuresSantHilari && closuresSantHilari.hasOwnProperty(dateKey));
+  }, [closuresArbucies, closuresSantHilari]);
+
   // 🎉 ACTUALITZAT: Obtenir sessions segons l'horari actiu en aquella data
   const getSessionsForDate = useCallback((date: Date): Session[] => {
     const dateKey = dateToKey(date);
