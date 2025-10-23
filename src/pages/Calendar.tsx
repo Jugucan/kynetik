@@ -4,18 +4,21 @@ import { DaySessionsModal } from "@/components/DaySessionsModal";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { programColors } from "@/lib/programColors";
 import { useSettings } from "@/hooks/useSettings";
-import { useSchedules, ScheduleSession } from "@/hooks/useSchedules";
+import { useSchedules } from "@/hooks/useSchedules";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 
-// Definició de Session (compatible amb els horaris)
+// Definició de Session
 export interface Session {
   time: string;
   program: string;
   center?: string;
+  isCustom?: boolean;
+  isDeleted?: boolean;
+  deleteReason?: string;
+  addReason?: string;
 }
 
-// Funció per generar la clau de data en format local 'YYYY-MM-DD'
 const dateToKey = (date: Date): string => {
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -23,7 +26,6 @@ const dateToKey = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-// Funció per calcular el període de facturació (del 26 al 25)
 const getBillingPeriod = (referenceDate: Date): { start: Date; end: Date } => {
   const year = referenceDate.getFullYear();
   const month = referenceDate.getMonth();
@@ -32,7 +34,6 @@ const getBillingPeriod = (referenceDate: Date): { start: Date; end: Date } => {
   let startMonth: number;
   let startYear: number;
   
-  // Si estem abans del dia 26, el període va del mes anterior
   if (day < 26) {
     startMonth = month - 1;
     startYear = month === 0 ? year - 1 : year;
@@ -41,7 +42,6 @@ const getBillingPeriod = (referenceDate: Date): { start: Date; end: Date } => {
     startYear = year;
   }
   
-  // Normalitzar el mes si és negatiu
   if (startMonth < 0) {
     startMonth = 11;
     startYear -= 1;
@@ -50,7 +50,6 @@ const getBillingPeriod = (referenceDate: Date): { start: Date; end: Date } => {
   const startDate = new Date(startYear, startMonth, 26);
   startDate.setHours(0, 0, 0, 0);
   
-  // La data final és el dia 25 del mes següent
   let endMonth = startMonth + 1;
   let endYear = startYear;
   if (endMonth > 11) {
@@ -68,21 +67,7 @@ const Calendar = () => {
   const { vacations, closuresArbucies, closuresSantHilari, officialHolidays, loading: settingsLoading } = useSettings();
   const { schedules, loading: schedulesLoading } = useSchedules();
   
-  // 🎉 NOU: Funció per trobar l'horari actiu en una data específica
-  const getScheduleForDate = useCallback((date: Date) => {
-    const dateStr = dateToKey(date);
-    
-    // Buscar l'horari que correspon a aquesta data
-    return schedules.find(schedule => {
-      const startDate = schedule.startDate;
-      const endDate = schedule.endDate || '9999-12-31'; // Si no té endDate, està actiu fins al futur
-      
-      return dateStr >= startDate && dateStr <= endDate;
-    });
-  }, [schedules]);
-
   const [currentViewDate, setCurrentViewDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-  
   const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
   const [deletedSessions, setDeletedSessions] = useState<Record<string, Array<{sessionIndex: number, reason: string}>>>({});
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -90,29 +75,62 @@ const Calendar = () => {
 
   const loading = settingsLoading || schedulesLoading;
 
-  // 🎉 NOU: Calcular el període de facturació del mes visualitzat
+  // Carregar sessions personalitzades de Firebase amb listener en temps real
+  useEffect(() => {
+    console.log("🔄 Iniciant listener de sessions personalitzades...");
+    const customSessionsDocRef = doc(db, 'settings', 'customSessions');
+    
+    const unsubscribe = onSnapshot(customSessionsDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const sessionsMap: Record<string, Session[]> = {};
+        
+        Object.entries(data).forEach(([dateKey, sessions]) => {
+          if (Array.isArray(sessions)) {
+            sessionsMap[dateKey] = sessions as Session[];
+          }
+        });
+        
+        setCustomSessions(sessionsMap);
+        console.log("✅ Sessions personalitzades carregades:", Object.keys(sessionsMap).length, "dies amb sessions modificades");
+        console.log("📅 Dies amb modificacions:", Object.keys(sessionsMap));
+      } else {
+        setCustomSessions({});
+        console.log("ℹ️ No hi ha sessions personalitzades guardades");
+      }
+    }, (error) => {
+      console.error("❌ Error carregant sessions personalitzades:", error);
+    });
+
+    return () => {
+      console.log("🛑 Tancant listener de sessions personalitzades");
+      unsubscribe();
+    };
+  }, []);
+
+  const getScheduleForDate = useCallback((date: Date) => {
+    const dateStr = dateToKey(date);
+    return schedules.find(schedule => {
+      const startDate = schedule.startDate;
+      const endDate = schedule.endDate || '9999-12-31';
+      return dateStr >= startDate && dateStr <= endDate;
+    });
+  }, [schedules]);
+
   const viewBillingPeriod = useMemo(() => getBillingPeriod(currentViewDate), [currentViewDate]);
 
   const goToPreviousMonth = useCallback(() => {
-    setCurrentViewDate(prevDate => {
-      return new Date(prevDate.getFullYear(), prevDate.getMonth() - 1, 1);
-    });
+    setCurrentViewDate(prevDate => new Date(prevDate.getFullYear(), prevDate.getMonth() - 1, 1));
   }, []);
 
   const goToNextMonth = useCallback(() => {
-    setCurrentViewDate(prevDate => {
-      return new Date(prevDate.getFullYear(), prevDate.getMonth() + 1, 1);
-    });
+    setCurrentViewDate(prevDate => new Date(prevDate.getFullYear(), prevDate.getMonth() + 1, 1));
   }, []);
 
   const currentMonthText = useMemo(() => {
-    return currentViewDate.toLocaleDateString("ca-ES", { 
-      month: "long", 
-      year: "numeric" 
-    });
+    return currentViewDate.toLocaleDateString("ca-ES", { month: "long", year: "numeric" });
   }, [currentViewDate]);
 
-  // Definir funcions de comprovació ABANS de getSessionsForDate
   const isHoliday = useCallback((date: Date) => {
     const dateKey = dateToKey(date);
     return officialHolidays && officialHolidays.hasOwnProperty(dateKey);
@@ -129,7 +147,6 @@ const Calendar = () => {
            (closuresSantHilari && closuresSantHilari.hasOwnProperty(dateKey));
   }, [closuresArbucies, closuresSantHilari]);
 
-  // 🎉 ACTUALITZAT: Obtenir sessions segons l'horari actiu en aquella data
   const getSessionsForDate = useCallback((date: Date): Session[] => {
     const dateKey = dateToKey(date);
     
@@ -139,19 +156,16 @@ const Calendar = () => {
       totalDiesAmbCustom: Object.keys(customSessions).length
     });
     
-    // 🎉 PRIORITAT 1: Si hi ha sessions personalitzades per aquest dia, usar-les SEMPRE
     if (customSessions[dateKey]) {
       console.log("📌 Usant sessions personalitzades per:", dateKey, customSessions[dateKey]);
       return customSessions[dateKey];
     }
     
-    // PRIORITAT 2: Si és festiu, vacances o tancament, no hi ha sessions
     if (isHoliday(date) || isVacation(date) || isClosure(date)) {
       console.log("🚫 Dia especial (festiu/vacances/tancament):", dateKey);
       return [];
     }
     
-    // PRIORITAT 3: Obtenir l'horari que estava actiu en aquesta data específica
     const scheduleForDate = getScheduleForDate(date);
     
     if (scheduleForDate) {
@@ -161,7 +175,6 @@ const Calendar = () => {
       
       console.log("📅 Usant horari estàndard per:", dateKey, scheduleSessions.length, "sessions");
       
-      // Convertir ScheduleSession a Session
       return scheduleSessions.map(s => ({
         time: s.time,
         program: s.program,
@@ -197,7 +210,6 @@ const Calendar = () => {
     setIsModalOpen(true);
   };
 
-  // Funcions auxiliars per obtenir noms/motius
   const getHolidayName = (date: Date) => {
     const dateKey = dateToKey(date);
     return officialHolidays && officialHolidays[dateKey] ? officialHolidays[dateKey] : "";
@@ -219,7 +231,6 @@ const Calendar = () => {
     return "";
   };
 
-  // 🎉 ACTUALITZAT: Calcular sessions considerant eliminacions
   const sessionStats = useMemo(() => {
     let arbuciesSessions = 0;
     let santHilariSessions = 0;
@@ -230,8 +241,6 @@ const Calendar = () => {
     
     while (currentDate <= viewBillingPeriod.end) {
       const sessions = getSessionsForDate(currentDate);
-      
-      // Filtrar sessions eliminades per al càlcul
       const activeSessions = sessions.filter(s => !s.isDeleted);
       
       if (activeSessions.length > 0) {
@@ -259,7 +268,7 @@ const Calendar = () => {
       arbucies: { sessions: arbuciesSessions, days: arbuciesDays },
       santHilari: { sessions: santHilariSessions, days: santHilariDays },
     };
-  }, [viewBillingPeriod, schedules, customSessions, vacations, closuresArbucies, closuresSantHilari, officialHolidays, getScheduleForDate]);
+  }, [viewBillingPeriod, getSessionsForDate]);
 
   const upcomingEvents = useMemo(() => {
     const today = new Date();
@@ -303,12 +312,9 @@ const Calendar = () => {
       });
     }
     
-    return events
-      .sort((a, b) => a.date.getTime() - b.date.getTime())
-      .slice(0, 5);
+    return events.sort((a, b) => a.date.getTime() - b.date.getTime()).slice(0, 5);
   }, [officialHolidays, vacations, closuresArbucies, closuresSantHilari]);
 
-  // GENERACIÓ DEL CALENDARI
   const year = currentViewDate.getFullYear();
   const month = currentViewDate.getMonth();
   
@@ -348,7 +354,6 @@ const Calendar = () => {
 
   return (
     <div className="space-y-6">
-      {/* 🎉 CANVIAT: Nom del mes més gran i visible */}
       <div className="flex items-center gap-3">
         <CalendarIcon className="w-8 h-8 text-primary" />
         <div className="flex-1">
@@ -359,22 +364,13 @@ const Calendar = () => {
 
       <div className="grid gap-6">
         <NeoCard>
-          
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold">Sessions del mes</h2>
             <div className="flex space-x-2">
-              <button 
-                onClick={goToPreviousMonth} 
-                className="p-2 rounded-full shadow-neo hover:shadow-neo-sm transition-all"
-                title="Mes anterior"
-              >
+              <button onClick={goToPreviousMonth} className="p-2 rounded-full shadow-neo hover:shadow-neo-sm transition-all" title="Mes anterior">
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              <button 
-                onClick={goToNextMonth} 
-                className="p-2 rounded-full shadow-neo hover:shadow-neo-sm transition-all"
-                title="Mes següent"
-              >
+              <button onClick={goToNextMonth} className="p-2 rounded-full shadow-neo hover:shadow-neo-sm transition-all" title="Mes següent">
                 <ChevronRight className="h-5 w-5" />
               </button>
             </div>
@@ -392,57 +388,25 @@ const Calendar = () => {
                 onClick={() => dayInfo.date && handleDayClick(dayInfo.date)}
                 disabled={!dayInfo.day}
                 className={`aspect-square rounded-xl shadow-neo hover:shadow-neo-sm transition-all flex flex-col items-center justify-start font-medium p-2 ${
-                  !dayInfo.day
-                    ? "invisible"
-                    : dayInfo.holiday
-                    ? "bg-yellow-500/20 border-2 border-yellow-500/50"
-                    : dayInfo.vacation
-                    ? "bg-blue-500/20 border-2 border-blue-500/50"
-                    : dayInfo.closure
-                    ? "bg-gray-500/20 border-2 border-gray-500/50"
-                    : ""
+                  !dayInfo.day ? "invisible" : dayInfo.holiday ? "bg-yellow-500/20 border-2 border-yellow-500/50" : dayInfo.vacation ? "bg-blue-500/20 border-2 border-blue-500/50" : dayInfo.closure ? "bg-gray-500/20 border-2 border-gray-500/50" : ""
                 }`}
-                title={
-                  dayInfo.holiday 
-                    ? `Festiu: ${getHolidayName(dayInfo.date!)}`
-                    : dayInfo.vacation
-                    ? `Vacances: ${getVacationReason(dayInfo.date!)}`
-                    : dayInfo.closure
-                    ? `Tancament: ${getClosureReason(dayInfo.date!)}`
-                    : ""
-                }
+                title={dayInfo.holiday ? `Festiu: ${getHolidayName(dayInfo.date!)}` : dayInfo.vacation ? `Vacances: ${getVacationReason(dayInfo.date!)}` : dayInfo.closure ? `Tancament: ${getClosureReason(dayInfo.date!)}` : ""}
               >
                 {dayInfo.day && (
                   <>
                     <span className="text-sm mb-1">{dayInfo.day}</span>
-                    
-                    {dayInfo.holiday && (
-                      <span className="text-[8px] text-yellow-700 font-bold mb-1">FESTIU</span>
-                    )}
-                    {dayInfo.vacation && (
-                      <span className="text-[8px] text-blue-700 font-bold mb-1">VACANCES</span>
-                    )}
-                    {dayInfo.closure && (
-                      <span className="text-[8px] text-gray-700 font-bold mb-1">TANCAT</span>
-                    )}
-
+                    {dayInfo.holiday && <span className="text-[8px] text-yellow-700 font-bold mb-1">FESTIU</span>}
+                    {dayInfo.vacation && <span className="text-[8px] text-blue-700 font-bold mb-1">VACANCES</span>}
+                    {dayInfo.closure && <span className="text-[8px] text-gray-700 font-bold mb-1">TANCAT</span>}
                     {dayInfo.sessions.length > 0 && (
                       <div className="flex gap-0.5 flex-wrap justify-center w-full">
                         {dayInfo.sessions.map((session, idx) => (
                           <div
                             key={idx}
                             className={`w-7 h-7 rounded ${
-                              session.isDeleted 
-                                ? 'bg-gray-300 dark:bg-gray-600 opacity-50' 
-                                : programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'
-                            } text-white text-[10px] flex items-center justify-center font-bold shadow-sm ${
-                              session.isDeleted ? 'line-through' : ''
-                            }`}
-                            title={
-                              session.isDeleted
-                                ? `ELIMINADA: ${session.time} - ${session.program} - ${session.deleteReason || 'Sense motiu'}`
-                                : `${session.time} - ${programColors[session.program as keyof typeof programColors]?.name || session.program} - ${session.center || 'N/A'}`
-                            }
+                              session.isDeleted ? 'bg-gray-300 dark:bg-gray-600 opacity-50' : programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'
+                            } text-white text-[10px] flex items-center justify-center font-bold shadow-sm ${session.isDeleted ? 'line-through' : ''}`}
+                            title={session.isDeleted ? `ELIMINADA: ${session.time} - ${session.program} - ${session.deleteReason || 'Sense motiu'}` : `${session.time} - ${programColors[session.program as keyof typeof programColors]?.name || session.program} - ${session.center || 'N/A'}`}
                           >
                             {session.program}
                           </div>
@@ -456,28 +420,15 @@ const Calendar = () => {
           </div>
 
           <div className="flex flex-wrap gap-4 text-xs text-muted-foreground border-t pt-3">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-yellow-500/50"></div>
-              <span>Festiu</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-blue-500/50"></div>
-              <span>Vacances</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-gray-500/50"></div>
-              <span>Tancament</span>
-            </div>
+            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-yellow-500/50"></div><span>Festiu</span></div>
+            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-500/50"></div><span>Vacances</span></div>
+            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-gray-500/50"></div><span>Tancament</span></div>
             {Object.entries(programColors).map(([code, data]) => (
-              <div key={code} className="flex items-center gap-1">
-                <div className={`w-3 h-3 rounded ${data.color}`}></div>
-                <span>{code}</span>
-              </div>
+              <div key={code} className="flex items-center gap-1"><div className={`w-3 h-3 rounded ${data.color}`}></div><span>{code}</span></div>
             ))}
           </div>
         </NeoCard>
 
-        {/* 🎉 ACTUALITZAT: Estadístiques del període visualitzat (26 al 25) */}
         <div className="grid md:grid-cols-2 gap-6">
           <NeoCard>
             <h3 className="font-semibold mb-3">Arbúcies</h3>
@@ -485,14 +436,8 @@ const Calendar = () => {
               Període: {viewBillingPeriod.start.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })} - {viewBillingPeriod.end.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
             </p>
             <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Sessions realitzades:</span>
-                <span className="font-bold text-primary">{sessionStats.arbucies.sessions}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Dies treballats:</span>
-                <span className="font-bold">{sessionStats.arbucies.days}</span>
-              </div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Sessions realitzades:</span><span className="font-bold text-primary">{sessionStats.arbucies.sessions}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Dies treballats:</span><span className="font-bold">{sessionStats.arbucies.days}</span></div>
             </div>
           </NeoCard>
 
@@ -502,14 +447,8 @@ const Calendar = () => {
               Període: {viewBillingPeriod.start.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })} - {viewBillingPeriod.end.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
             </p>
             <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Sessions realitzades:</span>
-                <span className="font-bold text-primary">{sessionStats.santHilari.sessions}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Dies treballats:</span>
-                <span className="font-bold">{sessionStats.santHilari.days}</span>
-              </div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Sessions realitzades:</span><span className="font-bold text-primary">{sessionStats.santHilari.sessions}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Dies treballats:</span><span className="font-bold">{sessionStats.santHilari.days}</span></div>
             </div>
           </NeoCard>
         </div>
@@ -522,15 +461,7 @@ const Calendar = () => {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const daysUntil = Math.ceil((event.date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                
-                let daysText = "";
-                if (daysUntil === 0) {
-                  daysText = "Avui";
-                } else if (daysUntil === 1) {
-                  daysText = "Demà";
-                } else {
-                  daysText = `Falten ${daysUntil} dies`;
-                }
+                let daysText = daysUntil === 0 ? "Avui" : daysUntil === 1 ? "Demà" : `Falten ${daysUntil} dies`;
                 
                 return (
                   <div key={idx} className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset">
@@ -539,16 +470,10 @@ const Calendar = () => {
                       <p className="text-sm text-muted-foreground">{event.reason}</p>
                     </div>
                     <div className="text-right ml-3">
-                      <span className={`block text-sm font-medium ${
-                        event.type === 'holiday' ? 'text-yellow-600' :
-                        event.type === 'vacation' ? 'text-blue-600' :
-                        'text-gray-600'
-                      }`}>
+                      <span className={`block text-sm font-medium ${event.type === 'holiday' ? 'text-yellow-600' : event.type === 'vacation' ? 'text-blue-600' : 'text-gray-600'}`}>
                         {event.date.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
                       </span>
-                      <span className="block text-xs text-muted-foreground mt-0.5">
-                        {daysText}
-                      </span>
+                      <span className="block text-xs text-muted-foreground mt-0.5">{daysText}</span>
                     </div>
                   </div>
                 );
