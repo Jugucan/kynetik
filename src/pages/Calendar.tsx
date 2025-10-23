@@ -133,14 +133,21 @@ const Calendar = () => {
   const getSessionsForDate = useCallback((date: Date): Session[] => {
     const dateKey = dateToKey(date);
     
+    console.log(`🔍 getSessionsForDate per ${dateKey}:`, {
+      teCustomSessions: !!customSessions[dateKey],
+      numCustomSessions: customSessions[dateKey]?.length || 0,
+      totalDiesAmbCustom: Object.keys(customSessions).length
+    });
+    
     // 🎉 PRIORITAT 1: Si hi ha sessions personalitzades per aquest dia, usar-les SEMPRE
     if (customSessions[dateKey]) {
-      console.log("📌 Usant sessions personalitzades per:", dateKey);
+      console.log("📌 Usant sessions personalitzades per:", dateKey, customSessions[dateKey]);
       return customSessions[dateKey];
     }
     
     // PRIORITAT 2: Si és festiu, vacances o tancament, no hi ha sessions
     if (isHoliday(date) || isVacation(date) || isClosure(date)) {
+      console.log("🚫 Dia especial (festiu/vacances/tancament):", dateKey);
       return [];
     }
     
@@ -152,6 +159,8 @@ const Calendar = () => {
       const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
       const scheduleSessions = scheduleForDate.sessions[adjustedDay] || [];
       
+      console.log("📅 Usant horari estàndard per:", dateKey, scheduleSessions.length, "sessions");
+      
       // Convertir ScheduleSession a Session
       return scheduleSessions.map(s => ({
         time: s.time,
@@ -162,6 +171,7 @@ const Calendar = () => {
       }));
     }
     
+    console.log("⚠️ No s'ha trobat cap sessió per:", dateKey);
     return [];
   }, [customSessions, getScheduleForDate, isHoliday, isVacation, isClosure]);
 
