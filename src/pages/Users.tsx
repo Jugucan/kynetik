@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { Users as UsersIcon, Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { Users as UsersIcon, Search, Plus, Pencil, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-// Cal importar el nou User que ja inclou els camps extra
 import { useUsers, User } from "@/hooks/useUsers"; 
 import { UserFormModal } from "@/components/UserFormModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import * as XLSX from 'xlsx';
 
 const Users = () => {
   const { users, loading, addUser, updateUser, deleteUser } = useUsers();
@@ -14,6 +15,7 @@ const Users = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const filteredUsers = users.filter(user =>
     (user.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -22,7 +24,6 @@ const Users = () => {
 
   const handleSaveUser = async (userData: Omit<User, 'id'>) => {
     if (editingUser) {
-      // Passem l'ID a l'actualització
       await updateUser(editingUser.id, userData);
     } else {
       await addUser(userData);
@@ -45,6 +46,76 @@ const Users = () => {
     setIsModalOpen(true);
   };
 
+  // 🆕 FUNCIÓ PER IMPORTAR USUARIS DES D'EXCEL
+  const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    toast.info("Processant fitxer Excel...");
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const row of jsonData as any[]) {
+        try {
+          // Mapejar les columnes de l'Excel als camps de l'usuari
+          const userData: Omit<User, 'id'> = {
+            name: row['Nom Complet'] || row['Nom'] || '',
+            center: row['Gimnàs'] || row['Gimnas'] || 'Arbúcies',
+            birthday: row['Data Aniversari'] || row['Data'] || '',
+            age: row['Edat'] || 0,
+            preferredPrograms: row['Sessions Habituals'] ? 
+              (typeof row['Sessions Habituals'] === 'string' ? 
+                row['Sessions Habituals'].split(',').map((s: string) => s.trim()) : 
+                [row['Sessions Habituals']]
+              ) : [],
+            phone: row['Telèfon'] || row['Telefon'] || '',
+            email: row['Email'] || '',
+            profileImageUrl: row['URL Foto Perfil'] || row['Foto'] || '',
+            notes: row['Notes'] || '',
+            avatar: row['URL Foto Perfil'] || row['Foto'] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${row['Nom Complet'] || 'user'}`,
+          };
+
+          // Validar que almenys tingui nom
+          if (!userData.name) {
+            console.warn('Fila sense nom, s\'omet');
+            errorCount++;
+            continue;
+          }
+
+          await addUser(userData);
+          successCount++;
+        } catch (error) {
+          console.error('Error afegint usuari:', error);
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`✅ S'han importat ${successCount} usuaris correctament!`);
+      }
+      if (errorCount > 0) {
+        toast.warning(`⚠️ ${errorCount} usuaris no s'han pogut importar`);
+      }
+
+    } catch (error) {
+      console.error('Error llegint fitxer Excel:', error);
+      toast.error('Error al processar el fitxer Excel');
+    } finally {
+      setIsImporting(false);
+      // Reiniciar l'input per poder tornar a carregar el mateix fitxer
+      event.target.value = '';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -55,11 +126,62 @@ const Users = () => {
             <p className="text-muted-foreground">Gestió dels teus alumnes</p>
           </div>
         </div>
-        <Button onClick={handleAddNew} className="shadow-neo hover:shadow-neo-sm gap-2">
-          <Plus className="w-4 h-4" />
-          Afegir usuari
-        </Button>
+        <div className="flex gap-2">
+          {/* 🆕 BOTÓ PER IMPORTAR EXCEL */}
+          <label htmlFor="excel-upload">
+            <Button 
+              className="shadow-neo hover:shadow-neo-sm gap-2" 
+              variant="outline"
+              disabled={isImporting}
+              asChild
+            >
+              <span>
+                <Upload className="w-4 h-4" />
+                {isImporting ? "Important..." : "Importar Excel"}
+              </span>
+            </Button>
+          </label>
+          <input
+            id="excel-upload"
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleImportExcel}
+            className="hidden"
+          />
+
+          <Button onClick={handleAddNew} className="shadow-neo hover:shadow-neo-sm gap-2">
+            <Plus className="w-4 h-4" />
+            Afegir usuari
+          </Button>
+        </div>
       </div>
+
+      {/* 🆕 INSTRUCCIONS PER A L'EXCEL */}
+      <NeoCard className="bg-blue-50/50">
+        <div className="flex items-start gap-3">
+          <Upload className="w-5 h-5 text-blue-600 mt-0.5" />
+          <div>
+            <h3 className="font-semibold text-blue-900 mb-1">Com importar usuaris des d'Excel</h3>
+            <p className="text-sm text-blue-700 mb-2">
+              El teu fitxer Excel ha de tenir aquestes columnes (en aquest ordre o amb aquests noms):
+            </p>
+            <ul className="text-xs text-blue-600 space-y-1 list-disc list-inside">
+              <li><strong>Nom Complet</strong> (obligatori)</li>
+              <li><strong>Gimnàs</strong> (Arbúcies o Sant Hilari)</li>
+              <li><strong>Data Aniversari</strong> (format DD/MM/YYYY, ex: 15/03/1990)</li>
+              <li><strong>Edat</strong> (número)</li>
+              <li><strong>Sessions Habituals</strong> (separats per comes, ex: BP, BC, BB)</li>
+              <li><strong>Telèfon</strong></li>
+              <li><strong>Email</strong></li>
+              <li><strong>URL Foto Perfil</strong> (opcional)</li>
+              <li><strong>Notes</strong> (opcional)</li>
+            </ul>
+            <p className="text-xs text-blue-600 mt-2">
+              💡 <strong>Consell:</strong> La columna "ID (intern)" de l'Excel no es farà servir, Firebase crearà els seus propis IDs automàticament.
+            </p>
+          </div>
+        </div>
+      </NeoCard>
 
       <NeoCard>
         <div className="relative mb-6">
@@ -90,7 +212,6 @@ const Users = () => {
                 }`}
               >
                 <div className="flex items-start gap-4">
-                  {/* Utilitzem profileImageUrl si existeix, si no, l'avatar antic/generat */}
                   <img 
                     src={user.profileImageUrl || user.avatar} 
                     alt={user.name}
@@ -131,14 +252,12 @@ const Users = () => {
                     
                     <p className="text-sm text-muted-foreground mt-1">{user.email}</p>
                     
-                    {/* INFORMACIÓ EXTRA */}
                     <div className="flex flex-wrap gap-4 mt-2 text-sm">
                       <span className="text-muted-foreground">
                         🎂 {user.birthday}
                       </span>
                       <span className="text-muted-foreground">📞 {user.phone}</span>
                       
-                      {/* Afegim els programes preferits */}
                       {user.preferredPrograms && user.preferredPrograms.length > 0 && (
                         <span className="font-semibold text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary-foreground shadow-neo-inset">
                           🏋️‍♀️ {user.preferredPrograms.join(', ')}
@@ -146,13 +265,11 @@ const Users = () => {
                       )}
                     </div>
                     
-                    {/* Afegim les notes personals */}
                     {user.notes && (
                       <p className="text-xs italic text-gray-500 mt-2 p-2 rounded-md bg-background/50 border shadow-neo-inset">
-                        📝 **Notes:** {user.notes}
+                        📝 <strong>Notes:</strong> {user.notes}
                       </p>
                     )}
-                    
                   </div>
                 </div>
               </div>
