@@ -46,7 +46,7 @@ const Users = () => {
     setIsModalOpen(true);
   };
 
-  // 🆕 FUNCIÓ PER IMPORTAR USUARIS DES D'EXCEL
+  // 🆕 FUNCIÓ PER IMPORTAR USUARIS DES D'EXCEL (sense camp edat)
   const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -71,7 +71,7 @@ const Users = () => {
             name: row['Nom Complet'] || row['Nom'] || '',
             center: row['Gimnàs'] || row['Gimnas'] || 'Arbúcies',
             birthday: row['Data Aniversari'] || row['Data'] || '',
-            age: row['Edat'] || 0,
+            age: 0, // 🆕 L'edat es calcularà automàticament al hook
             preferredPrograms: row['Sessions Habituals'] ? 
               (typeof row['Sessions Habituals'] === 'string' ? 
                 row['Sessions Habituals'].split(',').map((s: string) => s.trim()) : 
@@ -111,7 +111,6 @@ const Users = () => {
       toast.error('Error al processar el fitxer Excel');
     } finally {
       setIsImporting(false);
-      // Reiniciar l'input per poder tornar a carregar el mateix fitxer
       event.target.value = '';
     }
   };
@@ -127,7 +126,6 @@ const Users = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          {/* 🆕 BOTÓ PER IMPORTAR EXCEL */}
           <label htmlFor="excel-upload">
             <Button 
               className="shadow-neo hover:shadow-neo-sm gap-2" 
@@ -156,7 +154,7 @@ const Users = () => {
         </div>
       </div>
 
-      {/* 🆕 INSTRUCCIONS PER A L'EXCEL */}
+      {/* 🆕 INSTRUCCIONS ACTUALITZADES */}
       <NeoCard className="bg-blue-50/50">
         <div className="flex items-start gap-3">
           <Upload className="w-5 h-5 text-blue-600 mt-0.5" />
@@ -168,8 +166,7 @@ const Users = () => {
             <ul className="text-xs text-blue-600 space-y-1 list-disc list-inside">
               <li><strong>Nom Complet</strong> (obligatori)</li>
               <li><strong>Gimnàs</strong> (Arbúcies o Sant Hilari)</li>
-              <li><strong>Data Aniversari</strong> (format DD/MM/YYYY, ex: 15/03/1990)</li>
-              <li><strong>Edat</strong> (número)</li>
+              <li><strong>Data Aniversari</strong> (format DD/MM/YYYY, ex: 15/03/1990) - L'edat es calcularà automàticament ✨</li>
               <li><strong>Sessions Habituals</strong> (separats per comes, ex: BP, BC, BB)</li>
               <li><strong>Telèfon</strong></li>
               <li><strong>Email</strong></li>
@@ -177,7 +174,7 @@ const Users = () => {
               <li><strong>Notes</strong> (opcional)</li>
             </ul>
             <p className="text-xs text-blue-600 mt-2">
-              💡 <strong>Consell:</strong> La columna "ID (intern)" de l'Excel no es farà servir, Firebase crearà els seus propis IDs automàticament.
+              💡 <strong>Important:</strong> Ja no cal la columna "Edat" a l'Excel, es calcularà automàticament des de la data de naixement!
             </p>
           </div>
         </div>
@@ -300,7 +297,7 @@ const Users = () => {
             <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
             <AlertDialogAction onClick={() => deletingUserId && handleDeleteUser(deletingUserId)}>
               Eliminar
-            </AlertDialogAction>
+              </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
