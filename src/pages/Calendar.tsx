@@ -279,7 +279,9 @@ const Calendar = () => {
     if (officialHolidays) {
       Object.entries(officialHolidays).forEach(([dateKey, reason]) => {
         const date = new Date(dateKey);
-        if (date >= today) {
+        const dayOfWeek = date.getDay();
+        // 🎉 NOU: Filtrar caps de setmana (0=diumenge, 6=dissabte)
+        if (date >= today && dayOfWeek !== 0 && dayOfWeek !== 6) {
           events.push({ date, type: 'holiday', name: reason, reason: 'Festiu oficial' });
         }
       });
@@ -288,7 +290,9 @@ const Calendar = () => {
     if (vacations) {
       Object.entries(vacations).forEach(([dateKey, reason]) => {
         const date = new Date(dateKey);
-        if (date >= today) {
+        const dayOfWeek = date.getDay();
+        // 🎉 NOU: Filtrar caps de setmana
+        if (date >= today && dayOfWeek !== 0 && dayOfWeek !== 6) {
           events.push({ date, type: 'vacation', name: 'Vacances', reason: reason || 'Vacances generals' });
         }
       });
@@ -297,7 +301,9 @@ const Calendar = () => {
     if (closuresArbucies) {
       Object.entries(closuresArbucies).forEach(([dateKey, reason]) => {
         const date = new Date(dateKey);
-        if (date >= today) {
+        const dayOfWeek = date.getDay();
+        // 🎉 NOU: Filtrar caps de setmana
+        if (date >= today && dayOfWeek !== 0 && dayOfWeek !== 6) {
           events.push({ date, type: 'closure', name: 'Tancament Arbúcies', reason: reason || 'Tancament' });
         }
       });
@@ -306,7 +312,9 @@ const Calendar = () => {
     if (closuresSantHilari) {
       Object.entries(closuresSantHilari).forEach(([dateKey, reason]) => {
         const date = new Date(dateKey);
-        if (date >= today) {
+        const dayOfWeek = date.getDay();
+        // 🎉 NOU: Filtrar caps de setmana
+        if (date >= today && dayOfWeek !== 0 && dayOfWeek !== 6) {
           events.push({ date, type: 'closure', name: 'Tancament Sant Hilari', reason: reason || 'Tancament' });
         }
       });
@@ -382,44 +390,82 @@ const Calendar = () => {
                 {day}
               </div>
             ))}
-            {calendarDays.map((dayInfo, idx) => (
-              <button
-                key={idx}
-                onClick={() => dayInfo.date && handleDayClick(dayInfo.date)}
-                disabled={!dayInfo.day}
-                className={`aspect-square rounded-xl shadow-neo hover:shadow-neo-sm transition-all flex flex-col items-center justify-start font-medium p-2 ${
-                  !dayInfo.day ? "invisible" : dayInfo.holiday ? "bg-yellow-500/20 border-2 border-yellow-500/50" : dayInfo.vacation ? "bg-blue-500/20 border-2 border-blue-500/50" : dayInfo.closure ? "bg-gray-500/20 border-2 border-gray-500/50" : ""
-                }`}
-                title={dayInfo.holiday ? `Festiu: ${getHolidayName(dayInfo.date!)}` : dayInfo.vacation ? `Vacances: ${getVacationReason(dayInfo.date!)}` : dayInfo.closure ? `Tancament: ${getClosureReason(dayInfo.date!)}` : ""}
-              >
-                {dayInfo.day && (
-                  <>
-                    <span className="text-sm mb-1">{dayInfo.day}</span>
-                    {dayInfo.holiday && <span className="text-[8px] text-yellow-700 font-bold mb-1">FESTIU</span>}
-                    {dayInfo.vacation && <span className="text-[8px] text-blue-700 font-bold mb-1">VACANCES</span>}
-                    {dayInfo.closure && <span className="text-[8px] text-gray-700 font-bold mb-1">TANCAT</span>}
-                    {dayInfo.sessions.length > 0 && (
-                      <div className="flex gap-0.5 flex-wrap justify-center w-full">
-                        {dayInfo.sessions.map((session, idx) => (
-                          <div
-                            key={idx}
-                            className={`w-7 h-7 rounded ${
-                              session.isDeleted ? 'bg-gray-300 dark:bg-gray-600 opacity-50' : programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'
-                            } text-white text-[10px] flex items-center justify-center font-bold shadow-sm ${session.isDeleted ? 'line-through' : ''}`}
-                            title={session.isDeleted ? `ELIMINADA: ${session.time} - ${session.program} - ${session.deleteReason || 'Sense motiu'}` : `${session.time} - ${programColors[session.program as keyof typeof programColors]?.name || session.program} - ${session.center || 'N/A'}`}
-                          >
-                            {session.program}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-              </button>
-            ))}
+            {calendarDays.map((dayInfo, idx) => {
+              // 🎉 NOU: Comprovar si és el dia actual
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const isToday = dayInfo.date && dayInfo.date.getTime() === today.getTime();
+              
+              // 🎉 NOU: Comprovar si té sessions modificades
+              const dateKey = dayInfo.date ? dateToKey(dayInfo.date) : '';
+              const hasModifications = customSessions[dateKey] && customSessions[dateKey].length > 0;
+              
+              return (
+                <button
+                  key={idx}
+                  onClick={() => dayInfo.date && handleDayClick(dayInfo.date)}
+                  disabled={!dayInfo.day}
+                  className={`aspect-square rounded-xl shadow-neo hover:shadow-neo-sm transition-all flex flex-col items-center justify-start font-medium p-2 ${
+                    !dayInfo.day
+                      ? "invisible"
+                      : isToday
+                      ? "bg-primary/20 border-2 border-primary ring-2 ring-primary/50"
+                      : hasModifications
+                      ? "border-2 border-green-500"
+                      : dayInfo.holiday
+                      ? "bg-yellow-500/20 border-2 border-yellow-500/50"
+                      : dayInfo.vacation
+                      ? "bg-blue-500/20 border-2 border-blue-500/50"
+                      : dayInfo.closure
+                      ? "bg-gray-500/20 border-2 border-gray-500/50"
+                      : ""
+                  }`}
+                  title={
+                    isToday
+                      ? "Avui"
+                      : hasModifications
+                      ? "Dia amb modificacions a l'horari"
+                      : dayInfo.holiday 
+                      ? `Festiu: ${getHolidayName(dayInfo.date!)}`
+                      : dayInfo.vacation
+                      ? `Vacances: ${getVacationReason(dayInfo.date!)}`
+                      : dayInfo.closure
+                      ? `Tancament: ${getClosureReason(dayInfo.date!)}`
+                      : ""
+                  }
+                >
+                  {dayInfo.day && (
+                    <>
+                      <span className={`text-sm mb-1 ${isToday ? 'font-bold text-primary' : ''}`}>{dayInfo.day}</span>
+                      {isToday && <span className="text-[8px] text-primary font-bold mb-1">AVUI</span>}
+                      {dayInfo.holiday && <span className="text-[8px] text-yellow-700 font-bold mb-1">FESTIU</span>}
+                      {dayInfo.vacation && <span className="text-[8px] text-blue-700 font-bold mb-1">VACANCES</span>}
+                      {dayInfo.closure && <span className="text-[8px] text-gray-700 font-bold mb-1">TANCAT</span>}
+                      {dayInfo.sessions.length > 0 && (
+                        <div className="flex gap-0.5 flex-wrap justify-center w-full">
+                          {dayInfo.sessions.map((session, idx) => (
+                            <div
+                              key={idx}
+                              className={`w-7 h-7 rounded ${
+                                session.isDeleted ? 'bg-gray-300 dark:bg-gray-600 opacity-50' : programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'
+                              } text-white text-[10px] flex items-center justify-center font-bold shadow-sm ${session.isDeleted ? 'line-through' : ''}`}
+                              title={session.isDeleted ? `ELIMINADA: ${session.time} - ${session.program} - ${session.deleteReason || 'Sense motiu'}` : `${session.time} - ${programColors[session.program as keyof typeof programColors]?.name || session.program} - ${session.center || 'N/A'}`}
+                            >
+                              {session.program}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex flex-wrap gap-4 text-xs text-muted-foreground border-t pt-3">
+            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-primary/50 ring-2 ring-primary/30"></div><span>Dia actual</span></div>
+            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded border-2 border-green-500"></div><span>Modificat</span></div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-yellow-500/50"></div><span>Festiu</span></div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-500/50"></div><span>Vacances</span></div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-gray-500/50"></div><span>Tancament</span></div>
