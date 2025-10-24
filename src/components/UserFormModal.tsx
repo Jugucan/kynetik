@@ -4,23 +4,43 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// Importem el Textarea per a les notes
 import { Textarea } from "@/components/ui/textarea"; 
 import { User } from "@/hooks/useUsers";
 
-// Definició de l'estat inicial del formulari (amb els nous camps)
+// 🆕 FUNCIÓ PER CALCULAR L'EDAT
+const calculateAgeFromBirthday = (birthday: string): number => {
+  if (!birthday) return 0;
+  
+  const parts = birthday.split('/');
+  if (parts.length !== 3) return 0;
+  
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const year = parseInt(parts[2], 10);
+  
+  const birthDate = new Date(year, month, day);
+  const today = new Date();
+  
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return age;
+};
+
 const initialFormData = {
   name: "",
   email: "",
   center: "Arbúcies",
-  birthday: "", // Format DD/MM/YYYY
+  birthday: "",
   age: 0,
   phone: "",
-  avatar: "", // Valor per defecte original
-  
-  // NOUS CAMPS:
+  avatar: "",
   profileImageUrl: "",
-  preferredPrograms: "", // Com a string separada per comes per facilitar l'Input
+  preferredPrograms: "",
   notes: "",
 };
 
@@ -36,19 +56,15 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
 
   useEffect(() => {
     if (user) {
-      // Inicialització del formulari amb les dades de l'usuari
       setFormData({
         name: user.name,
         email: user.email,
         center: user.center,
-        // La data ja ve en format DD/MM/YYYY des del hook
         birthday: user.birthday as string, 
         age: user.age,
         phone: user.phone,
         avatar: user.avatar,
-        // Inicialització dels nous camps (l'array es converteix a string)
         profileImageUrl: user.profileImageUrl || '',
-        // Converteix l'array a una string separada per comes per mostrar-la a l'Input
         preferredPrograms: Array.isArray(user.preferredPrograms) ? user.preferredPrograms.join(', ') : (user.preferredPrograms as string || ''),
         notes: user.notes || '',
       });
@@ -57,18 +73,26 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
     }
   }, [user, open]);
 
+  // 🆕 ACTUALITZAR L'EDAT AUTOMÀTICAMENT QUAN CANVIA LA DATA DE NAIXEMENT
+  const handleBirthdayChange = (birthday: string) => {
+    const calculatedAge = calculateAgeFromBirthday(birthday);
+    setFormData({ 
+      ...formData, 
+      birthday,
+      age: calculatedAge 
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Utilitzem profileImageUrl com a valor de l'avatar final si està present
     const finalAvatar = formData.profileImageUrl || formData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${formData.name}`;
     
     await onSave({
       ...formData,
-      // La lògica de conversió de birthday i preferredPrograms a format de Firebase
-      // es fa dins del hook useUsers.ts abans de guardar.
       avatar: finalAvatar, 
-      profileImageUrl: formData.profileImageUrl, 
+      profileImageUrl: formData.profileImageUrl,
+      // L'edat es recalcularà automàticament al hook
     });
     
     onClose();
@@ -76,10 +100,6 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      {/* CANVI CLAU: 
-        - overflow-y-auto: Habilita el scroll vertical quan el contingut supera l'alçada.
-        - max-h-[90vh]: Limita l'alçada de la finestra al 90% del viewport (pantalla).
-      */}
       <DialogContent className="sm:max-w-[500px] overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{user ? "Editar usuari" : "Afegir usuari"}</DialogTitle>
@@ -87,7 +107,6 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
         
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* CAMPS EXISTENTS */}
           <div className="space-y-2">
             <Label htmlFor="name">Nom</Label>
             <Input
@@ -122,6 +141,7 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
             </Select>
           </div>
 
+          {/* 🆕 CAMP DE DATA AMB CÀLCUL AUTOMÀTIC D'EDAT */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="birthday">Data de naixement (DD/MM/AAAA)</Label>
@@ -129,19 +149,20 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
                 id="birthday"
                 placeholder="DD/MM/AAAA"
                 value={formData.birthday}
-                onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+                onChange={(e) => handleBirthdayChange(e.target.value)}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="age">Edat</Label>
+              <Label htmlFor="age">Edat (automàtic)</Label>
               <Input
                 id="age"
                 type="number"
                 value={formData.age}
-                onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || 0 })}
-                required
+                disabled
+                className="bg-gray-100 cursor-not-allowed"
+                title="L'edat es calcula automàticament des de la data de naixement"
               />
             </div>
           </div>
@@ -156,7 +177,6 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
             />
           </div>
 
-          {/* NOU CAMP: profileImageUrl */}
           <div className="space-y-2">
             <Label htmlFor="profileImageUrl">URL de la Foto de Perfil (Opcional)</Label>
             <Input
@@ -167,7 +187,6 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
             />
           </div>
 
-          {/* NOU CAMP: preferredPrograms */}
           <div className="space-y-2">
             <Label htmlFor="preferredPrograms">Programes Preferits (separa per comes: BP, BC, etc.)</Label>
             <Input
@@ -178,7 +197,6 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
             />
           </div>
 
-          {/* NOU CAMP: notes (utilitza Textarea) */}
           <div className="space-y-2">
             <Label htmlFor="notes">Notes Personals (Internes)</Label>
             <Textarea
