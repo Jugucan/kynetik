@@ -5,12 +5,23 @@ import { Calendar, Users, TrendingUp, Cake, PartyPopper } from "lucide-react";
 import { programColors } from "@/lib/programColors";
 import { useSettings } from "@/hooks/useSettings";
 import { useSchedules } from "@/hooks/useSchedules";
+import { useUsers } from "@/hooks/useUsers";
 
 // Definició de Session
 interface Session {
   time: string;
   program: string;
   center?: string;
+}
+
+// Interfície per als aniversaris
+interface Birthday {
+  name: string;
+  date: string;
+  status: "past" | "today" | "upcoming";
+  age: number;
+  center: string;
+  photo: string;
 }
 
 const Index = () => {
@@ -20,6 +31,7 @@ const Index = () => {
   // 🎉 Carregar dades des de Firebase
   const { vacations, closuresArbucies, closuresSantHilari, officialHolidays } = useSettings();
   const { getActiveSchedule } = useSchedules();
+  const { users } = useUsers(); // 🆕 Carregar usuaris reals
   const activeSchedule = getActiveSchedule();
 
   const activePrograms = [
@@ -28,13 +40,73 @@ const Index = () => {
     { name: "BodyBalance 105", code: "BB", days: 60, color: "bg-green-500" },
   ];
 
-  const upcomingBirthdays = [
-    { name: "Joan Pérez", date: "2 Mar", status: "past", age: 34, center: "Arbúcies", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Joan" },
-    { name: "Maria García", date: "8 Mar", status: "past", age: 28, center: "Sant Hilari", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria" },
-    { name: "Laura Soler", date: "10 Mar", status: "today", age: 31, center: "Arbúcies", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Laura" },
-    { name: "Joan Martínez", date: "15 Mar", status: "upcoming", age: 42, center: "Sant Hilari", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=JoanM" },
-    { name: "Anna López", date: "18 Mar", status: "upcoming", age: 25, center: "Arbúcies", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Anna" },
-  ];
+  // 🆕 FUNCIÓ PER CALCULAR ELS ANIVERSARIS REALS DELS USUARIS
+  const getUpcomingBirthdays = (): Birthday[] => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const birthdays: Birthday[] = [];
+
+    users.forEach(user => {
+      // Convertir la data de naixement (DD/MM/YYYY) a un objecte Date
+      const birthdayParts = user.birthday.toString().split('/');
+      if (birthdayParts.length !== 3) return;
+
+      const day = parseInt(birthdayParts[0], 10);
+      const month = parseInt(birthdayParts[1], 10) - 1; // Mesos van de 0-11 a JavaScript
+
+      // Crear la data d'aniversari d'aquest any
+      const birthdayThisYear = new Date(currentYear, month, day);
+      
+      // Calcular la diferència en dies entre avui i l'aniversari
+      const diffTime = birthdayThisYear.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // Només mostrem aniversaris dels últims 7 dies, avui i els pròxims 7 dies
+      if (diffDays >= -7 && diffDays <= 7) {
+        let status: "past" | "today" | "upcoming";
+        
+        if (diffDays < 0) {
+          status = "past";
+        } else if (diffDays === 0) {
+          status = "today";
+        } else {
+          status = "upcoming";
+        }
+
+        // Format de data per mostrar (dia i mes)
+        const dateString = `${day} ${getMonthName(month)}`;
+
+        birthdays.push({
+          name: user.name,
+          date: dateString,
+          status: status,
+          age: user.age,
+          center: user.center,
+          photo: user.profileImageUrl || user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`
+        });
+      }
+    });
+
+    // Ordenar per data (els passats primer, després avui, després els propers)
+    birthdays.sort((a, b) => {
+      const statusOrder = { past: 0, today: 1, upcoming: 2 };
+      return statusOrder[a.status] - statusOrder[b.status];
+    });
+
+    return birthdays;
+  };
+
+  // 🆕 FUNCIÓ AUXILIAR per obtenir el nom del mes en català
+  const getMonthName = (monthIndex: number): string => {
+    const months = [
+      "Gen", "Feb", "Mar", "Abr", "Mai", "Jun",
+      "Jul", "Ago", "Set", "Oct", "Nov", "Des"
+    ];
+    return months[monthIndex];
+  };
+
+  // 🆕 Obtenir els aniversaris reals
+  const upcomingBirthdays = getUpcomingBirthdays();
 
   const dateToKey = (date: Date): string => {
     const year = date.getFullYear();
@@ -118,7 +190,7 @@ const Index = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Usuaris actius</p>
-              <p className="text-2xl font-bold text-accent">48</p>
+              <p className="text-2xl font-bold text-accent">{users.length}</p>
             </div>
           </div>
         </NeoCard>
@@ -159,50 +231,57 @@ const Index = () => {
         </div>
       </NeoCard>
 
-      {/* Aniversaris */}
+      {/* Aniversaris - 🆕 AMB DADES REALS DE FIREBASE */}
       <NeoCard>
         <div className="flex items-center gap-2 mb-4">
           <Cake className="w-5 h-5 text-primary" />
           <h2 className="text-xl font-semibold">Aniversaris propers</h2>
         </div>
-        <div className="space-y-2">
-          {upcomingBirthdays.map((birthday, index) => (
-            <div
-              key={index}
-              className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
-                birthday.status === "past" 
-                  ? "shadow-neo-inset opacity-50" 
-                  : birthday.status === "today"
-                  ? "shadow-neo bg-gradient-to-r from-primary/20 to-accent/20 border-2 border-primary"
-                  : "shadow-neo-inset"
-              }`}
-            >
-              <img 
-                src={birthday.photo} 
-                alt={birthday.name} 
-                className="w-12 h-12 rounded-full shadow-neo"
-              />
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className={`font-medium ${birthday.status === "past" ? "text-muted-foreground" : ""}`}>
-                    {birthday.name}
-                  </span>
-                  {birthday.status === "today" && (
-                    <PartyPopper className="w-5 h-5 text-primary animate-bounce" />
-                  )}
+        
+        {upcomingBirthdays.length === 0 ? (
+          <p className="text-center text-muted-foreground py-4">
+            No hi ha aniversaris propers (7 dies enrere/endavant)
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {upcomingBirthdays.map((birthday, index) => (
+              <div
+                key={index}
+                className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                  birthday.status === "past" 
+                    ? "shadow-neo-inset opacity-50" 
+                    : birthday.status === "today"
+                    ? "shadow-neo bg-gradient-to-r from-primary/20 to-accent/20 border-2 border-primary"
+                    : "shadow-neo-inset"
+                }`}
+              >
+                <img 
+                  src={birthday.photo} 
+                  alt={birthday.name} 
+                  className="w-12 h-12 rounded-full shadow-neo object-cover"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-medium ${birthday.status === "past" ? "text-muted-foreground" : ""}`}>
+                      {birthday.name}
+                    </span>
+                    {birthday.status === "today" && (
+                      <PartyPopper className="w-5 h-5 text-primary animate-bounce" />
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {birthday.age} anys · {birthday.center}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {birthday.age} anys · {birthday.center}
-                </p>
+                <span className={`text-sm ${
+                  birthday.status === "today" ? "text-primary font-bold" : "text-muted-foreground"
+                }`}>
+                  {birthday.date}
+                </span>
               </div>
-              <span className={`text-sm ${
-                birthday.status === "today" ? "text-primary font-bold" : "text-muted-foreground"
-              }`}>
-                {birthday.date}
-              </span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </NeoCard>
 
       {/* Mini calendari */}
