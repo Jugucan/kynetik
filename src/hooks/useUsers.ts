@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, Timestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase'; // Ruta corregida com ja vam fer
+import { db } from '../lib/firebase';
 import { toast } from 'sonner';
 
 // Funció utilitària per convertir DD/MM/YYYY a Date object
@@ -48,19 +48,42 @@ const dateToDisplayString = (dateInput: Timestamp | string | Date): string => {
   return `${day}/${month}/${year}`;
 };
 
+// 🆕 FUNCIÓ PER CALCULAR L'EDAT AUTOMÀTICAMENT
+const calculateAge = (birthday: string | Timestamp | Date): number => {
+  let birthDate: Date | null = null;
+  
+  if (birthday instanceof Timestamp) {
+    birthDate = birthday.toDate();
+  } else if (typeof birthday === 'string') {
+    birthDate = dateStringToDate(birthday);
+  } else if (birthday instanceof Date) {
+    birthDate = birthday;
+  }
+  
+  if (!birthDate) return 0;
+  
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  // Si encara no ha complert anys aquest any, restem 1
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return age;
+};
 
 export interface User {
   id: string;
   name: string;
   email: string;
   center: string;
-  // Hem de permetre Timestamp | string a l'entrada del hook, però la sortida serà string (DD/MM/YYYY)
   birthday: Timestamp | string; 
-  age: number;
+  age: number; // Ara es calcularà automàticament
   phone: string;
-  avatar: string; // Utilitzat com a valor per defecte
+  avatar: string;
   
-  // NOUS CAMPS:
   preferredPrograms: string[];
   profileImageUrl: string;
   notes: string;
@@ -80,6 +103,9 @@ export const useUsers = () => {
             // CONVERSIÓ CLAU EN LECTURA: Timestamp a DD/MM/YYYY per a l'UI
             const birthdayDisplay = dateToDisplayString(data.birthday);
             
+            // 🆕 CALCULAR L'EDAT AUTOMÀTICAMENT
+            const calculatedAge = calculateAge(data.birthday);
+            
             // Per als nous camps, assignem valors per defecte si són undefined a Firestore
             const preferredPrograms: string[] = Array.isArray(data.preferredPrograms) 
                                                 ? data.preferredPrograms 
@@ -95,6 +121,7 @@ export const useUsers = () => {
               id: doc.id,
               ...data,
               birthday: birthdayDisplay, 
+              age: calculatedAge, // 🆕 Utilitzem l'edat calculada
               preferredPrograms,
               profileImageUrl,
               notes,
@@ -122,10 +149,17 @@ export const useUsers = () => {
           const dateObj = dateStringToDate(dataToSave.birthday);
           if (dateObj) {
               dataToSave.birthday = Timestamp.fromDate(dateObj);
+              // 🆕 CALCULAR I GUARDAR L'EDAT AUTOMÀTICAMENT
+              dataToSave.age = calculateAge(dateObj);
           } else {
               console.warn(`Format de data de naixement incorrecte: ${dataToSave.birthday}`);
-              delete dataToSave.birthday; // Eliminar si no és vàlid
+              delete dataToSave.birthday;
           }
+      }
+      
+      // Si ja ve amb un Timestamp (per exemple en actualitzacions)
+      if (dataToSave.birthday instanceof Timestamp) {
+          dataToSave.age = calculateAge(dataToSave.birthday);
       }
 
       // Converteix la string de programes (separada per comes) a un array de strings per a Firestore
@@ -138,7 +172,6 @@ export const useUsers = () => {
       
       return dataToSave;
   }
-
 
   const addUser = async (userData: Omit<User, 'id'>) => {
     try {
