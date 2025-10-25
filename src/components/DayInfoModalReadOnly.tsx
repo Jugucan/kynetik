@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +40,9 @@ export const DayInfoModalReadOnly = ({
 
   const activeSessions = sessions.filter(s => !s.isDeleted);
   const deletedSessions = sessions.filter(s => s.isDeleted);
+  
+  // 🆕 Comprovar si és un dia especial
+  const isSpecialDay = holidayName || vacationReason || closureReason;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -66,6 +68,7 @@ export const DayInfoModalReadOnly = ({
                 <div>
                   <p className="font-semibold text-yellow-700">Festiu Oficial</p>
                   <p className="text-sm text-yellow-600">{holidayName}</p>
+                  <p className="text-xs text-yellow-500 mt-1">No hi ha sessions aquest dia</p>
                 </div>
               </div>
             </div>
@@ -78,6 +81,7 @@ export const DayInfoModalReadOnly = ({
                 <div>
                   <p className="font-semibold text-blue-700">Vacances</p>
                   <p className="text-sm text-blue-600">{vacationReason}</p>
+                  <p className="text-xs text-blue-500 mt-1">No hi ha sessions aquest dia</p>
                 </div>
               </div>
             </div>
@@ -90,6 +94,7 @@ export const DayInfoModalReadOnly = ({
                 <div>
                   <p className="font-semibold text-gray-700">Tancament</p>
                   <p className="text-sm text-gray-600">{closureReason}</p>
+                  <p className="text-xs text-gray-500 mt-1">No hi ha sessions aquest dia</p>
                 </div>
               </div>
             </div>
@@ -198,8 +203,8 @@ export const DayInfoModalReadOnly = ({
             </div>
           )}
 
-          {/* Si no hi ha cap sessió */}
-          {activeSessions.length === 0 && deletedSessions.length === 0 && !holidayName && !vacationReason && !closureReason && (
+          {/* 🆕 Si no hi ha cap sessió NI és un dia especial */}
+          {activeSessions.length === 0 && deletedSessions.length === 0 && !isSpecialDay && (
             <div className="text-center py-8">
               <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
               <p className="text-sm text-muted-foreground">
