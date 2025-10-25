@@ -231,7 +231,7 @@ const Index = () => {
     return currentViewDate.toLocaleDateString("ca-ES", { month: "long", year: "numeric" });
   }, [currentViewDate]);
 
-  // 🆕 GENERAR CALENDARI NOMÉS AMB DIES LABORABLES
+  // 🆕 GENERAR CALENDARI AMB DIES LABORABLES CORRECTAMENT POSICIONATS
   const year = currentViewDate.getFullYear();
   const month = currentViewDate.getMonth();
   
@@ -239,23 +239,74 @@ const Index = () => {
   const lastDayOfMonth = new Date(year, month + 1, 0);
   const daysInCurrentMonth = lastDayOfMonth.getDate();
   
-  // 🆕 Calcular dies laborables del mes
-  const workDays: Array<{ day: number; date: Date; sessions: Session[]; holiday: boolean; vacation: boolean; closure: boolean }> = [];
+  // 🆕 Crear array del calendari amb posicions correctes
+  const calendarDays: Array<{ 
+    day: number | null; 
+    date: Date | null; 
+    sessions: Session[]; 
+    holiday: boolean; 
+    vacation: boolean; 
+    closure: boolean;
+    dayOfWeek: number; // 1=Dilluns, 5=Divendres
+  }> = [];
   
+  // Trobar el primer dilluns del calendari
+  const firstDayOfWeek = firstDayOfMonth.getDay(); // 0=Diumenge, 1=Dilluns, ..., 6=Dissabte
+  const adjustedFirstDay = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // Convertir a 0=Dilluns, 6=Diumenge
+  
+  // Afegir espais buits per als dies abans del primer dia del mes (només si no és dilluns)
+  if (adjustedFirstDay > 0) {
+    for (let i = 0; i < adjustedFirstDay; i++) {
+      calendarDays.push({ 
+        day: null, 
+        date: null, 
+        sessions: [], 
+        holiday: false, 
+        vacation: false, 
+        closure: false,
+        dayOfWeek: i + 1
+      });
+    }
+  }
+  
+  // Afegir tots els dies del mes
   for (let day = 1; day <= daysInCurrentMonth; day++) {
     const date = new Date(year, month, day);
     const dayOfWeek = date.getDay();
     
-    // 🆕 Només afegir dies de dilluns (1) a divendres (5)
+    // Només afegir dies de dilluns (1) a divendres (5)
     if (dayOfWeek >= 1 && dayOfWeek <= 5) {
       const sessions = getSessionsForDate(date);
       const holiday = isHoliday(date);
       const vacation = isVacation(date);
       const closure = isClosure(date);
       
-      workDays.push({ day, date, sessions, holiday, vacation, closure });
+      calendarDays.push({ 
+        day, 
+        date, 
+        sessions, 
+        holiday, 
+        vacation, 
+        closure,
+        dayOfWeek
+      });
+    } else if (dayOfWeek === 6 || dayOfWeek === 0) {
+      // Cap de setmana: afegir espai buit per mantenir l'alineació
+      // Només si no és l'últim dia de la setmana visible
+      const nextDay = new Date(year, month, day + 1);
+      const nextDayOfWeek = nextDay.getDay();
+      
+      // Si el següent dia és dilluns i encara estem dins del mes, preparem la nova setmana
+      if (nextDayOfWeek === 1 && day < daysInCurrentMonth) {
+        // No fem res aquí, el següent dia laborable es col·locarà a la primera columna
+      }
     }
   }
+
+  // Calcular el total de sessions del mes
+  const totalSessionsThisMonth = calendarDays
+    .filter(day => day.date !== null)
+    .reduce((total, day) => total + day.sessions.filter(s => !s.isDeleted).length, 0);
 
   return (
     <div className="space-y-6">
@@ -273,9 +324,7 @@ const Index = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Sessions aquest mes</p>
-              <p className="text-2xl font-bold text-primary">
-                {workDays.reduce((total, day) => total + day.sessions.filter(s => !s.isDeleted).length, 0)}
-              </p>
+              <p className="text-2xl font-bold text-primary">{totalSessionsThisMonth}</p>
             </div>
           </div>
         </NeoCard>
@@ -381,7 +430,7 @@ const Index = () => {
         )}
       </NeoCard>
 
-      {/* 🆕 CALENDARI NOMÉS DIES LABORABLES */}
+      {/* 🆕 CALENDARI NOMÉS DIES LABORABLES AMB POSICIONS CORRECTES */}
       <NeoCard>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold capitalize">Dies laborables - {currentMonthText}</h2>
@@ -414,7 +463,11 @@ const Index = () => {
 
         {/* Dies laborables */}
         <div className="grid grid-cols-5 gap-3">
-          {workDays.map((dayInfo, idx) => {
+          {calendarDays.map((dayInfo, idx) => {
+            if (!dayInfo.day || !dayInfo.date) {
+              return <div key={idx} className="aspect-square" />;
+            }
+            
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const isToday = dayInfo.date.getTime() === today.getTime();
@@ -425,7 +478,7 @@ const Index = () => {
             return (
               <button
                 key={idx}
-                onClick={() => handleDayClick(dayInfo.date)}
+                onClick={() => handleDayClick(dayInfo.date!)}
                 className={`aspect-square rounded-xl shadow-neo hover:shadow-neo-sm transition-all flex flex-col items-center justify-start font-medium p-2 ${
                   isToday
                     ? "bg-primary/20 border-2 border-primary ring-2 ring-primary/50"
@@ -465,7 +518,7 @@ const Index = () => {
                       <div
                         key={idx}
                         className={`w-7 h-7 rounded ${
-                          session.isDeleted ?
+                          session.isDeleted ? 
                           'bg-gray-300 opacity-50' : 
                           programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'
                         } text-white text-[10px] flex items-center justify-center font-bold shadow-sm`}
