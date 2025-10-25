@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { Dumbbell, Plus, Star, Edit, Trash2, PlayCircle, History } from "lucide-react";
+import { Dumbbell, Plus, Star, Edit, Trash2, PlayCircle, History, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePrograms } from "@/hooks/usePrograms";
 import {
@@ -26,10 +26,21 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Programs = () => {
-  const { programs, loading, addProgram, addSubprogram, activateSubprogram, updateTracks, deleteProgram, getActiveSubprogram } = usePrograms();
+  const { 
+    programs, 
+    loading, 
+    addProgram, 
+    addSubprogram, 
+    activateSubprogram, 
+    updateTracks, 
+    addTrack,
+    deleteTrack,
+    deleteProgram, 
+    deleteSubprogram,
+    getActiveSubprogram 
+  } = usePrograms();
   
   // Estats per els diàlegs
   const [showAddProgram, setShowAddProgram] = useState(false);
@@ -37,12 +48,13 @@ const Programs = () => {
   const [showEditTracks, setShowEditTracks] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteSubprogramConfirm, setShowDeleteSubprogramConfirm] = useState(false);
   
   // Estats per formularis
   const [selectedProgramId, setSelectedProgramId] = useState<string>("");
   const [selectedSubprogramId, setSelectedSubprogramId] = useState<string>("");
   const [programForm, setProgramForm] = useState({ name: "", code: "", color: "#ef4444" });
-  const [subprogramForm, setSubprogramForm] = useState({ name: "", trackCount: 10 });
+  const [subprogramForm, setSubprogramForm] = useState({ name: "" });
   const [editingTracks, setEditingTracks] = useState<any[]>([]);
 
   // Funció per afegir programa
@@ -70,20 +82,12 @@ const Programs = () => {
       return;
     }
 
-    // Crear tracks buits
-    const tracks = Array.from({ length: subprogramForm.trackCount }, (_, i) => ({
-      id: `track-${i + 1}`,
-      name: `Track ${i + 1}`,
-      favorite: false,
-      notes: "",
-    }));
-
-    const result = await addSubprogram(selectedProgramId, subprogramForm.name, tracks);
+    const result = await addSubprogram(selectedProgramId, subprogramForm.name);
     
     if (result.success) {
       toast.success(`Subprograma ${subprogramForm.name} creat correctament!`);
       setShowAddSubprogram(false);
-      setSubprogramForm({ name: "", trackCount: 10 });
+      setSubprogramForm({ name: "" });
       setSelectedProgramId("");
     } else {
       toast.error("Error al crear el subprograma");
@@ -131,6 +135,23 @@ const Programs = () => {
     setEditingTracks(updated);
   };
 
+  // 🆕 Funció per afegir un nou track
+  const handleAddTrack = () => {
+    const newTrack = {
+      id: `track-${Date.now()}`,
+      name: `Track ${editingTracks.length + 1}`,
+      favorite: false,
+      notes: '',
+    };
+    setEditingTracks([...editingTracks, newTrack]);
+  };
+
+  // 🆕 Funció per eliminar un track
+  const handleDeleteTrack = (index: number) => {
+    const updated = editingTracks.filter((_, i) => i !== index);
+    setEditingTracks(updated);
+  };
+
   // Funció per eliminar programa
   const handleDeleteProgram = async () => {
     const result = await deleteProgram(selectedProgramId);
@@ -141,6 +162,20 @@ const Programs = () => {
       setSelectedProgramId("");
     } else {
       toast.error("Error al eliminar el programa");
+    }
+  };
+
+  // 🆕 Funció per eliminar subprograma
+  const handleDeleteSubprogram = async () => {
+    const result = await deleteSubprogram(selectedProgramId, selectedSubprogramId);
+    
+    if (result.success) {
+      toast.success("Subprograma eliminat correctament!");
+      setShowDeleteSubprogramConfirm(false);
+      setSelectedProgramId("");
+      setSelectedSubprogramId("");
+    } else {
+      toast.error("Error al eliminar el subprograma");
     }
   };
 
@@ -268,11 +303,25 @@ const Programs = () => {
                                   </span>
                                 )}
                               </div>
-                              {isActive && (
-                                <span className="text-xs px-2 py-1 rounded-full bg-primary text-primary-foreground">
-                                  Actiu
-                                </span>
-                              )}
+                              <div className="flex items-center gap-2">
+                                {isActive && (
+                                  <span className="text-xs px-2 py-1 rounded-full bg-primary text-primary-foreground">
+                                    Actiu
+                                  </span>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-red-500 hover:text-red-600"
+                                  onClick={() => {
+                                    setSelectedProgramId(program.id);
+                                    setSelectedSubprogramId(subprogram.id);
+                                    setShowDeleteSubprogramConfirm(true);
+                                  }}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
                             </div>
                             
                             <div className="flex gap-2">
@@ -350,6 +399,9 @@ const Programs = () => {
                 value={programForm.code}
                 onChange={(e) => setProgramForm({ ...programForm, code: e.target.value })}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Si el codi és BP, BC o BB, s'aplicarà una plantilla de tracks personalitzada
+              </p>
             </div>
             
             <div>
@@ -388,7 +440,7 @@ const Programs = () => {
           <DialogHeader>
             <DialogTitle>Nou subprograma</DialogTitle>
             <DialogDescription>
-              Crea un nou subprograma
+              Crea un nou subprograma amb tracks per defecte
             </DialogDescription>
           </DialogHeader>
           
@@ -401,18 +453,11 @@ const Programs = () => {
                 value={subprogramForm.name}
                 onChange={(e) => setSubprogramForm({ ...subprogramForm, name: e.target.value })}
               />
-            </div>
-            
-            <div>
-              <Label htmlFor="track-count">Nombre de tracks</Label>
-              <Input
-                id="track-count"
-                type="number"
-                min="1"
-                max="20"
-                value={subprogramForm.trackCount}
-                onChange={(e) => setSubprogramForm({ ...subprogramForm, trackCount: parseInt(e.target.value) || 10 })}
-              />
+              {selectedProgramId && programs[selectedProgramId] && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  S'aplicarà la plantilla de tracks per {programs[selectedProgramId].code}
+                </p>
+              )}
             </div>
           </div>
 
@@ -439,7 +484,16 @@ const Programs = () => {
           
           <div className="space-y-3">
             {editingTracks.map((track, index) => (
-              <div key={track.id} className="p-4 border rounded-lg space-y-3">
+              <div key={track.id} className="p-4 border rounded-lg space-y-3 relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 h-6 w-6 text-red-500 hover:text-red-600"
+                  onClick={() => handleDeleteTrack(index)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+                
                 <div className="flex items-center gap-3">
                   <Checkbox
                     checked={track.favorite}
@@ -474,6 +528,15 @@ const Programs = () => {
                 </div>
               </div>
             ))}
+            
+            <Button
+              variant="outline"
+              onClick={handleAddTrack}
+              className="w-full"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Afegir track
+            </Button>
           </div>
 
           <DialogFooter>
@@ -543,7 +606,7 @@ const Programs = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Diàleg: Confirmar eliminació */}
+      {/* Diàleg: Confirmar eliminació programa */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -555,6 +618,24 @@ const Programs = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteProgram} className="bg-red-500 hover:bg-red-600">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Diàleg: Confirmar eliminació subprograma */}
+      <AlertDialog open={showDeleteSubprogramConfirm} onOpenChange={setShowDeleteSubprogramConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar subprograma?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Aquesta acció no es pot desfer. S'eliminarà el subprograma i tot el seu historial permanentment.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSubprogram} className="bg-red-500 hover:bg-red-600">
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
