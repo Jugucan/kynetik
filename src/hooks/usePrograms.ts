@@ -30,6 +30,55 @@ export interface Program {
   subprograms: { [key: string]: Subprogram };
 }
 
+// Plantilles de tracks per defecte segons el programa
+const DEFAULT_TRACKS: { [key: string]: string[] } = {
+  'BP': [
+    'Escalfament',
+    'Squats',
+    'Pit',
+    'Esquena',
+    'Bíceps/Tríceps',
+    'Lunge',
+    'Espatlles',
+    'Abdominals',
+    'Estiraments'
+  ],
+  'BC': [
+    'Escalfament',
+    'Combat 1',
+    'Combat 2',
+    'Combat 3',
+    'Recuperació',
+    'Combat 4',
+    'Combat 5',
+    'Combat 6',
+    'Estiraments'
+  ],
+  'BB': [
+    'Escalfament',
+    'Salutació al sol',
+    'Guerrers',
+    'Equilibris',
+    'Flexions endavant',
+    'Estiraments laterals',
+    'Extensions',
+    'Torsions',
+    'Relaxació final'
+  ],
+  'DEFAULT': [
+    'Track 1',
+    'Track 2',
+    'Track 3',
+    'Track 4',
+    'Track 5',
+    'Track 6',
+    'Track 7',
+    'Track 8',
+    'Track 9',
+    'Track 10'
+  ]
+};
+
 export const usePrograms = () => {
   const [programs, setPrograms] = useState<{ [key: string]: Program }>({});
   const [loading, setLoading] = useState(true);
@@ -61,6 +110,18 @@ export const usePrograms = () => {
     return () => unsubscribe();
   }, []);
 
+  // Funció per obtenir tracks per defecte segons el codi del programa
+  const getDefaultTracks = (programCode: string): Track[] => {
+    const trackNames = DEFAULT_TRACKS[programCode.toUpperCase()] || DEFAULT_TRACKS['DEFAULT'];
+    
+    return trackNames.map((name, index) => ({
+      id: `track-${Date.now()}-${index}`,
+      name: name,
+      favorite: false,
+      notes: '',
+    }));
+  };
+
   // Funció per afegir un nou programa
   const addProgram = async (name: string, code: string, color: string) => {
     try {
@@ -82,7 +143,7 @@ export const usePrograms = () => {
   };
 
   // Funció per afegir un subprograma
-  const addSubprogram = async (programId: string, subprogramName: string, tracks: Track[]) => {
+  const addSubprogram = async (programId: string, subprogramName: string) => {
     try {
       const program = programs[programId];
       if (!program) throw new Error("Program not found");
@@ -90,10 +151,13 @@ export const usePrograms = () => {
       const subprogramId = subprogramName.toLowerCase().replace(/\s+/g, '-');
       const programRef = doc(db, 'programs', programId);
 
+      // Obtenir tracks per defecte segons el codi del programa
+      const defaultTracks = getDefaultTracks(program.code);
+
       const newSubprogram: Subprogram = {
         id: subprogramId,
         name: subprogramName,
-        tracks: tracks,
+        tracks: defaultTracks,
         launches: [],
       };
 
@@ -169,6 +233,49 @@ export const usePrograms = () => {
     }
   };
 
+  // 🆕 Funció per afegir un track nou
+  const addTrack = async (programId: string, subprogramId: string) => {
+    try {
+      const program = programs[programId];
+      if (!program) throw new Error("Program not found");
+      
+      const subprogram = program.subprograms[subprogramId];
+      if (!subprogram) throw new Error("Subprogram not found");
+
+      const newTrack: Track = {
+        id: `track-${Date.now()}`,
+        name: `Track ${subprogram.tracks.length + 1}`,
+        favorite: false,
+        notes: '',
+      };
+
+      const updatedTracks = [...subprogram.tracks, newTrack];
+      
+      return await updateTracks(programId, subprogramId, updatedTracks);
+    } catch (error) {
+      console.error("Error adding track:", error);
+      return { success: false, error };
+    }
+  };
+
+  // 🆕 Funció per eliminar un track
+  const deleteTrack = async (programId: string, subprogramId: string, trackId: string) => {
+    try {
+      const program = programs[programId];
+      if (!program) throw new Error("Program not found");
+      
+      const subprogram = program.subprograms[subprogramId];
+      if (!subprogram) throw new Error("Subprogram not found");
+
+      const updatedTracks = subprogram.tracks.filter(track => track.id !== trackId);
+      
+      return await updateTracks(programId, subprogramId, updatedTracks);
+    } catch (error) {
+      console.error("Error deleting track:", error);
+      return { success: false, error };
+    }
+  };
+
   // Funció per eliminar un programa
   const deleteProgram = async (programId: string) => {
     try {
@@ -176,6 +283,29 @@ export const usePrograms = () => {
       return { success: true };
     } catch (error) {
       console.error("Error deleting program:", error);
+      return { success: false, error };
+    }
+  };
+
+  // Funció per eliminar un subprograma
+  const deleteSubprogram = async (programId: string, subprogramId: string) => {
+    try {
+      const program = programs[programId];
+      if (!program) throw new Error("Program not found");
+
+      const programRef = doc(db, 'programs', programId);
+      
+      // Crear una còpia dels subprogrames sense el que volem eliminar
+      const updatedSubprograms = { ...program.subprograms };
+      delete updatedSubprograms[subprogramId];
+
+      await updateDoc(programRef, {
+        subprograms: updatedSubprograms,
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error deleting subprogram:", error);
       return { success: false, error };
     }
   };
@@ -212,7 +342,10 @@ export const usePrograms = () => {
     addSubprogram,
     activateSubprogram,
     updateTracks,
+    addTrack,
+    deleteTrack,
     deleteProgram,
+    deleteSubprogram,
     getActiveSubprogram,
   };
 };
