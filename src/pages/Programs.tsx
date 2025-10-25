@@ -1,42 +1,159 @@
+import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { Dumbbell, Plus } from "lucide-react";
+import { Dumbbell, Plus, Star, Edit, Trash2, PlayCircle, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePrograms } from "@/hooks/usePrograms";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Programs = () => {
-  const mockPrograms = [
-    {
-      id: 1,
-      name: "BodyPump",
-      code: "BP",
-      color: "bg-red-500",
-      activeSubprogram: "BP 120",
-      activeDays: 45,
-    },
-    {
-      id: 2,
-      name: "BodyCombat",
-      code: "BC",
-      color: "bg-orange-500",
-      activeSubprogram: "BC 95",
-      activeDays: 30,
-    },
-    {
-      id: 3,
-      name: "BodyBalance",
-      code: "BB",
-      color: "bg-green-500",
-      activeSubprogram: "BB 105",
-      activeDays: 60,
-    },
-    {
-      id: 4,
-      name: "Sh'Bam",
-      code: "SB",
-      color: "bg-pink-500",
-      activeSubprogram: "SB 50",
-      activeDays: 20,
-    },
-  ];
+  const { programs, loading, addProgram, addSubprogram, activateSubprogram, updateTracks, deleteProgram, getActiveSubprogram } = usePrograms();
+  
+  // Estats per els diàlegs
+  const [showAddProgram, setShowAddProgram] = useState(false);
+  const [showAddSubprogram, setShowAddSubprogram] = useState(false);
+  const [showEditTracks, setShowEditTracks] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  // Estats per formularis
+  const [selectedProgramId, setSelectedProgramId] = useState<string>("");
+  const [selectedSubprogramId, setSelectedSubprogramId] = useState<string>("");
+  const [programForm, setProgramForm] = useState({ name: "", code: "", color: "#ef4444" });
+  const [subprogramForm, setSubprogramForm] = useState({ name: "", trackCount: 10 });
+  const [editingTracks, setEditingTracks] = useState<any[]>([]);
+
+  // Funció per afegir programa
+  const handleAddProgram = async () => {
+    if (!programForm.name || !programForm.code) {
+      toast.error("Si us plau, omple tots els camps");
+      return;
+    }
+
+    const result = await addProgram(programForm.name, programForm.code, programForm.color);
+    
+    if (result.success) {
+      toast.success(`Programa ${programForm.name} creat correctament!`);
+      setShowAddProgram(false);
+      setProgramForm({ name: "", code: "", color: "#ef4444" });
+    } else {
+      toast.error("Error al crear el programa");
+    }
+  };
+
+  // Funció per afegir subprograma
+  const handleAddSubprogram = async () => {
+    if (!subprogramForm.name || !selectedProgramId) {
+      toast.error("Si us plau, omple tots els camps");
+      return;
+    }
+
+    // Crear tracks buits
+    const tracks = Array.from({ length: subprogramForm.trackCount }, (_, i) => ({
+      id: `track-${i + 1}`,
+      name: `Track ${i + 1}`,
+      favorite: false,
+      notes: "",
+    }));
+
+    const result = await addSubprogram(selectedProgramId, subprogramForm.name, tracks);
+    
+    if (result.success) {
+      toast.success(`Subprograma ${subprogramForm.name} creat correctament!`);
+      setShowAddSubprogram(false);
+      setSubprogramForm({ name: "", trackCount: 10 });
+      setSelectedProgramId("");
+    } else {
+      toast.error("Error al crear el subprograma");
+    }
+  };
+
+  // Funció per activar subprograma
+  const handleActivateSubprogram = async (programId: string, subprogramId: string) => {
+    const result = await activateSubprogram(programId, subprogramId);
+    
+    if (result.success) {
+      toast.success("Subprograma activat correctament!");
+    } else {
+      toast.error("Error al activar el subprograma");
+    }
+  };
+
+  // Funció per editar tracks
+  const handleOpenEditTracks = (programId: string, subprogramId: string) => {
+    const program = programs[programId];
+    const subprogram = program.subprograms[subprogramId];
+    
+    setSelectedProgramId(programId);
+    setSelectedSubprogramId(subprogramId);
+    setEditingTracks([...subprogram.tracks]);
+    setShowEditTracks(true);
+  };
+
+  // Funció per guardar tracks editats
+  const handleSaveTracks = async () => {
+    const result = await updateTracks(selectedProgramId, selectedSubprogramId, editingTracks);
+    
+    if (result.success) {
+      toast.success("Tracks actualitzats correctament!");
+      setShowEditTracks(false);
+    } else {
+      toast.error("Error al actualitzar els tracks");
+    }
+  };
+
+  // Funció per actualitzar un track
+  const updateTrack = (index: number, field: string, value: any) => {
+    const updated = [...editingTracks];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditingTracks(updated);
+  };
+
+  // Funció per eliminar programa
+  const handleDeleteProgram = async () => {
+    const result = await deleteProgram(selectedProgramId);
+    
+    if (result.success) {
+      toast.success("Programa eliminat correctament!");
+      setShowDeleteConfirm(false);
+      setSelectedProgramId("");
+    } else {
+      toast.error("Error al eliminar el programa");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <Dumbbell className="w-12 h-12 text-primary animate-pulse mx-auto mb-4" />
+          <p className="text-muted-foreground">Carregant programes...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -48,34 +165,401 @@ const Programs = () => {
             <p className="text-muted-foreground">Gestió dels programes i subprogrames</p>
           </div>
         </div>
-        <Button className="shadow-neo hover:shadow-neo-sm gap-2">
+        <Button onClick={() => setShowAddProgram(true)} className="shadow-neo hover:shadow-neo-sm gap-2">
           <Plus className="w-4 h-4" />
           Nou programa
         </Button>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {mockPrograms.map((program) => (
-          <NeoCard key={program.id} className="cursor-pointer hover:shadow-neo-lg transition-all">
-            <div className="flex items-start gap-4">
-              <div className={`w-16 h-16 ${program.color} rounded-xl shadow-neo flex items-center justify-center text-white font-bold text-xl`}>
-                {program.code}
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-semibold mb-1">{program.name}</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Subprograma actiu: <span className="text-primary font-medium">{program.activeSubprogram}</span>
-                </p>
-                <div className="flex items-center gap-2">
-                  <div className="px-3 py-1 rounded-full shadow-neo-inset text-sm">
-                    {program.activeDays} dies actiu
+      {Object.keys(programs).length === 0 ? (
+        <NeoCard className="text-center py-12">
+          <Dumbbell className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+          <h3 className="text-xl font-semibold mb-2">Cap programa creat</h3>
+          <p className="text-muted-foreground mb-4">Comença creant el teu primer programa</p>
+          <Button onClick={() => setShowAddProgram(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Crear programa
+          </Button>
+        </NeoCard>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-6">
+          {Object.values(programs).map((program) => {
+            const { subprogram: activeSubprogram, days: activeDays } = getActiveSubprogram(program.id);
+            
+            return (
+              <NeoCard key={program.id} className="relative">
+                <div className="flex items-start gap-4 mb-4">
+                  <div 
+                    className="w-16 h-16 rounded-xl shadow-neo flex items-center justify-center text-white font-bold text-xl"
+                    style={{ backgroundColor: program.color }}
+                  >
+                    {program.code}
                   </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold mb-1">{program.name}</h3>
+                    {activeSubprogram ? (
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Subprograma actiu: <span className="text-primary font-medium">{activeSubprogram.name}</span>
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Cap subprograma actiu
+                      </p>
+                    )}
+                    {activeDays > 0 && (
+                      <div className="inline-block px-3 py-1 rounded-full shadow-neo-inset text-sm">
+                        {activeDays} dies actiu
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setSelectedProgramId(program.id);
+                      setShowDeleteConfirm(true);
+                    }}
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-sm">Subprogrames</h4>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedProgramId(program.id);
+                        setShowAddSubprogram(true);
+                      }}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Afegir
+                    </Button>
+                  </div>
+
+                  {Object.keys(program.subprograms).length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Cap subprograma creat
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {Object.values(program.subprograms).map((subprogram) => {
+                        const isActive = activeSubprogram?.id === subprogram.id;
+                        const favoriteCount = subprogram.tracks.filter(t => t.favorite).length;
+                        
+                        return (
+                          <div
+                            key={subprogram.id}
+                            className={`p-3 rounded-lg border-2 ${
+                              isActive ? 'border-primary bg-primary/5' : 'border-border'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{subprogram.name}</span>
+                                {favoriteCount > 0 && (
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                    {favoriteCount}
+                                  </span>
+                                )}
+                              </div>
+                              {isActive && (
+                                <span className="text-xs px-2 py-1 rounded-full bg-primary text-primary-foreground">
+                                  Actiu
+                                </span>
+                              )}
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenEditTracks(program.id, subprogram.id)}
+                                className="flex-1"
+                              >
+                                <Edit className="w-3 h-3 mr-1" />
+                                Editar tracks
+                              </Button>
+                              
+                              {!isActive && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleActivateSubprogram(program.id, subprogram.id)}
+                                  className="flex-1"
+                                >
+                                  <PlayCircle className="w-3 h-3 mr-1" />
+                                  Activar
+                                </Button>
+                              )}
+                              
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedProgramId(program.id);
+                                  setSelectedSubprogramId(subprogram.id);
+                                  setShowHistory(true);
+                                }}
+                              >
+                                <History className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </NeoCard>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Diàleg: Afegir programa */}
+      <Dialog open={showAddProgram} onOpenChange={setShowAddProgram}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nou programa</DialogTitle>
+            <DialogDescription>
+              Crea un nou programa d'entrenament
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="program-name">Nom del programa</Label>
+              <Input
+                id="program-name"
+                placeholder="Ex: BodyPump"
+                value={programForm.name}
+                onChange={(e) => setProgramForm({ ...programForm, name: e.target.value })}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="program-code">Codi</Label>
+              <Input
+                id="program-code"
+                placeholder="Ex: BP"
+                value={programForm.code}
+                onChange={(e) => setProgramForm({ ...programForm, code: e.target.value })}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="program-color">Color</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="program-color"
+                  type="color"
+                  value={programForm.color}
+                  onChange={(e) => setProgramForm({ ...programForm, color: e.target.value })}
+                  className="w-20 h-10"
+                />
+                <Input
+                  value={programForm.color}
+                  onChange={(e) => setProgramForm({ ...programForm, color: e.target.value })}
+                  placeholder="#ef4444"
+                />
               </div>
             </div>
-          </NeoCard>
-        ))}
-      </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddProgram(false)}>
+              Cancel·lar
+            </Button>
+            <Button onClick={handleAddProgram}>
+              Crear programa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diàleg: Afegir subprograma */}
+      <Dialog open={showAddSubprogram} onOpenChange={setShowAddSubprogram}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nou subprograma</DialogTitle>
+            <DialogDescription>
+              Crea un nou subprograma
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="subprogram-name">Nom del subprograma</Label>
+              <Input
+                id="subprogram-name"
+                placeholder="Ex: BP 120"
+                value={subprogramForm.name}
+                onChange={(e) => setSubprogramForm({ ...subprogramForm, name: e.target.value })}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="track-count">Nombre de tracks</Label>
+              <Input
+                id="track-count"
+                type="number"
+                min="1"
+                max="20"
+                value={subprogramForm.trackCount}
+                onChange={(e) => setSubprogramForm({ ...subprogramForm, trackCount: parseInt(e.target.value) || 10 })}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddSubprogram(false)}>
+              Cancel·lar
+            </Button>
+            <Button onClick={handleAddSubprogram}>
+              Crear subprograma
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diàleg: Editar tracks */}
+      <Dialog open={showEditTracks} onOpenChange={setShowEditTracks}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar tracks</DialogTitle>
+            <DialogDescription>
+              Personalitza els tracks del subprograma
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3">
+            {editingTracks.map((track, index) => (
+              <div key={track.id} className="p-4 border rounded-lg space-y-3">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    checked={track.favorite}
+                    onCheckedChange={(checked) => updateTrack(index, 'favorite', checked)}
+                    id={`favorite-${index}`}
+                  />
+                  <Label htmlFor={`favorite-${index}`} className="flex items-center gap-2 cursor-pointer">
+                    <Star className={`w-4 h-4 ${track.favorite ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                    Preferit
+                  </Label>
+                </div>
+                
+                <div>
+                  <Label htmlFor={`track-name-${index}`}>Nom del track</Label>
+                  <Input
+                    id={`track-name-${index}`}
+                    value={track.name}
+                    onChange={(e) => updateTrack(index, 'name', e.target.value)}
+                    placeholder={`Track ${index + 1}`}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor={`track-notes-${index}`}>Notes</Label>
+                  <Textarea
+                    id={`track-notes-${index}`}
+                    value={track.notes}
+                    onChange={(e) => updateTrack(index, 'notes', e.target.value)}
+                    placeholder="Ex: Material necessari, observacions..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditTracks(false)}>
+              Cancel·lar
+            </Button>
+            <Button onClick={handleSaveTracks}>
+              Guardar canvis
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diàleg: Historial de llançaments */}
+      <Dialog open={showHistory} onOpenChange={setShowHistory}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Historial de llançaments</DialogTitle>
+            <DialogDescription>
+              Llançaments del subprograma {selectedProgramId && selectedSubprogramId && programs[selectedProgramId]?.subprograms[selectedSubprogramId]?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-2">
+            {selectedProgramId && selectedSubprogramId && programs[selectedProgramId]?.subprograms[selectedSubprogramId]?.launches.length > 0 ? (
+              programs[selectedProgramId].subprograms[selectedSubprogramId].launches.map((launch, index) => {
+                const startDate = new Date(launch.startDate);
+                const endDate = launch.endDate ? new Date(launch.endDate) : null;
+                const days = endDate 
+                  ? Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+                  : Math.floor((new Date().getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+                
+                return (
+                  <div key={index} className="p-3 border rounded-lg">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium">Llançament {index + 1}</span>
+                      {!endDate && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-primary text-primary-foreground">
+                          Actiu
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Inici: {startDate.toLocaleDateString('ca-ES')}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Final: {endDate ? endDate.toLocaleDateString('ca-ES') : 'Encara actiu'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Durada: {days} dies
+                    </p>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Cap llançament registrat
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setShowHistory(false)}>
+              Tancar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diàleg: Confirmar eliminació */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Aquesta acció no es pot desfer. S'eliminarà el programa i tots els seus subprogrames permanentment.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteProgram} className="bg-red-500 hover:bg-red-600">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
