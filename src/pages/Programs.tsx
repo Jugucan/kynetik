@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { Dumbbell, Plus, Star, Edit, Trash2, PlayCircle, History, X } from "lucide-react";
+import { Dumbbell, Plus, Star, Edit, Trash2, PlayCircle, History, X, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePrograms } from "@/hooks/usePrograms";
 import {
@@ -31,7 +31,8 @@ const Programs = () => {
   const { 
     programs, 
     loading, 
-    addProgram, 
+    addProgram,
+    updateProgramColor,
     addSubprogram, 
     activateSubprogram, 
     updateTracks, 
@@ -49,6 +50,7 @@ const Programs = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteSubprogramConfirm, setShowDeleteSubprogramConfirm] = useState(false);
+  const [showEditColor, setShowEditColor] = useState(false);
   
   // Estats per formularis
   const [selectedProgramId, setSelectedProgramId] = useState<string>("");
@@ -56,6 +58,7 @@ const Programs = () => {
   const [programForm, setProgramForm] = useState({ name: "", code: "", color: "#ef4444" });
   const [subprogramForm, setSubprogramForm] = useState({ name: "" });
   const [editingTracks, setEditingTracks] = useState<any[]>([]);
+  const [editingColor, setEditingColor] = useState("#ef4444");
 
   // Funció per afegir programa
   const handleAddProgram = async () => {
@@ -72,6 +75,18 @@ const Programs = () => {
       setProgramForm({ name: "", code: "", color: "#ef4444" });
     } else {
       toast.error("Error al crear el programa");
+    }
+  };
+
+  // 🆕 Funció per canviar el color
+  const handleUpdateColor = async () => {
+    const result = await updateProgramColor(selectedProgramId, editingColor);
+    
+    if (result.success) {
+      toast.success("Color actualitzat correctament!");
+      setShowEditColor(false);
+    } else {
+      toast.error("Error al actualitzar el color");
     }
   };
 
@@ -135,7 +150,7 @@ const Programs = () => {
     setEditingTracks(updated);
   };
 
-  // 🆕 Funció per afegir un nou track
+  // Funció per afegir un nou track
   const handleAddTrack = () => {
     const newTrack = {
       id: `track-${Date.now()}`,
@@ -146,7 +161,7 @@ const Programs = () => {
     setEditingTracks([...editingTracks, newTrack]);
   };
 
-  // 🆕 Funció per eliminar un track
+  // Funció per eliminar un track
   const handleDeleteTrack = (index: number) => {
     const updated = editingTracks.filter((_, i) => i !== index);
     setEditingTracks(updated);
@@ -165,7 +180,7 @@ const Programs = () => {
     }
   };
 
-  // 🆕 Funció per eliminar subprograma
+  // Funció per eliminar subprograma
   const handleDeleteSubprogram = async () => {
     const result = await deleteSubprogram(selectedProgramId, selectedSubprogramId);
     
@@ -225,10 +240,18 @@ const Programs = () => {
               <NeoCard key={program.id} className="relative">
                 <div className="flex items-start gap-4 mb-4">
                   <div 
-                    className="w-16 h-16 rounded-xl shadow-neo flex items-center justify-center text-white font-bold text-xl"
+                    className="w-16 h-16 rounded-xl shadow-neo flex items-center justify-center text-white font-bold text-xl relative group cursor-pointer"
                     style={{ backgroundColor: program.color }}
+                    onClick={() => {
+                      setSelectedProgramId(program.id);
+                      setEditingColor(program.color);
+                      setShowEditColor(true);
+                    }}
                   >
                     {program.code}
+                    <div className="absolute inset-0 bg-black/50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Palette className="w-6 h-6 text-white" />
+                    </div>
                   </div>
                   <div className="flex-1">
                     <h3 className="text-xl font-semibold mb-1">{program.name}</h3>
@@ -429,6 +452,57 @@ const Programs = () => {
             </Button>
             <Button onClick={handleAddProgram}>
               Crear programa
+            </Button>
+          </DialogFooter>
+          </DialogContent>
+      </Dialog>
+
+      {/* 🆕 Diàleg: Editar color del programa */}
+      <Dialog open={showEditColor} onOpenChange={setShowEditColor}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Canviar color del programa</DialogTitle>
+            <DialogDescription>
+              Tria un nou color per {selectedProgramId && programs[selectedProgramId]?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-color">Color</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="edit-color"
+                  type="color"
+                  value={editingColor}
+                  onChange={(e) => setEditingColor(e.target.value)}
+                  className="w-20 h-10"
+                />
+                <Input
+                  value={editingColor}
+                  onChange={(e) => setEditingColor(e.target.value)}
+                  placeholder="#ef4444"
+                />
+              </div>
+            </div>
+            
+            <div className="p-4 rounded-lg border-2 border-border">
+              <p className="text-sm text-muted-foreground mb-2">Previsualització:</p>
+              <div 
+                className="w-16 h-16 rounded-xl shadow-neo flex items-center justify-center text-white font-bold text-xl mx-auto"
+                style={{ backgroundColor: editingColor }}
+              >
+                {selectedProgramId && programs[selectedProgramId]?.code}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditColor(false)}>
+              Cancel·lar
+            </Button>
+            <Button onClick={handleUpdateColor}>
+              Guardar color
             </Button>
           </DialogFooter>
         </DialogContent>
