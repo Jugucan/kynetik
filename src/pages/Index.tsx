@@ -231,80 +231,137 @@ const Index = () => {
     return currentViewDate.toLocaleDateString("ca-ES", { month: "long", year: "numeric" });
   }, [currentViewDate]);
 
-  // 🆕 GENERAR CALENDARI AMB DIES LABORABLES CORRECTAMENT POSICIONATS
-  const year = currentViewDate.getFullYear();
-  const month = currentViewDate.getMonth();
-  
-  const firstDayOfMonth = new Date(year, month, 1);
-  const lastDayOfMonth = new Date(year, month + 1, 0);
-  const daysInCurrentMonth = lastDayOfMonth.getDate();
-  
-  // 🆕 Crear array del calendari amb posicions correctes
-  const calendarDays: Array<{ 
-    day: number | null; 
-    date: Date | null; 
-    sessions: Session[]; 
-    holiday: boolean; 
-    vacation: boolean; 
-    closure: boolean;
-    dayOfWeek: number; // 1=Dilluns, 5=Divendres
-  }> = [];
-  
-  // Trobar el primer dilluns del calendari
-  const firstDayOfWeek = firstDayOfMonth.getDay(); // 0=Diumenge, 1=Dilluns, ..., 6=Dissabte
-  const adjustedFirstDay = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // Convertir a 0=Dilluns, 6=Diumenge
-  
-  // Afegir espais buits per als dies abans del primer dia del mes (només si no és dilluns)
-  if (adjustedFirstDay > 0) {
-    for (let i = 0; i < adjustedFirstDay; i++) {
-      calendarDays.push({ 
-        day: null, 
-        date: null, 
-        sessions: [], 
-        holiday: false, 
-        vacation: false, 
-        closure: false,
-        dayOfWeek: i + 1
-      });
-    }
-  }
-  
-  // Afegir tots els dies del mes
-  for (let day = 1; day <= daysInCurrentMonth; day++) {
-    const date = new Date(year, month, day);
-    const dayOfWeek = date.getDay();
+  // 🆕 GENERAR CALENDARI AMB DIES LABORABLES CORRECTAMENT POSICIONATS (MILLORAT)
+  const calendarData = useMemo(() => {
+    const year = currentViewDate.getFullYear();
+    const month = currentViewDate.getMonth();
     
-    // Només afegir dies de dilluns (1) a divendres (5)
-    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-      const sessions = getSessionsForDate(date);
-      const holiday = isHoliday(date);
-      const vacation = isVacation(date);
-      const closure = isClosure(date);
+    const firstDayOfMonth = new Date(year, month, 1);
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+    const daysInCurrentMonth = lastDayOfMonth.getDate();
+    
+    // Array per guardar les files del calendari
+    const weeks: Array<Array<{
+      day: number | null;
+      date: Date | null;
+      sessions: Session[];
+      holiday: boolean;
+      vacation: boolean;
+      closure: boolean;
+    }>> = [];
+    
+    let currentWeek: Array<any> = [];
+    
+    // Iterar per tots els dies del mes
+    for (let day = 1; day <= daysInCurrentMonth; day++) {
+      const date = new Date(year, month, day);
+      const dayOfWeek = date.getDay(); // 0=Diumenge, 1=Dilluns, ..., 6=Dissabte
       
-      calendarDays.push({ 
-        day, 
-        date, 
-        sessions, 
-        holiday, 
-        vacation, 
-        closure,
-        dayOfWeek
-      });
-    } else if (dayOfWeek === 6 || dayOfWeek === 0) {
-      // Cap de setmana: afegir espai buit per mantenir l'alineació
-      // Només si no és l'últim dia de la setmana visible
-      const nextDay = new Date(year, month, day + 1);
-      const nextDayOfWeek = nextDay.getDay();
-      
-      // Si el següent dia és dilluns i encara estem dins del mes, preparem la nova setmana
-      if (nextDayOfWeek === 1 && day < daysInCurrentMonth) {
-        // No fem res aquí, el següent dia laborable es col·locarà a la primera columna
+      // Només processar dies laborables (dilluns a divendres)
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        // Si és dilluns i ja tenim dies a la setmana actual, començar nova setmana
+        if (dayOfWeek === 1 && currentWeek.length > 0) {
+          // Completar la setmana anterior amb espais buits si cal
+          while (currentWeek.length < 5) {
+            currentWeek.push({
+              day: null,
+              date: null,
+              sessions: [],
+              holiday: false,
+              vacation: false,
+              closure: false
+            });
+          }
+          weeks.push(currentWeek);
+          currentWeek = [];
+        }
+        
+        // Si és el primer dia laborable del mes, afegir espais buits al principi
+        if (day === 1 || (day > 1 && currentWeek.length === 0 && dayOfWeek > 1)) {
+          const previousDay = new Date(year, month, day - 1);
+          let checkDay = previousDay.getDate() > 0 ? previousDay : new Date(year, month, 1);
+          
+          // Trobar quin dia de la setmana és el primer dia del mes
+          const firstDayWeekday = new Date(year, month, 1).getDay();
+          
+          // Si el primer dia del mes és dilluns a divendres
+          if (firstDayWeekday >= 1 && firstDayWeekday <= 5) {
+            // Afegir espais buits des de dilluns fins al dia anterior
+            for (let i = 1; i < dayOfWeek; i++) {
+              if (i < dayOfWeek) {
+                currentWeek.push({
+                  day: null,
+                  date: null,
+                  sessions: [],
+                  holiday: false,
+                  vacation: false,
+                  closure: false
+                });
+              }
+            }
+          } else if (firstDayWeekday === 0) {
+            // Si el mes comença en diumenge, el primer laborable és dilluns (no cal espais)
+            // No fer res
+          } else if (firstDayWeekday === 6) {
+            // Si el mes comença dissabte, el primer laborable és dilluns (no cal espais)
+            // No fer res
+          }
+        }
+        
+        // Afegir el dia actual
+        const sessions = getSessionsForDate(date);
+        const holiday = isHoliday(date);
+        const vacation = isVacation(date);
+        const closure = isClosure(date);
+        
+        currentWeek.push({
+          day,
+          date,
+          sessions,
+          holiday,
+          vacation,
+          closure
+        });
+        
+        // Si és divendres, completar la setmana i afegir-la
+        if (dayOfWeek === 5) {
+          while (currentWeek.length < 5) {
+            currentWeek.push({
+              day: null,
+              date: null,
+              sessions: [],
+              holiday: false,
+              vacation: false,
+              closure: false
+            });
+          }
+          weeks.push(currentWeek);
+          currentWeek = [];
+        }
       }
     }
-  }
+    
+    // Afegir l'última setmana si no està completa
+    if (currentWeek.length > 0) {
+      while (currentWeek.length < 5) {
+        currentWeek.push({
+          day: null,
+          date: null,
+          sessions: [],
+          holiday: false,
+          vacation: false,
+          closure: false
+        });
+      }
+      weeks.push(currentWeek);
+    }
+    
+    // Aplanar l'array de setmanes en un sol array
+    return weeks.flat();
+  }, [currentViewDate, getSessionsForDate, isHoliday, isVacation, isClosure]);
 
   // Calcular el total de sessions del mes
-  const totalSessionsThisMonth = calendarDays
+  const totalSessionsThisMonth = calendarData
     .filter(day => day.date !== null)
     .reduce((total, day) => total + day.sessions.filter(s => !s.isDeleted).length, 0);
 
@@ -435,8 +492,7 @@ const Index = () => {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold capitalize">Dies laborables - {currentMonthText}</h2>
           <div className="flex space-x-2">
-            <button 
-              onClick={goToPreviousMonth} 
+            <button onClick={goToPreviousMonth} 
               className="p-2 rounded-full shadow-neo hover:shadow-neo-sm transition-all" 
               title="Mes anterior"
             >
@@ -463,7 +519,7 @@ const Index = () => {
 
         {/* Dies laborables */}
         <div className="grid grid-cols-5 gap-3">
-          {calendarDays.map((dayInfo, idx) => {
+          {calendarData.map((dayInfo, idx) => {
             if (!dayInfo.day || !dayInfo.date) {
               return <div key={idx} className="aspect-square" />;
             }
