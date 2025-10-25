@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { Dumbbell, Plus, Star, Edit, Trash2, PlayCircle, History, X, Palette } from "lucide-react";
+import { Dumbbell, Plus, Star, Edit, Trash2, PlayCircle, History, X, Palette, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePrograms } from "@/hooks/usePrograms";
 import {
@@ -38,6 +38,7 @@ const Programs = () => {
     updateTracks, 
     addTrack,
     deleteTrack,
+    updateLaunches,
     deleteProgram, 
     deleteSubprogram,
     getActiveSubprogram 
@@ -59,6 +60,7 @@ const Programs = () => {
   const [subprogramForm, setSubprogramForm] = useState({ name: "" });
   const [editingTracks, setEditingTracks] = useState<any[]>([]);
   const [editingColor, setEditingColor] = useState("#ef4444");
+  const [editingLaunches, setEditingLaunches] = useState<any[]>([]);
 
   // Funció per afegir programa
   const handleAddProgram = async () => {
@@ -78,7 +80,7 @@ const Programs = () => {
     }
   };
 
-  // 🆕 Funció per canviar el color
+  // Funció per canviar el color
   const handleUpdateColor = async () => {
     const result = await updateProgramColor(selectedProgramId, editingColor);
     
@@ -165,6 +167,51 @@ const Programs = () => {
   const handleDeleteTrack = (index: number) => {
     const updated = editingTracks.filter((_, i) => i !== index);
     setEditingTracks(updated);
+  };
+
+  // 🆕 Funció per obrir l'editor d'historial
+  const handleOpenHistory = (programId: string, subprogramId: string) => {
+    const program = programs[programId];
+    const subprogram = program.subprograms[subprogramId];
+    
+    setSelectedProgramId(programId);
+    setSelectedSubprogramId(subprogramId);
+    setEditingLaunches([...subprogram.launches]);
+    setShowHistory(true);
+  };
+
+  // 🆕 Funció per afegir un nou llançament
+  const handleAddLaunch = () => {
+    const newLaunch = {
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: null,
+    };
+    setEditingLaunches([...editingLaunches, newLaunch]);
+  };
+
+  // 🆕 Funció per actualitzar un llançament
+  const updateLaunch = (index: number, field: string, value: any) => {
+    const updated = [...editingLaunches];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditingLaunches(updated);
+  };
+
+  // 🆕 Funció per eliminar un llançament
+  const handleDeleteLaunch = (index: number) => {
+    const updated = editingLaunches.filter((_, i) => i !== index);
+    setEditingLaunches(updated);
+  };
+
+  // 🆕 Funció per guardar l'historial editat
+  const handleSaveLaunches = async () => {
+    const result = await updateLaunches(selectedProgramId, selectedSubprogramId, editingLaunches);
+    
+    if (result.success) {
+      toast.success("Historial actualitzat correctament!");
+      setShowHistory(false);
+    } else {
+      toast.error("Error al actualitzar l'historial");
+    }
   };
 
   // Funció per eliminar programa
@@ -359,8 +406,7 @@ const Programs = () => {
                               </Button>
                               
                               {!isActive && (
-                                <Button
-                                  size="sm"
+                                <Button size="sm"
                                   onClick={() => handleActivateSubprogram(program.id, subprogram.id)}
                                   className="flex-1"
                                 >
@@ -372,11 +418,7 @@ const Programs = () => {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => {
-                                  setSelectedProgramId(program.id);
-                                  setSelectedSubprogramId(subprogram.id);
-                                  setShowHistory(true);
-                                }}
+                                onClick={() => handleOpenHistory(program.id, subprogram.id)}
                               >
                                 <History className="w-3 h-3" />
                               </Button>
@@ -454,10 +496,10 @@ const Programs = () => {
               Crear programa
             </Button>
           </DialogFooter>
-          </DialogContent>
+        </DialogContent>
       </Dialog>
 
-      {/* 🆕 Diàleg: Editar color del programa */}
+      {/* Diàleg: Editar color del programa */}
       <Dialog open={showEditColor} onOpenChange={setShowEditColor}>
         <DialogContent>
           <DialogHeader>
@@ -624,57 +666,121 @@ const Programs = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Diàleg: Historial de llançaments */}
+      {/* 🆕 Diàleg: Editar historial de llançaments */}
       <Dialog open={showHistory} onOpenChange={setShowHistory}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Historial de llançaments</DialogTitle>
             <DialogDescription>
-              Llançaments del subprograma {selectedProgramId && selectedSubprogramId && programs[selectedProgramId]?.subprograms[selectedSubprogramId]?.name}
+              Gestiona l'historial de llançaments de {selectedProgramId && selectedSubprogramId && programs[selectedProgramId]?.subprograms[selectedSubprogramId]?.name}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-2">
-            {selectedProgramId && selectedSubprogramId && programs[selectedProgramId]?.subprograms[selectedSubprogramId]?.launches.length > 0 ? (
-              programs[selectedProgramId].subprograms[selectedSubprogramId].launches.map((launch, index) => {
-                const startDate = new Date(launch.startDate);
+          <div className="space-y-3">
+            {editingLaunches.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Cap llançament registrat. Afegeix el primer!
+              </p>
+            ) : (
+              editingLaunches.map((launch, index) => {
+                const startDate = launch.startDate ? new Date(launch.startDate) : null;
                 const endDate = launch.endDate ? new Date(launch.endDate) : null;
-                const days = endDate 
+                const days = startDate && endDate
                   ? Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-                  : Math.floor((new Date().getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+                  : startDate
+                  ? Math.floor((new Date().getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+                  : 0;
                 
                 return (
-                  <div key={index} className="p-3 border rounded-lg">
-                    <div className="flex items-center justify-between mb-1">
+                  <div key={index} className="p-4 border rounded-lg space-y-3 relative">
+                    <div className="flex items-center justify-between mb-2">
                       <span className="font-medium">Llançament {index + 1}</span>
-                      {!endDate && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-primary text-primary-foreground">
-                          Actiu
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {!launch.endDate && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-primary text-primary-foreground">
+                            Actiu
+                          </span>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-red-500 hover:text-red-600"
+                          onClick={() => handleDeleteLaunch(index)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Inici: {startDate.toLocaleDateString('ca-ES')}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Final: {endDate ? endDate.toLocaleDateString('ca-ES') : 'Encara actiu'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Durada: {days} dies
-                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor={`launch-start-${index}`}>
+                          <Calendar className="w-3 h-3 inline mr-1" />
+                          Data d'inici
+                        </Label>
+                        <Input
+                          id={`launch-start-${index}`}
+                          type="date"
+                          value={launch.startDate}
+                          onChange={(e) => updateLaunch(index, 'startDate', e.target.value)}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor={`launch-end-${index}`}>
+                          <Calendar className="w-3 h-3 inline mr-1" />
+                          Data final
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id={`launch-end-${index}`}
+                            type="date"
+                            value={launch.endDate || ''}
+                            onChange={(e) => updateLaunch(index, 'endDate', e.target.value || null)}
+                          />
+                          {launch.endDate && (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => updateLaunch(index, 'endDate', null)}
+                              title="Marcar com actiu"
+                            >
+                              <PlayCircle className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Deixa buit si està actiu
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-2 border-t">
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Durada:</strong> {days} dies
+                      </p>
+                    </div>
                   </div>
                 );
               })
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Cap llançament registrat
-              </p>
             )}
+            
+            <Button
+              variant="outline"
+              onClick={handleAddLaunch}
+              className="w-full"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Afegir llançament
+            </Button>
           </div>
 
           <DialogFooter>
-            <Button onClick={() => setShowHistory(false)}>
-              Tancar
+            <Button variant="outline" onClick={() => setShowHistory(false)}>
+              Cancel·lar
+            </Button>
+            <Button onClick={handleSaveLaunches}>
+              Guardar canvis
             </Button>
           </DialogFooter>
         </DialogContent>
