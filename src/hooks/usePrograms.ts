@@ -44,14 +44,16 @@ const DEFAULT_TRACKS: { [key: string]: string[] } = {
     'Estiraments'
   ],
   'BC': [
-    'Escalfament',
+    '1A Escalfament tren superior',
+    '1B Escalfament tren inferior',
     'Combat 1',
+    'Power Training 1',
     'Combat 2',
+    'Power Training 2',
     'Combat 3',
-    'Recuperació',
-    'Combat 4',
-    'Combat 5',
-    'Combat 6',
+    'Muay Thai',
+    'Power Training 3',
+    'Abdominals',
     'Estiraments'
   ],
   'BB': [
@@ -138,6 +140,22 @@ export const usePrograms = () => {
       return { success: true };
     } catch (error) {
       console.error("Error adding program:", error);
+      return { success: false, error };
+    }
+  };
+
+  // 🆕 Funció per actualitzar el color d'un programa
+  const updateProgramColor = async (programId: string, color: string) => {
+    try {
+      const programRef = doc(db, 'programs', programId);
+      
+      await updateDoc(programRef, {
+        color: color,
+      });
+      
+      return { success: true };
+    } catch (error) {
+      console.error("Error updating program color:", error);
       return { success: false, error };
     }
   };
@@ -233,7 +251,7 @@ export const usePrograms = () => {
     }
   };
 
-  // 🆕 Funció per afegir un track nou
+  // Funció per afegir un track nou
   const addTrack = async (programId: string, subprogramId: string) => {
     try {
       const program = programs[programId];
@@ -258,7 +276,7 @@ export const usePrograms = () => {
     }
   };
 
-  // 🆕 Funció per eliminar un track
+  // Funció per eliminar un track
   const deleteTrack = async (programId: string, subprogramId: string, trackId: string) => {
     try {
       const program = programs[programId];
@@ -339,6 +357,7 @@ export const usePrograms = () => {
     programs,
     loading,
     addProgram,
+    updateProgramColor,
     addSubprogram,
     activateSubprogram,
     updateTracks,
