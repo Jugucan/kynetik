@@ -144,7 +144,7 @@ export const usePrograms = () => {
     }
   };
 
-  // 🆕 Funció per actualitzar el color d'un programa
+  // Funció per actualitzar el color d'un programa
   const updateProgramColor = async (programId: string, color: string) => {
     try {
       const programRef = doc(db, 'programs', programId);
@@ -294,6 +294,27 @@ export const usePrograms = () => {
     }
   };
 
+  // 🆕 Funció per actualitzar l'historial de llançaments
+  const updateLaunches = async (programId: string, subprogramId: string, launches: Launch[]) => {
+    try {
+      const programRef = doc(db, 'programs', programId);
+      
+      // Ordenar llançaments per data d'inici
+      const sortedLaunches = [...launches].sort((a, b) => 
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+      );
+      
+      await updateDoc(programRef, {
+        [`subprograms.${subprogramId}.launches`]: sortedLaunches,
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error updating launches:", error);
+      return { success: false, error };
+    }
+  };
+
   // Funció per eliminar un programa
   const deleteProgram = async (programId: string) => {
     try {
@@ -363,6 +384,7 @@ export const usePrograms = () => {
     updateTracks,
     addTrack,
     deleteTrack,
+    updateLaunches,
     deleteProgram,
     deleteSubprogram,
     getActiveSubprogram,
