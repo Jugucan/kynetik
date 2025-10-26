@@ -13,25 +13,24 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useNavigate } from "react-router-dom"; // <-- NOU: Importem useNavigate
+import { UserDetailModal } from "@/components/UserDetailModal"; // <-- NOU: Importem el component de detall
 
 const Users = () => {
   const { users, loading, addUser, updateUser, deleteUser } = useUsers();
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [viewingUser, setViewingUser] = useState<User | null>(null); // <-- NOU: Estat per l'usuari que veiem en detall
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
-  const navigate = useNavigate(); // <-- NOU: Inicialitzem useNavigate
-
-  // 1. Apliquem l'ordenació alfabètica abans de filtrar
+  // 1. Apliquem l'ordenació alfabètica
   const sortedUsers = [...users].sort((a, b) => 
-    (a.name || '').localeCompare(b.name || '', 'ca', { sensitivity: 'base' }) // 'ca' per català, 'sensitivity: base' per ignorar accents
+    (a.name || '').localeCompare(b.name || '', 'ca', { sensitivity: 'base' })
   );
 
-  const filteredUsers = sortedUsers.filter(user => // <-- Usem sortedUsers
+  const filteredUsers = sortedUsers.filter(user =>
     (user.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (user.email || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -44,8 +43,20 @@ const Users = () => {
     }
     setEditingUser(null);
   };
+  
+  // Funció que es cridarà per obrir la fitxa en mode de vista (el modal)
+  const handleViewUser = (user: User) => {
+    setViewingUser(user);
+  };
+  
+  // Funció per tancar el modal de vista
+  const handleCloseViewModal = () => {
+    setViewingUser(null);
+  };
 
   const handleEditUser = (user: User) => {
+    // Si estem veient la fitxa i cliquem editar, tanquem el de vista i obrim el d'edició
+    handleCloseViewModal(); 
     setEditingUser(user);
     setIsModalOpen(true);
   };
@@ -59,13 +70,8 @@ const Users = () => {
     setEditingUser(null);
     setIsModalOpen(true);
   };
-  
-  // NOU: Funció per anar a la fitxa de detall
-  const handleViewUserDetail = (userId: string) => {
-    navigate(`/users/${userId}`);
-  };
 
-  // FUNCIÓ PER IMPORTAR USUARIS DES D'EXCEL
+  // FUNCIÓ PER IMPORTAR USUARIS DES D'EXCEL (Sense Canvis)
   const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -134,7 +140,7 @@ const Users = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
-      {/* Capçalera amb botons (Sense Canvis) */}
+      {/* Capçalera amb botons */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
@@ -231,7 +237,7 @@ const Users = () => {
         </div>
       </NeoCard>
 
-      {/* Llista d'usuaris (AMB CANVIS DE NAVEGACIÓ) */}
+      {/* Llista d'usuaris (AMB CLIC DE MODAL) */}
       <NeoCard>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
@@ -244,8 +250,8 @@ const Users = () => {
             {filteredUsers.map((user) => (
               <div
                 key={user.id}
-                // <-- NOU: Fem la targeta clicable per anar al detall
-                onClick={() => handleViewUserDetail(user.id)}
+                // <-- NOU: Cliquem aquí per obrir el modal de detall
+                onClick={() => handleViewUser(user)}
                 className={`p-3 sm:p-4 rounded-xl shadow-neo transition-all border-2 cursor-pointer hover:shadow-neo-lg hover:scale-[1.005] ${
                   user.center === "Arbúcies" 
                     ? "bg-blue-500/20 border-blue-500/30" 
@@ -268,7 +274,7 @@ const Users = () => {
                         <p className="text-xs sm:text-sm font-medium text-primary">{user.age} anys</p>
                       </div>
                       
-                      {/* Botons d'acció - Hem d'aturar la propagació del clic! */}
+                      {/* Botons d'acció - Aturem el clic! */}
                       <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                         <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs font-medium shadow-neo-inset ${
                           user.center === "Arbúcies" 
@@ -277,7 +283,7 @@ const Users = () => {
                         }`}>
                           {user.center}
                         </span>
-                        {/* ⚠️ IMPORTANT: Afegim e.stopPropagation() per evitar que s'obri el detall en clicar Editar o Eliminar */}
+                        {/* ⚠️ IMPORTANT: Afegim e.stopPropagation() per evitar que s'obri el modal de detall */}
                         <Button
                           size="icon"
                           variant="outline"
@@ -332,6 +338,14 @@ const Users = () => {
           </div>
         )}
       </NeoCard>
+
+      {/* Modal de Detall d'Usuari (Utilitzant el nou component) */}
+      <UserDetailModal
+        user={viewingUser}
+        isOpen={!!viewingUser} // Obert si viewingUser no és null
+        onClose={handleCloseViewModal}
+        onEdit={handleEditUser} // Permet saltar a editar des d'aquí
+      />
 
       {/* Modal d'edició/creació (Sense Canvis) */}
       <UserFormModal
