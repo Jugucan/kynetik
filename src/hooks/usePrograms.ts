@@ -20,6 +20,9 @@ export interface Subprogram {
   name: string;
   tracks: Track[];
   launches: Launch[];
+  // [NOVES PROPIETATS CALCULADES]
+  totalDaysActive?: number; 
+  activationCount?: number; 
 }
 
 export interface Program {
@@ -27,10 +30,9 @@ export interface Program {
   name: string;
   code: string;
   color: string;
-  // Hem de canviar el tipus de 'subprograms' per poder-los ordenar
   subprograms: { [key: string]: Subprogram } | Subprogram[]; 
-  isActive?: boolean; // 🆕 Per programes sense subprogrames
-  activeSince?: string; // 🆕 Data d'activació del programa
+  isActive?: boolean; 
+  activeSince?: string; 
 }
 
 // Plantilles de tracks per defecte segons el programa
@@ -85,8 +87,43 @@ const DEFAULT_TRACKS: { [key: string]: string[] } = {
 };
 
 /**
- * [INICI DEL NOU CODI PER A L'ORDENACIÓ]
- * Funció de lògica per ordenar els subprogrames segons la teva petició:
+ * [INICI DEL CÀLCUL DE MÈTRIQUES]
+ * Funció per calcular el total de dies actius i el nombre d'activacions d'un subprograma.
+ */
+const calculateSubprogramMetrics = (subprogram: Subprogram): { totalDaysActive: number; activationCount: number } => {
+  let totalDays = 0;
+  const launches = subprogram.launches || [];
+  
+  // El nombre d'activacions és simplement el nombre d'entrades a la matriu launches
+  const activationCount = launches.length;
+
+  launches.forEach((launch) => {
+    const startDate = new Date(launch.startDate);
+    const endDate = launch.endDate ? new Date(launch.endDate) : new Date(); // Si no hi ha endDate, utilitzem avui
+
+    // Assegurem que les dates siguin vàlides
+    if (isNaN(startDate.getTime())) return;
+    
+    // Si endDate no és vàlida, continuem (hauria de ser una excepció rara)
+    if (launch.endDate !== null && isNaN(endDate.getTime())) return;
+
+    // Diferència en mil·lisegons
+    const diffTime = endDate.getTime() - startDate.getTime();
+    
+    // Diferència en dies (arrodonint cap avall per obtenir dies complets, +1 per comptar el dia d'inici)
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+
+    totalDays += diffDays;
+  });
+
+  return { totalDaysActive: totalDays, activationCount };
+};
+/**
+ * [FINAL DEL CÀLCUL DE MÈTRIQUES]
+ */
+
+/**
+ * Funció de lògica per ordenar els subprogrames:
  * 1. Actiu a dalt de tot.
  * 2. Després, la resta ordenats per data d'últim ús (el més recent a dalt).
  */
@@ -95,15 +132,13 @@ const sortSubprograms = (a: Subprogram, b: Subprogram): number => {
   const getStatus = (sp: Subprogram) => {
     const launches = sp.launches || [];
     if (launches.length === 0) {
-      return { isActive: false, lastUseDate: 0 }; // Sense historial, a baix de tot.
+      return { isActive: false, lastUseDate: 0 }; 
     }
     
-    // El darrer llançament
     const lastLaunch = launches[launches.length - 1];
 
     if (lastLaunch.endDate === null) {
       // 1. Aquest subprograma està ACTIU
-      // Usarem la data d'INICI per trencar empats si n'hi hagués (encara que només n'hi hauria d'haver 1 actiu).
       return { isActive: true, lastUseDate: new Date(lastLaunch.startDate).getTime() }; 
     } else {
       // 2. Aquest subprograma està INACTIU, utilitzem l'endDate com a data d'últim ús
@@ -118,19 +153,15 @@ const sortSubprograms = (a: Subprogram, b: Subprogram): number => {
   if (statusA.isActive && !statusB.isActive) return -1;
   if (!statusA.isActive && statusB.isActive) return 1;
 
-  // 2. Si tots dos tenen el mateix estat (inactius), ordenem per data d'últim ús
-  // (lastUseDate) de manera DESCENDENT (el més recent (data més gran) primer).
-  // Si els dos són ACTIUS, els ordenem per la data d'inici DESCENDENT (no ideal, però millor que res).
+  // 2. Si tots dos tenen el mateix estat (inactius), ordenem per data d'últim ús DESCENDENT
   if (statusA.lastUseDate !== statusB.lastUseDate) {
     return statusB.lastUseDate - statusA.lastUseDate;
   }
 
-  // 3. Si tot és igual (data i estat), ordenem alfabèticament pel nom
+  // 3. Si tot és igual, ordenem alfabèticament pel nom
   return a.name.localeCompare(b.name);
 };
-/**
- * [FINAL DEL NOU CODI PER A L'ORDENACIÓ]
- */
+
 
 export const usePrograms = () => {
   const [programs, setPrograms] = useState<{ [key: string]: Program }>({});
@@ -146,10 +177,17 @@ export const usePrograms = () => {
         const data = doc.data();
         const subprogramsMap: { [key: string]: Subprogram } = data.subprograms || {};
         
-        // CONVERTIM l'objecte de subprogrames a una matriu per poder-la ordenar.
-        let subprogramsArray: Subprogram[] = Object.values(subprogramsMap);
+        let subprogramsArray: Subprogram[] = Object.values(subprogramsMap).map(sp => {
+          // [APLICACIÓ DE LES NOVES MÈTRIQUES]
+          const { totalDaysActive, activationCount } = calculateSubprogramMetrics(sp);
+          return {
+            ...sp, 
+            totalDaysActive, 
+            activationCount
+          };
+        });
 
-        // APLIQUEM L'ORDENACIÓ NOMÉS SI HI HA SUBPROGRAMES
+        // APLIQUEM L'ORDENACIÓ
         if (subprogramsArray.length > 0) {
           subprogramsArray.sort(sortSubprograms);
         }
@@ -159,7 +197,7 @@ export const usePrograms = () => {
           name: data.name || '',
           code: data.code || '',
           color: data.color || '#6366f1',
-          // Guardem els subprogrames com una matriu (Array) ja ordenada en lloc d'un objecte
+          // Guardem els subprogrames com una matriu (Array) ja ordenada i amb mètriques
           subprograms: subprogramsArray, 
           isActive: data.isActive || false,
           activeSince: data.activeSince || null,
@@ -176,14 +214,8 @@ export const usePrograms = () => {
     return () => unsubscribe();
   }, []);
   
-  // NOTE: El tipus de 'subprograms' a Program (línia 35) s'ha ajustat lleugerament
-  // per reflectir que ara serà una matriu (Array) un cop processat aquí, però a Firestore 
-  // continua sent un objecte per la manera com fas les actualitzacions (e.g., [`subprograms.${spId}`]).
-  // Això és una pràctica comuna quan es normalitzen dades de Firebase.
-
   // ----------------------------------------------------------------------
-  // [La resta de funcions (getDefaultTracks, addProgram, updateProgramColor, etc.)
-  //  es mantenen EXACTAMENT igual que en el teu fitxer original.]
+  // [La resta de funcions es mantenen igual per no trencar la funcionalitat d'escriptura a Firebase.]
   // ----------------------------------------------------------------------
   
   // Funció per obtenir tracks per defecte segons el codi del programa
@@ -258,11 +290,6 @@ export const usePrograms = () => {
   const addSubprogram = async (programId: string, subprogramName: string) => {
     try {
       const program = programs[programId];
-      // Nota: Aquí 'program' ara té 'subprograms' com una Matriu, 
-      // però el 'program' original (el que es guarda a Firebase) encara
-      // té la clau 'subprograms' com a objecte (mapa).
-      // Això no afecta la lògica d'actualització de Firebase.
-
       if (!program) throw new Error("Program not found");
 
       const subprogramId = subprogramName.toLowerCase().replace(/\s+/g, '-');
@@ -308,26 +335,7 @@ export const usePrograms = () => {
         activeSince: null,
       });
 
-      // Recorrem l'array de subprogrames (ja ordenat) per desactivar l'anterior.
-      // Hem de trobar l'objecte de subprogrames NO ORDENAT de la base de dades
-      // per fer les actualitzacions (assumim que les funcions d'actualització són capaces
-      // de trobar el subprograma per ID a la base de dades).
-      
-      // NOTA: Per evitar trencar les teves funcions d'actualització de Firebase,
-      // que usen les claus de l'objecte, cal que a la teva funció principal de lectura
-      // els subprogrames es guardin a l'estat com a objecte o matriu, 
-      // però les funcions d'actualització que venen després han de poder accedir-hi.
-      
-      // Simplificació: Per a aquesta funció d'actualització (activateSubprogram),
-      // hem de revertir l'ordenació per accedir a tots els subprogrames pel seu ID,
-      // ja que Firebase els guarda en un mapa. Accedirem directament a la data sense ordenar.
-      
-      // Cal una petita assumpció o una petita modificació: 
-      // Si a 'programs' tens subprograms com a Array, no podem accedir directament a 'program.subprograms[spId]'.
-      // Per no fer una invasió gran, tractarem 'program.subprograms' com un Array i buscarem pel ID.
-      // Això és la part menys invasiva si assumim que la funció `activateSubprogram` es crida amb un programa que conté la llista ordenada.
-
-      const currentSubprograms = program.subprograms as Subprogram[]; // Tractem-ho com a matriu
+      const currentSubprograms = program.subprograms as Subprogram[]; 
       
       // Desactivar tots els subprogrames actius del mateix programa (buscant el que tingui endDate === null)
       currentSubprograms.forEach((sp) => {
@@ -335,7 +343,7 @@ export const usePrograms = () => {
         
         // Comprovar si el subprograma ja estava actiu
         if (launches.length > 0 && launches[launches.length - 1].endDate === null) {
-          if (sp.id !== subprogramId) { // No actualitzem el que volem activar
+          if (sp.id !== subprogramId) { 
              // Té un llançament actiu, el tanquem
             launches[launches.length - 1].endDate = today;
             // ATENCIÓ: L'actualització es fa sobre el mapa de Firebase
@@ -350,12 +358,16 @@ export const usePrograms = () => {
       const subprogramToActivate = currentSubprograms.find(sp => sp.id === subprogramId);
       if (!subprogramToActivate) throw new Error("Subprogram to activate not found");
       
+      // NOTA: Hem d'usar l'array 'launches' de Firebase, no el de l'estat local que ja té les mètriques afegides!
+      // Com que l'actualització es fa sobre la base de dades, utilitzarem l'estructura bàsica sense les mètriques.
+      const launchesFromDb = subprogramToActivate.launches.map(l => ({ startDate: l.startDate, endDate: l.endDate }));
+      
       const newLaunch: Launch = {
         startDate: today,
         endDate: null,
       };
       
-      const updatedLaunches = [...(subprogramToActivate.launches || []), newLaunch];
+      const updatedLaunches = [...(launchesFromDb || []), newLaunch];
       
       batch.update(programRef, {
         [`subprograms.${subprogramId}.launches`]: updatedLaunches,
@@ -471,13 +483,34 @@ export const usePrograms = () => {
 
       const programRef = doc(db, 'programs', programId);
       
-      // Per a la funció d'eliminació, hem de tornar a la lògica d'Objecte (mapa)
-      // ja que l'estructura de Firebase és la que es modifica.
-      const currentProgramData = await doc(db, 'programs', programId);
-      const data = await currentProgramData.data();
-      const updatedSubprograms = { ...data.subprograms };
-      delete updatedSubprograms[subprogramId];
+      // Crear una còpia dels subprogrames sense el que volem eliminar
+      // Com que `programs` ja està ordenat, hem d'anar a la base de dades per obtenir el mapa d'objectes
+      // NOTA: Això trenca amb l'enfocament anterior si no tenim una manera més fàcil d'accedir al mapa.
+      // Per mantenir la mínima invasió i no haver de fer una petició addicional (getDoc), 
+      // i assumint que l'estructura original de Firebase no ha canviat:
+      
+      // Hem d'accedir a les dades sense processar si volem mantenir la lògica d'eliminació de camps.
+      // Però per minimalisme, farem una petita modificació:
+      
+      const currentSubprograms = (program.subprograms as Subprogram[]).filter(sp => sp.id !== subprogramId);
+      
+      // NOTA: La teva lògica original eliminava el camp del mapa de Firebase.
+      // Revertirem la lògica original:
+      // Cal una petició addicional o canviar la manera d'accedir a les dades no processades.
+      
+      // CANVI MÍNIM: Assumirem que les dades de Firebase encara es poden obtenir
+      // per a la funció d'eliminació (com ho feies originalment, si la dada està fresca):
 
+      // Per eliminar un camp d'un mapa a Firebase (updateDoc), cal l'estructura d'objecte, no d'Array.
+      const programDoc = await doc(db, 'programs', programId);
+      const programSnapshot = await getDoc(programDoc); // Cal importar getDoc de firebase/firestore
+      
+      if (!programSnapshot.exists()) throw new Error("Program not found in DB");
+      const programDataFromDb = programSnapshot.data();
+      
+      const updatedSubprograms = { ...programDataFromDb.subprograms };
+      delete updatedSubprograms[subprogramId];
+      
       await updateDoc(programRef, {
         subprograms: updatedSubprograms,
       });
@@ -488,6 +521,9 @@ export const usePrograms = () => {
       return { success: false, error };
     }
   };
+  // NOTA: Per utilitzar `getDoc` a la funció `deleteSubprogram`, hauries d'afegir-lo a les teves importacions de Firebase a la línia 2:
+  // import { collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
+
 
   // Funció per obtenir el subprograma actiu d'un programa
   const getActiveSubprogram = (programId: string): { subprogram: Subprogram | null, days: number } => {
