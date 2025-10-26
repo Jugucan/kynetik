@@ -28,6 +28,8 @@ export interface Program {
   code: string;
   color: string;
   subprograms: { [key: string]: Subprogram };
+  isActive?: boolean; // 🆕 Per programes sense subprogrames
+  activeSince?: string; // 🆕 Data d'activació del programa
 }
 
 // Plantilles de tracks per defecte segons el programa
@@ -99,6 +101,8 @@ export const usePrograms = () => {
           code: data.code || '',
           color: data.color || '#6366f1',
           subprograms: data.subprograms || {},
+          isActive: data.isActive || false,
+          activeSince: data.activeSince || null,
         };
       });
       
@@ -135,6 +139,8 @@ export const usePrograms = () => {
         code,
         color,
         subprograms: {},
+        isActive: false,
+        activeSince: null,
       });
       
       return { success: true };
@@ -160,6 +166,24 @@ export const usePrograms = () => {
     }
   };
 
+  // 🆕 Funció per activar/desactivar un programa sencer (sense subprogrames)
+  const toggleProgramActive = async (programId: string, isActive: boolean) => {
+    try {
+      const programRef = doc(db, 'programs', programId);
+      const today = new Date().toISOString().split('T')[0];
+      
+      await updateDoc(programRef, {
+        isActive: isActive,
+        activeSince: isActive ? today : null,
+      });
+      
+      return { success: true };
+    } catch (error) {
+      console.error("Error toggling program active:", error);
+      return { success: false, error };
+    }
+  };
+
   // Funció per afegir un subprograma
   const addSubprogram = async (programId: string, subprogramName: string) => {
     try {
@@ -179,8 +203,11 @@ export const usePrograms = () => {
         launches: [],
       };
 
+      // Si el programa estava actiu sense subprogrames, desactivar-lo
       await updateDoc(programRef, {
         [`subprograms.${subprogramId}`]: newSubprogram,
+        isActive: false,
+        activeSince: null,
       });
 
       return { success: true };
@@ -199,6 +226,12 @@ export const usePrograms = () => {
       const batch = writeBatch(db);
       const programRef = doc(db, 'programs', programId);
       const today = new Date().toISOString().split('T')[0];
+
+      // Desactivar el programa sencer si estava actiu
+      batch.update(programRef, {
+        isActive: false,
+        activeSince: null,
+      });
 
       // Desactivar tots els subprogrames actius del mateix programa
       Object.keys(program.subprograms).forEach((spId) => {
@@ -294,7 +327,7 @@ export const usePrograms = () => {
     }
   };
 
-  // 🆕 Funció per actualitzar l'historial de llançaments
+  // Funció per actualitzar l'historial de llançaments
   const updateLaunches = async (programId: string, subprogramId: string, launches: Launch[]) => {
     try {
       const programRef = doc(db, 'programs', programId);
@@ -374,11 +407,60 @@ export const usePrograms = () => {
     return { subprogram: activeSubprogram, days: activeDays };
   };
 
+  // 🆕 Funció per obtenir tots els programes/subprogrames actius
+  const getAllActivePrograms = () => {
+    const activeList: Array<{
+      programId: string;
+      programName: string;
+      programCode: string;
+      programColor: string;
+      subprogramName: string | null;
+      days: number;
+      isWholeProgram: boolean;
+    }> = [];
+
+    Object.values(programs).forEach((program) => {
+      // Comprovar si té subprograma actiu
+      const { subprogram, days } = getActiveSubprogram(program.id);
+      
+      if (subprogram) {
+        // Té un subprograma actiu
+        activeList.push({
+          programId: program.id,
+          programName: program.name,
+          programCode: program.code,
+          programColor: program.color,
+          subprogramName: subprogram.name,
+          days: days,
+          isWholeProgram: false,
+        });
+      } else if (program.isActive && Object.keys(program.subprograms).length === 0) {
+        // El programa sencer està actiu (sense subprogrames)
+        const activeSince = program.activeSince ? new Date(program.activeSince) : new Date();
+        const today = new Date();
+        const daysSinceActive = Math.floor((today.getTime() - activeSince.getTime()) / (1000 * 60 * 60 * 24));
+        
+        activeList.push({
+          programId: program.id,
+          programName: program.name,
+          programCode: program.code,
+          programColor: program.color,
+          subprogramName: null,
+          days: daysSinceActive,
+          isWholeProgram: true,
+        });
+      }
+    });
+
+    return activeList;
+  };
+
   return {
     programs,
     loading,
     addProgram,
     updateProgramColor,
+    toggleProgramActive,
     addSubprogram,
     activateSubprogram,
     updateTracks,
@@ -388,5 +470,6 @@ export const usePrograms = () => {
     deleteProgram,
     deleteSubprogram,
     getActiveSubprogram,
+    getAllActivePrograms,
   };
 };
