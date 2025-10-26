@@ -762,8 +762,8 @@ const Programs = () => {
                   <Label htmlFor={`track-name-${index}`}>Nom del track</Label>
                   <Input
                     id={`track-name-${index}`}
-                    value={track.name}
-                    onChange={(e) => updateTrack(index, 'name, e.target.value)}
+                    value={track.name}                    
+                    onChange={(e) => updateTrack(index, 'name', e.target.value)}
                     placeholder={`Track ${index + 1}`}
                   />
                 </div>
