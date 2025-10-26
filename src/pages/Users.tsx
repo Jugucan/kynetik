@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { Users as UsersIcon, Search, Plus, Pencil, Trash2, Upload, Info, ChevronDown, ChevronUp } from "lucide-react";
+import { Users as UsersIcon, Search, Plus, Pencil, Trash2, Upload, Info, ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUsers, User } from "@/hooks/useUsers"; 
@@ -13,27 +13,48 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { UserDetailModal } from "@/components/UserDetailModal"; // <-- NOU: Importem el component de detall
+import { UserDetailModal } from "@/components/UserDetailModal";
+
+// ⬇️ NOU: Importem els components Select
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+
 
 const Users = () => {
   const { users, loading, addUser, updateUser, deleteUser } = useUsers();
   const [searchQuery, setSearchQuery] = useState("");
+  // ⬇️ NOU: Estat per guardar el filtre de centre
+  const [centerFilter, setCenterFilter] = useState<string>("all"); 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [viewingUser, setViewingUser] = useState<User | null>(null); // <-- NOU: Estat per l'usuari que veiem en detall
+  const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
-  // 1. Apliquem l'ordenació alfabètica
+  // 1. Apliquem l'ordenació alfabètica (Sense Canvis)
   const sortedUsers = [...users].sort((a, b) => 
     (a.name || '').localeCompare(b.name || '', 'ca', { sensitivity: 'base' })
   );
 
-  const filteredUsers = sortedUsers.filter(user =>
-    (user.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (user.email || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // 2. ⬇️ MODIFICACIÓ CLAU: Apliquem el filtratge
+  const filteredUsers = sortedUsers.filter(user => {
+    // 2.1. Filtre per Centre
+    const matchesCenter = centerFilter === "all" || 
+                          (user.center || '').toLowerCase() === centerFilter.toLowerCase();
+
+    // 2.2. Filtre per Cerca de Text
+    const matchesSearch = (user.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (user.email || '').toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Només mostrem si compleix amb AMBDÓS filtres
+    return matchesCenter && matchesSearch;
+  });
 
   const handleSaveUser = async (userData: Omit<User, 'id'>) => {
     if (editingUser) {
@@ -44,18 +65,15 @@ const Users = () => {
     setEditingUser(null);
   };
   
-  // Funció que es cridarà per obrir la fitxa en mode de vista (el modal)
   const handleViewUser = (user: User) => {
     setViewingUser(user);
   };
   
-  // Funció per tancar el modal de vista
   const handleCloseViewModal = () => {
     setViewingUser(null);
   };
 
   const handleEditUser = (user: User) => {
-    // Si estem veient la fitxa i cliquem editar, tanquem el de vista i obrim el d'edició
     handleCloseViewModal(); 
     setEditingUser(user);
     setIsModalOpen(true);
@@ -140,7 +158,7 @@ const Users = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
-      {/* Capçalera amb botons */}
+      {/* Capçalera amb botons (Sense Canvis) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
@@ -151,7 +169,7 @@ const Users = () => {
         </div>
         
         <div className="flex gap-2">
-          {/* Botó Importar Excel */}
+          {/* Botó Importar Excel (Sense Canvis) */}
           <label htmlFor="excel-upload" className="flex-1 sm:flex-none">
             <Button 
               className="shadow-neo hover:shadow-neo-sm gap-2 w-full sm:w-auto" 
@@ -174,7 +192,7 @@ const Users = () => {
             className="hidden"
           />
 
-          {/* Botó Afegir usuari */}
+          {/* Botó Afegir usuari (Sense Canvis) */}
           <Button onClick={handleAddNew} className="shadow-neo hover:shadow-neo-sm gap-2 flex-1 sm:flex-none">
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Afegir usuari</span>
@@ -224,33 +242,56 @@ const Users = () => {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Cercador (Sense Canvis) */}
-      <NeoCard>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-          <Input 
-            placeholder="Buscar usuari..." 
-            className="pl-9 sm:pl-10 shadow-neo-inset border-0 text-sm sm:text-base"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      {/* ⬇️ MODIFICACIÓ CLAU: Cercador i Filtre en paral·lel */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        
+        {/* Filtre per Centre */}
+        <div className="sm:col-span-1">
+            <NeoCard className="h-full">
+                <Select value={centerFilter} onValueChange={setCenterFilter}>
+                    <SelectTrigger className="shadow-neo-inset border-0 text-sm sm:text-base h-10 sm:h-12">
+                        <MapPin className="w-4 h-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Filtrar per centre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Tots els Centres</SelectItem>
+                        <SelectItem value="Arbúcies">Arbúcies</SelectItem>
+                        <SelectItem value="Sant Hilari">Sant Hilari</SelectItem>
+                        {/* ℹ️ Pots afegir més centres aquí si en tens! */}
+                    </SelectContent>
+                </Select>
+            </NeoCard>
         </div>
-      </NeoCard>
 
-      {/* Llista d'usuaris (AMB CLIC DE MODAL) */}
+        {/* Cercador de Text */}
+        <div className="sm:col-span-2">
+            <NeoCard className="h-full">
+                <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                <Input 
+                    placeholder="Cercar per nom o email..." 
+                    className="pl-9 sm:pl-10 shadow-neo-inset border-0 text-sm sm:text-base h-10 sm:h-12"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                </div>
+            </NeoCard>
+        </div>
+      </div>
+
+      {/* Llista d'usuaris (Sense Canvis en el map) */}
       <NeoCard>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
         ) : filteredUsers.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm">
-            {searchQuery ? "No s'han trobat usuaris" : "No hi ha usuaris. Afegeix-ne un!"}
+            No s'han trobat usuaris amb els filtres aplicats.
           </div>
         ) : (
           <div className="space-y-3 sm:space-y-4">
             {filteredUsers.map((user) => (
               <div
                 key={user.id}
-                // <-- NOU: Cliquem aquí per obrir el modal de detall
                 onClick={() => handleViewUser(user)}
                 className={`p-3 sm:p-4 rounded-xl shadow-neo transition-all border-2 cursor-pointer hover:shadow-neo-lg hover:scale-[1.005] ${
                   user.center === "Arbúcies" 
@@ -274,7 +315,7 @@ const Users = () => {
                         <p className="text-xs sm:text-sm font-medium text-primary">{user.age} anys</p>
                       </div>
                       
-                      {/* Botons d'acció - Aturem el clic! */}
+                      {/* Botons d'acció */}
                       <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                         <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs font-medium shadow-neo-inset ${
                           user.center === "Arbúcies" 
@@ -283,13 +324,12 @@ const Users = () => {
                         }`}>
                           {user.center}
                         </span>
-                        {/* ⚠️ IMPORTANT: Afegim e.stopPropagation() per evitar que s'obri el modal de detall */}
                         <Button
                           size="icon"
                           variant="outline"
                           className="h-7 w-7 sm:h-8 sm:w-8"
                           onClick={(e) => {
-                            e.stopPropagation(); // Evita el clic del contenidor principal
+                            e.stopPropagation(); 
                             handleEditUser(user);
                           }}
                         >
@@ -300,7 +340,7 @@ const Users = () => {
                           variant="outline"
                           className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground"
                           onClick={(e) => {
-                            e.stopPropagation(); // Evita el clic del contenidor principal
+                            e.stopPropagation(); 
                             setDeletingUserId(user.id);
                           }}
                         >
@@ -339,15 +379,13 @@ const Users = () => {
         )}
       </NeoCard>
 
-      {/* Modal de Detall d'Usuari (Utilitzant el nou component) */}
+      {/* Modals (Sense Canvis) */}
       <UserDetailModal
         user={viewingUser}
-        isOpen={!!viewingUser} // Obert si viewingUser no és null
+        isOpen={!!viewingUser}
         onClose={handleCloseViewModal}
-        onEdit={handleEditUser} // Permet saltar a editar des d'aquí
+        onEdit={handleEditUser}
       />
-
-      {/* Modal d'edició/creació (Sense Canvis) */}
       <UserFormModal
         open={isModalOpen}
         onClose={() => {
@@ -357,8 +395,6 @@ const Users = () => {
         onSave={handleSaveUser}
         user={editingUser}
       />
-
-      {/* Modal de confirmació d'eliminació (Sense Canvis) */}
       <AlertDialog open={!!deletingUserId} onOpenChange={() => setDeletingUserId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
