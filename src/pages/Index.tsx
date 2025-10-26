@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { DayInfoModalReadOnly } from "@/components/DayInfoModalReadOnly";
-import { Calendar, Users, TrendingUp, Cake, PartyPopper, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Users, TrendingUp, Cake, PartyPopper, ChevronLeft, ChevronRight, Dumbbell } from "lucide-react";
 import { programColors } from "@/lib/programColors";
 import { useSettings } from "@/hooks/useSettings";
 import { useSchedules } from "@/hooks/useSchedules";
 import { useUsers } from "@/hooks/useUsers";
+import { usePrograms } from "@/hooks/usePrograms";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 // Definició de Session
 interface Session {
@@ -38,6 +40,7 @@ const dateToKey = (date: Date): string => {
 };
 
 const Index = () => {
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentViewDate, setCurrentViewDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -47,6 +50,7 @@ const Index = () => {
   const { vacations, closuresArbucies, closuresSantHilari, officialHolidays } = useSettings();
   const { schedules } = useSchedules();
   const { users } = useUsers();
+  const { getAllActivePrograms, loading: programsLoading } = usePrograms();
 
   // Carregar sessions personalitzades de Firebase
   useEffect(() => {
@@ -72,11 +76,8 @@ const Index = () => {
     return () => unsubscribe();
   }, []);
 
-  const activePrograms = [
-    { name: "BodyPump 120", code: "BP", days: 45, color: "bg-red-500" },
-    { name: "BodyCombat 95", code: "BC", days: 30, color: "bg-orange-500" },
-    { name: "BodyBalance 105", code: "BB", days: 60, color: "bg-green-500" },
-  ];
+  // 🆕 Obtenir programes actius reals
+  const activePrograms = getAllActivePrograms();
 
   // FUNCIÓ PER CALCULAR ELS ANIVERSARIS REALS DELS USUARIS
   const getUpcomingBirthdays = (): Birthday[] => {
@@ -231,7 +232,7 @@ const Index = () => {
     return currentViewDate.toLocaleDateString("ca-ES", { month: "long", year: "numeric" });
   }, [currentViewDate]);
 
-  // 🆕 GENERAR CALENDARI AMB DIES LABORABLES CORRECTAMENT POSICIONATS (MILLORAT)
+  // GENERAR CALENDARI AMB DIES LABORABLES CORRECTAMENT POSICIONATS
   const calendarData = useMemo(() => {
     const year = currentViewDate.getFullYear();
     const month = currentViewDate.getMonth();
@@ -240,7 +241,6 @@ const Index = () => {
     const lastDayOfMonth = new Date(year, month + 1, 0);
     const daysInCurrentMonth = lastDayOfMonth.getDate();
     
-    // Array per guardar les files del calendari
     const weeks: Array<Array<{
       day: number | null;
       date: Date | null;
@@ -252,16 +252,12 @@ const Index = () => {
     
     let currentWeek: Array<any> = [];
     
-    // Iterar per tots els dies del mes
     for (let day = 1; day <= daysInCurrentMonth; day++) {
       const date = new Date(year, month, day);
-      const dayOfWeek = date.getDay(); // 0=Diumenge, 1=Dilluns, ..., 6=Dissabte
+      const dayOfWeek = date.getDay();
       
-      // Només processar dies laborables (dilluns a divendres)
       if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-        // Si és dilluns i ja tenim dies a la setmana actual, començar nova setmana
         if (dayOfWeek === 1 && currentWeek.length > 0) {
-          // Completar la setmana anterior amb espais buits si cal
           while (currentWeek.length < 5) {
             currentWeek.push({
               day: null,
@@ -276,17 +272,10 @@ const Index = () => {
           currentWeek = [];
         }
         
-        // Si és el primer dia laborable del mes, afegir espais buits al principi
         if (day === 1 || (day > 1 && currentWeek.length === 0 && dayOfWeek > 1)) {
-          const previousDay = new Date(year, month, day - 1);
-          let checkDay = previousDay.getDate() > 0 ? previousDay : new Date(year, month, 1);
-          
-          // Trobar quin dia de la setmana és el primer dia del mes
           const firstDayWeekday = new Date(year, month, 1).getDay();
           
-          // Si el primer dia del mes és dilluns a divendres
           if (firstDayWeekday >= 1 && firstDayWeekday <= 5) {
-            // Afegir espais buits des de dilluns fins al dia anterior
             for (let i = 1; i < dayOfWeek; i++) {
               if (i < dayOfWeek) {
                 currentWeek.push({
@@ -299,16 +288,9 @@ const Index = () => {
                 });
               }
             }
-          } else if (firstDayWeekday === 0) {
-            // Si el mes comença en diumenge, el primer laborable és dilluns (no cal espais)
-            // No fer res
-          } else if (firstDayWeekday === 6) {
-            // Si el mes comença dissabte, el primer laborable és dilluns (no cal espais)
-            // No fer res
           }
         }
         
-        // Afegir el dia actual
         const sessions = getSessionsForDate(date);
         const holiday = isHoliday(date);
         const vacation = isVacation(date);
@@ -323,7 +305,6 @@ const Index = () => {
           closure
         });
         
-        // Si és divendres, completar la setmana i afegir-la
         if (dayOfWeek === 5) {
           while (currentWeek.length < 5) {
             currentWeek.push({
@@ -341,7 +322,6 @@ const Index = () => {
       }
     }
     
-    // Afegir l'última setmana si no està completa
     if (currentWeek.length > 0) {
       while (currentWeek.length < 5) {
         currentWeek.push({
@@ -356,11 +336,9 @@ const Index = () => {
       weeks.push(currentWeek);
     }
     
-    // Aplanar l'array de setmanes en un sol array
     return weeks.flat();
   }, [currentViewDate, getSessionsForDate, isHoliday, isVacation, isClosure]);
 
-  // Calcular el total de sessions del mes
   const totalSessionsThisMonth = calendarData
     .filter(day => day.date !== null)
     .reduce((total, day) => total + day.sessions.filter(s => !s.isDeleted).length, 0);
@@ -405,33 +383,73 @@ const Index = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Programes actius</p>
-              <p className="text-2xl font-bold text-destructive">4</p>
+              <p className="text-2xl font-bold text-destructive">{activePrograms.length}</p>
             </div>
           </div>
         </NeoCard>
       </div>
 
-      {/* Programes actius */}
+      {/* 🆕 Programes actius REALS */}
       <NeoCard>
-        <h2 className="text-xl font-semibold mb-4">Subprogrames actius</h2>
-        <div className="grid md:grid-cols-3 gap-4">
-          {activePrograms.map((program) => (
-            <div
-              key={program.code}
-              className="p-4 rounded-xl shadow-neo hover:shadow-neo-sm transition-all cursor-pointer"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className={`w-10 h-10 ${program.color} rounded-lg shadow-neo flex items-center justify-center text-white font-bold`}>
-                  {program.code}
-                </div>
-                <div>
-                  <p className="font-semibold">{program.name}</p>
-                  <p className="text-sm text-muted-foreground">{program.days} dies actiu</p>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Programes i subprogrames actius</h2>
+          <button
+            onClick={() => navigate('/programs')}
+            className="text-sm text-primary hover:underline flex items-center gap-1"
+          >
+            <Dumbbell className="w-4 h-4" />
+            Gestionar programes
+          </button>
         </div>
+        
+        {programsLoading ? (
+          <div className="text-center py-8">
+            <Dumbbell className="w-8 h-8 text-primary animate-pulse mx-auto mb-2" />
+            <p className="text-muted-foreground">Carregant programes...</p>
+          </div>
+        ) : activePrograms.length === 0 ? (
+          <div className="text-center py-8">
+            <Dumbbell className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+            <p className="text-muted-foreground mb-2">No hi ha cap programa o subprograma actiu</p>
+            <button
+              onClick={() => navigate('/programs')}
+              className="text-sm text-primary hover:underline"
+            >
+              Anar a Programes per activar-ne un
+            </button>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-3 gap-4">
+            {activePrograms.map((program) => (
+              <div
+                key={`${program.programId}-${program.subprogramName || 'main'}`}
+                className="p-4 rounded-xl shadow-neo hover:shadow-neo-sm transition-all cursor-pointer"
+                onClick={() => navigate('/programs')}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div 
+                    className="w-10 h-10 rounded-lg shadow-neo flex items-center justify-center text-white font-bold"
+                    style={{ backgroundColor: program.programColor }}
+                  >
+                    {program.programCode}
+                  </div>
+                  <div>
+                    <p className="font-semibold">
+                      {program.subprogramName || program.programName}
+                    </p>
+                    {program.subprogramName && (
+                      <p className="text-xs text-muted-foreground">{program.programName}</p>
+                    )}
+                    {program.isWholeProgram && (
+                      <p className="text-xs text-primary">Programa complet</p>
+                    )}
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">{program.days} dies actiu</p>
+              </div>
+            ))}
+          </div>
+        )}
       </NeoCard>
 
       {/* Aniversaris */}
@@ -487,7 +505,7 @@ const Index = () => {
         )}
       </NeoCard>
 
-      {/* 🆕 CALENDARI NOMÉS DIES LABORABLES AMB POSICIONS CORRECTES */}
+      {/* CALENDARI NOMÉS DIES LABORABLES */}
       <NeoCard>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold capitalize">Dies laborables - {currentMonthText}</h2>
@@ -508,7 +526,6 @@ const Index = () => {
           </div>
         </div>
         
-        {/* 🆕 GRID AMB 5 COLUMNES (DL-DV) */}
         <div className="grid grid-cols-5 gap-3 mb-4">
           {["Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres"].map((day) => (
             <div key={day} className="text-center font-semibold text-sm text-muted-foreground py-2">
@@ -517,7 +534,6 @@ const Index = () => {
           ))}
         </div>
 
-        {/* Dies laborables */}
         <div className="grid grid-cols-5 gap-3">
           {calendarData.map((dayInfo, idx) => {
             if (!dayInfo.day || !dayInfo.date) {
