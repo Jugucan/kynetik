@@ -763,7 +763,7 @@ const Programs = () => {
                   <Input
                     id={`track-name-${index}`}
                     value={track.name}
-                    onChange={(e) => updateTrack(index, 'name , e.target.value)}
+                    onChange={(e) => updateTrack(index, 'name, e.target.value)}
                     placeholder={`Track ${index + 1}`}
                   />
                 </div>
