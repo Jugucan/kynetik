@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { Dumbbell, Plus, Star, Edit, Trash2, PlayCircle, History, X, Palette, Calendar } from "lucide-react";
+import { Dumbbell, Plus, Star, Edit, Trash2, PlayCircle, History, X, Palette, Calendar, Power, PowerOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePrograms } from "@/hooks/usePrograms";
 import {
@@ -33,6 +33,7 @@ const Programs = () => {
     loading, 
     addProgram,
     updateProgramColor,
+    toggleProgramActive,
     addSubprogram, 
     activateSubprogram, 
     updateTracks, 
@@ -52,6 +53,7 @@ const Programs = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteSubprogramConfirm, setShowDeleteSubprogramConfirm] = useState(false);
   const [showEditColor, setShowEditColor] = useState(false);
+  const [showSubprograms, setShowSubprograms] = useState(false);
   
   // Estats per formularis
   const [selectedProgramId, setSelectedProgramId] = useState<string>("");
@@ -92,6 +94,17 @@ const Programs = () => {
     }
   };
 
+  // 🆕 Funció per activar/desactivar programa sencer
+  const handleToggleProgramActive = async (programId: string, currentState: boolean) => {
+    const result = await toggleProgramActive(programId, !currentState);
+    
+    if (result.success) {
+      toast.success(currentState ? "Programa desactivat correctament!" : "Programa activat correctament!");
+    } else {
+      toast.error("Error al canviar l'estat del programa");
+    }
+  };
+
   // Funció per afegir subprograma
   const handleAddSubprogram = async () => {
     if (!subprogramForm.name || !selectedProgramId) {
@@ -103,9 +116,7 @@ const Programs = () => {
     
     if (result.success) {
       toast.success(`Subprograma ${subprogramForm.name} creat correctament!`);
-      setShowAddSubprogram(false);
       setSubprogramForm({ name: "" });
-      setSelectedProgramId("");
     } else {
       toast.error("Error al crear el subprograma");
     }
@@ -169,7 +180,7 @@ const Programs = () => {
     setEditingTracks(updated);
   };
 
-  // 🆕 Funció per obrir l'editor d'historial
+  // Funció per obrir l'editor d'historial
   const handleOpenHistory = (programId: string, subprogramId: string) => {
     const program = programs[programId];
     const subprogram = program.subprograms[subprogramId];
@@ -180,7 +191,7 @@ const Programs = () => {
     setShowHistory(true);
   };
 
-  // 🆕 Funció per afegir un nou llançament
+  // Funció per afegir un nou llançament
   const handleAddLaunch = () => {
     const newLaunch = {
       startDate: new Date().toISOString().split('T')[0],
@@ -189,20 +200,20 @@ const Programs = () => {
     setEditingLaunches([...editingLaunches, newLaunch]);
   };
 
-  // 🆕 Funció per actualitzar un llançament
+  // Funció per actualitzar un llançament
   const updateLaunch = (index: number, field: string, value: any) => {
     const updated = [...editingLaunches];
     updated[index] = { ...updated[index], [field]: value };
     setEditingLaunches(updated);
   };
 
-  // 🆕 Funció per eliminar un llançament
+  // Funció per eliminar un llançament
   const handleDeleteLaunch = (index: number) => {
     const updated = editingLaunches.filter((_, i) => i !== index);
     setEditingLaunches(updated);
   };
 
-  // 🆕 Funció per guardar l'historial editat
+  // Funció per guardar l'historial editat
   const handleSaveLaunches = async () => {
     const result = await updateLaunches(selectedProgramId, selectedSubprogramId, editingLaunches);
     
@@ -239,6 +250,12 @@ const Programs = () => {
     } else {
       toast.error("Error al eliminar el subprograma");
     }
+  };
+
+  // 🆕 Funció per obrir el modal de subprogrames
+  const handleOpenSubprograms = (programId: string) => {
+    setSelectedProgramId(programId);
+    setShowSubprograms(true);
   };
 
   if (loading) {
@@ -279,17 +296,27 @@ const Programs = () => {
           </Button>
         </NeoCard>
       ) : (
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Object.values(programs).map((program) => {
             const { subprogram: activeSubprogram, days: activeDays } = getActiveSubprogram(program.id);
+            const hasSubprograms = Object.keys(program.subprograms).length > 0;
+            const isWholeActive = program.isActive && !hasSubprograms;
+            const activeSinceDays = isWholeActive && program.activeSince 
+              ? Math.floor((new Date().getTime() - new Date(program.activeSince).getTime()) / (1000 * 60 * 60 * 24))
+              : 0;
             
             return (
-              <NeoCard key={program.id} className="relative">
+              <NeoCard 
+                key={program.id} 
+                className="relative cursor-pointer hover:shadow-neo-lg transition-all"
+                onClick={() => hasSubprograms && handleOpenSubprograms(program.id)}
+              >
                 <div className="flex items-start gap-4 mb-4">
                   <div 
-                    className="w-16 h-16 rounded-xl shadow-neo flex items-center justify-center text-white font-bold text-xl relative group cursor-pointer"
+                    className="w-16 h-16 rounded-xl shadow-neo flex items-center justify-center text-white font-bold text-xl relative group"
                     style={{ backgroundColor: program.color }}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setSelectedProgramId(program.id);
                       setEditingColor(program.color);
                       setShowEditColor(true);
@@ -302,25 +329,47 @@ const Programs = () => {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-xl font-semibold mb-1">{program.name}</h3>
-                    {activeSubprogram ? (
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Subprograma actiu: <span className="text-primary font-medium">{activeSubprogram.name}</span>
-                      </p>
+                    {hasSubprograms ? (
+                      <>
+                        {activeSubprogram ? (
+                          <>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              Subprograma actiu: <span className="text-primary font-medium">{activeSubprogram.name}</span>
+                            </p>
+                            <div className="inline-block px-3 py-1 rounded-full shadow-neo-inset text-sm">
+                              {activeDays} dies actiu
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {Object.keys(program.subprograms).length} subprogrames
+                          </p>
+                        )}
+                      </>
                     ) : (
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Cap subprograma actiu
-                      </p>
-                    )}
-                    {activeDays > 0 && (
-                      <div className="inline-block px-3 py-1 rounded-full shadow-neo-inset text-sm">
-                        {activeDays} dies actiu
-                      </div>
+                      <>
+                        {isWholeActive ? (
+                          <>
+                            <p className="text-sm text-primary font-medium mb-2">
+                              Programa actiu
+                            </p>
+                            <div className="inline-block px-3 py-1 rounded-full shadow-neo-inset text-sm">
+                              {activeSinceDays} dies actiu
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Sense subprogrames
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setSelectedProgramId(program.id);
                       setShowDeleteConfirm(true);
                     }}
@@ -330,103 +379,57 @@ const Programs = () => {
                   </Button>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-sm">Subprogrames</h4>
+                {/* Accions del programa */}
+                <div className="flex gap-2 pt-3 border-t">
+                  {hasSubprograms ? (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        setSelectedProgramId(program.id);
-                        setShowAddSubprogram(true);
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenSubprograms(program.id);
                       }}
                     >
-                      <Plus className="w-3 h-3 mr-1" />
-                      Afegir
+                      <Dumbbell className="w-3 h-3 mr-1" />
+                      Gestionar subprogrames
                     </Button>
-                  </div>
-
-                  {Object.keys(program.subprograms).length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Cap subprograma creat
-                    </p>
                   ) : (
-                    <div className="space-y-2">
-                      {Object.values(program.subprograms).map((subprogram) => {
-                        const isActive = activeSubprogram?.id === subprogram.id;
-                        const favoriteCount = subprogram.tracks.filter(t => t.favorite).length;
-                        
-                        return (
-                          <div
-                            key={subprogram.id}
-                            className={`p-3 rounded-lg border-2 ${
-                              isActive ? 'border-primary bg-primary/5' : 'border-border'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{subprogram.name}</span>
-                                {favoriteCount > 0 && (
-                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                                    {favoriteCount}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {isActive && (
-                                  <span className="text-xs px-2 py-1 rounded-full bg-primary text-primary-foreground">
-                                    Actiu
-                                  </span>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 text-red-500 hover:text-red-600"
-                                  onClick={() => {
-                                    setSelectedProgramId(program.id);
-                                    setSelectedSubprogramId(subprogram.id);
-                                    setShowDeleteSubprogramConfirm(true);
-                                  }}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
-                            
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleOpenEditTracks(program.id, subprogram.id)}
-                                className="flex-1"
-                              >
-                                <Edit className="w-3 h-3 mr-1" />
-                                Editar tracks
-                              </Button>
-                              
-                              {!isActive && (
-                                <Button size="sm"
-                                  onClick={() => handleActivateSubprogram(program.id, subprogram.id)}
-                                  className="flex-1"
-                                >
-                                  <PlayCircle className="w-3 h-3 mr-1" />
-                                  Activar
-                                </Button>
-                              )}
-                              
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleOpenHistory(program.id, subprogram.id)}
-                              >
-                                <History className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedProgramId(program.id);
+                          setShowAddSubprogram(true);
+                        }}
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Afegir subprograma
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleProgramActive(program.id, isWholeActive);
+                        }}
+                        variant={isWholeActive ? "destructive" : "default"}
+                      >
+                        {isWholeActive ? (
+                          <>
+                            <PowerOff className="w-3 h-3 mr-1" />
+                            Desactivar
+                          </>
+                        ) : (
+                          <>
+                            <Power className="w-3 h-3 mr-1" />
+                            Activar
+                          </>
+                        )}
+                      </Button>
+                    </>
                   )}
                 </div>
               </NeoCard>
@@ -434,6 +437,136 @@ const Programs = () => {
           })}
         </div>
       )}
+
+      {/* 🆕 Diàleg: Gestió de subprogrames */}
+      <Dialog open={showSubprograms} onOpenChange={setShowSubprograms}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div 
+                className="w-10 h-10 rounded-lg shadow-neo flex items-center justify-center text-white font-bold"
+                style={{ backgroundColor: selectedProgramId && programs[selectedProgramId]?.color }}
+              >
+                {selectedProgramId && programs[selectedProgramId]?.code}
+              </div>
+              Subprogrames de {selectedProgramId && programs[selectedProgramId]?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Gestiona els subprogrames d'aquest programa
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold">Subprogrames</h4>
+              <Button
+                size="sm"
+                onClick={() => setShowAddSubprogram(true)}
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Afegir subprograma
+              </Button>
+            </div>
+
+            {selectedProgramId && Object.keys(programs[selectedProgramId]?.subprograms || {}).length === 0 ? (
+              <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                <Dumbbell className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                <p className="text-muted-foreground mb-2">Cap subprograma creat</p>
+                <Button
+                  size="sm"
+                  onClick={() => setShowAddSubprogram(true)}
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Crear primer subprograma
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-3 max-h-[50vh] overflow-y-auto pr-2">
+                {selectedProgramId && Object.values(programs[selectedProgramId]?.subprograms || {}).map((subprogram) => {
+                  const isActive = getActiveSubprogram(selectedProgramId).subprogram?.id === subprogram.id;
+                  const favoriteCount = subprogram.tracks.filter(t => t.favorite).length;
+                  const activeDays = isActive ? getActiveSubprogram(selectedProgramId).days : 0;
+                  
+                  return (
+                    <div
+                      key={subprogram.id}
+                      className={`p-4 rounded-lg border-2 ${
+                        isActive ? 'border-primary bg-primary/5' : 'border-border'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-lg">{subprogram.name}</span>
+                          {favoriteCount > 0 && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                              {favoriteCount}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isActive && (
+                            <span className="text-xs px-2 py-1 rounded-full bg-primary text-primary-foreground">
+                              Actiu · {activeDays} dies
+                            </span>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-red-500 hover:text-red-600"
+                            onClick={() => {
+                              setSelectedSubprogramId(subprogram.id);
+                              setShowDeleteSubprogramConfirm(true);
+                            }}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenEditTracks(selectedProgramId, subprogram.id)}
+                        >
+                          <Edit className="w-3 h-3 mr-1" />
+                          Tracks
+                        </Button>
+                        
+                        {!isActive && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleActivateSubprogram(selectedProgramId, subprogram.id)}
+                          >
+                            <PlayCircle className="w-3 h-3 mr-1" />
+                            Activar
+                          </Button>
+                        )}
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenHistory(selectedProgramId, subprogram.id)}
+                        >
+                          <History className="w-3 h-3 mr-1" />
+                          Historial
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setShowSubprograms(false)}>
+              Tancar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Diàleg: Afegir programa */}
       <Dialog open={showAddProgram} onOpenChange={setShowAddProgram}>
@@ -578,7 +711,10 @@ const Programs = () => {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddSubprogram(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowAddSubprogram(false);
+              setSubprogramForm({ name: "" });
+            }}>
               Cancel·lar
             </Button>
             <Button onClick={handleAddSubprogram}>
@@ -627,7 +763,7 @@ const Programs = () => {
                   <Input
                     id={`track-name-${index}`}
                     value={track.name}
-                    onChange={(e) => updateTrack(index, 'name', e.target.value)}
+                    onChange={(e) => updateTrack(index, 'name , e.target.value)}
                     placeholder={`Track ${index + 1}`}
                   />
                 </div>
@@ -666,7 +802,7 @@ const Programs = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 🆕 Diàleg: Editar historial de llançaments */}
+      {/* Diàleg: Editar historial de llançaments */}
       <Dialog open={showHistory} onOpenChange={setShowHistory}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
