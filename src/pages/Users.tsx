@@ -13,6 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useNavigate } from "react-router-dom"; // <-- NOU: Importem useNavigate
 
 const Users = () => {
   const { users, loading, addUser, updateUser, deleteUser } = useUsers();
@@ -23,7 +24,14 @@ const Users = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
-  const filteredUsers = users.filter(user =>
+  const navigate = useNavigate(); // <-- NOU: Inicialitzem useNavigate
+
+  // 1. Apliquem l'ordenació alfabètica abans de filtrar
+  const sortedUsers = [...users].sort((a, b) => 
+    (a.name || '').localeCompare(b.name || '', 'ca', { sensitivity: 'base' }) // 'ca' per català, 'sensitivity: base' per ignorar accents
+  );
+
+  const filteredUsers = sortedUsers.filter(user => // <-- Usem sortedUsers
     (user.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (user.email || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -50,6 +58,11 @@ const Users = () => {
   const handleAddNew = () => {
     setEditingUser(null);
     setIsModalOpen(true);
+  };
+  
+  // NOU: Funció per anar a la fitxa de detall
+  const handleViewUserDetail = (userId: string) => {
+    navigate(`/users/${userId}`);
   };
 
   // FUNCIÓ PER IMPORTAR USUARIS DES D'EXCEL
@@ -121,7 +134,7 @@ const Users = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
-      {/* Capçalera amb botons */}
+      {/* Capçalera amb botons (Sense Canvis) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
@@ -164,7 +177,7 @@ const Users = () => {
         </div>
       </div>
 
-      {/* Instruccions desplegables */}
+      {/* Instruccions desplegables (Sense Canvis) */}
       <Collapsible open={showInstructions} onOpenChange={setShowInstructions}>
         <CollapsibleTrigger asChild>
           <Button 
@@ -205,7 +218,7 @@ const Users = () => {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Cercador */}
+      {/* Cercador (Sense Canvis) */}
       <NeoCard>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
@@ -218,7 +231,7 @@ const Users = () => {
         </div>
       </NeoCard>
 
-      {/* Llista d'usuaris */}
+      {/* Llista d'usuaris (AMB CANVIS DE NAVEGACIÓ) */}
       <NeoCard>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
@@ -231,7 +244,9 @@ const Users = () => {
             {filteredUsers.map((user) => (
               <div
                 key={user.id}
-                className={`p-3 sm:p-4 rounded-xl shadow-neo transition-all border-2 ${
+                // <-- NOU: Fem la targeta clicable per anar al detall
+                onClick={() => handleViewUserDetail(user.id)}
+                className={`p-3 sm:p-4 rounded-xl shadow-neo transition-all border-2 cursor-pointer hover:shadow-neo-lg hover:scale-[1.005] ${
                   user.center === "Arbúcies" 
                     ? "bg-blue-500/20 border-blue-500/30" 
                     : "bg-green-500/20 border-green-500/30"
@@ -253,7 +268,7 @@ const Users = () => {
                         <p className="text-xs sm:text-sm font-medium text-primary">{user.age} anys</p>
                       </div>
                       
-                      {/* Botons d'acció - Responsive */}
+                      {/* Botons d'acció - Hem d'aturar la propagació del clic! */}
                       <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                         <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs font-medium shadow-neo-inset ${
                           user.center === "Arbúcies" 
@@ -262,11 +277,15 @@ const Users = () => {
                         }`}>
                           {user.center}
                         </span>
+                        {/* ⚠️ IMPORTANT: Afegim e.stopPropagation() per evitar que s'obri el detall en clicar Editar o Eliminar */}
                         <Button
                           size="icon"
                           variant="outline"
                           className="h-7 w-7 sm:h-8 sm:w-8"
-                          onClick={() => handleEditUser(user)}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Evita el clic del contenidor principal
+                            handleEditUser(user);
+                          }}
                         >
                           <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
@@ -274,7 +293,10 @@ const Users = () => {
                           size="icon"
                           variant="outline"
                           className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                          onClick={() => setDeletingUserId(user.id)}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Evita el clic del contenidor principal
+                            setDeletingUserId(user.id);
+                          }}
                         >
                           <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
@@ -311,7 +333,7 @@ const Users = () => {
         )}
       </NeoCard>
 
-      {/* Modal d'edició/creació */}
+      {/* Modal d'edició/creació (Sense Canvis) */}
       <UserFormModal
         open={isModalOpen}
         onClose={() => {
@@ -322,7 +344,7 @@ const Users = () => {
         user={editingUser}
       />
 
-      {/* Modal de confirmació d'eliminació */}
+      {/* Modal de confirmació d'eliminació (Sense Canvis) */}
       <AlertDialog open={!!deletingUserId} onOpenChange={() => setDeletingUserId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
