@@ -132,38 +132,69 @@ const Users = () => {
             }
           }
 
-          const userData: Omit<User, 'id'> = {
-            name: importedUser.name || '',
-            email: importedUser.email || '',
-            phone: importedUser.phone || '',
-            birthday: importedUser.birthday || '',
-            age: importedUser.age || 0,
-            center: importedUser.center || 'Sant Hilari',
-            preferredPrograms: Array.isArray(importedUser.preferredPrograms) 
-              ? importedUser.preferredPrograms 
-              : [],
-            profileImageUrl: importedUser.profileImageUrl || '',
-            avatar: importedUser.profileImageUrl || importedUser.avatar || '',
-            notes: importedUser.notes || ''
-          };
-
-          if (!userData.name) {
+          if (!importedUser.name) {
             skippedCount++;
             continue;
           }
 
           if (existingUser) {
-            const combinedNotes = [
-              existingUser.notes,
-              userData.notes
-            ].filter(n => n).join('\n---\n');
+            // 🆕 FUSIÓ INTEL·LIGENT: Només actualitzem camps buits
+            const mergedData: Partial<User> = {};
             
-            await updateUser(existingUser.id, {
-              ...userData,
-              notes: combinedNotes
-            });
+            // Nom: Mantenim l'existent (més fiable)
+            mergedData.name = existingUser.name || importedUser.name;
+            
+            // Email: Mantenim l'existent si n'hi ha, sinó l'importat
+            mergedData.email = existingUser.email || importedUser.email || '';
+            
+            // Telèfon: Mantenim l'existent si n'hi ha
+            mergedData.phone = existingUser.phone || importedUser.phone || '';
+            
+            // Aniversari: Mantenim l'existent si n'hi ha
+            mergedData.birthday = existingUser.birthday || importedUser.birthday || '';
+            
+            // Centre: Mantenim l'existent (pot haver estat corregit manualment)
+            mergedData.center = existingUser.center || importedUser.center || 'Sant Hilari';
+            
+            // Foto de perfil: Si l'importada és millor (de Deporsite), l'actualitzem
+            if (importedUser.profileImageUrl && importedUser.profileImageUrl.includes('candelfi.deporsite.net')) {
+              mergedData.profileImageUrl = importedUser.profileImageUrl;
+              mergedData.avatar = importedUser.profileImageUrl;
+            } else {
+              mergedData.profileImageUrl = existingUser.profileImageUrl || importedUser.profileImageUrl || '';
+              mergedData.avatar = existingUser.avatar || existingUser.profileImageUrl || importedUser.avatar || '';
+            }
+            
+            // Programes preferits: COMBINEM sense duplicats
+            const existingPrograms = Array.isArray(existingUser.preferredPrograms) ? existingUser.preferredPrograms : [];
+            const importedPrograms = Array.isArray(importedUser.preferredPrograms) ? importedUser.preferredPrograms : [];
+            mergedData.preferredPrograms = [...new Set([...existingPrograms, ...importedPrograms])];
+            
+            // Notes: FUSIONEM sempre
+            const existingNotes = existingUser.notes || '';
+            const importedNotes = importedUser.notes || '';
+            const notesToMerge = [existingNotes, importedNotes].filter(n => n && n.trim().length > 0);
+            mergedData.notes = notesToMerge.join('\n\n---\n\n');
+            
+            await updateUser(existingUser.id, mergedData);
             updatedCount++;
           } else {
+            // Usuari nou: creem amb totes les dades
+            const userData: Omit<User, 'id'> = {
+              name: importedUser.name || '',
+              email: importedUser.email || '',
+              phone: importedUser.phone || '',
+              birthday: importedUser.birthday || '',
+              age: importedUser.age || 0,
+              center: importedUser.center || 'Sant Hilari',
+              preferredPrograms: Array.isArray(importedUser.preferredPrograms) 
+                ? importedUser.preferredPrograms 
+                : [],
+              profileImageUrl: importedUser.profileImageUrl || '',
+              avatar: importedUser.profileImageUrl || importedUser.avatar || '',
+              notes: importedUser.notes || ''
+            };
+            
             await addUser(userData);
             newCount++;
           }
