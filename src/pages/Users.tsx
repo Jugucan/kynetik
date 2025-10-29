@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { Users as UsersIcon, Search, Plus, Pencil, Trash2, Upload, Info, ChevronDown, ChevronUp, MapPin } from "lucide-react";
+import { Users as UsersIcon, Search, Plus, Pencil, Trash2, Upload, Info, ChevronDown, ChevronUp, MapPin, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUsers, User } from "@/hooks/useUsers"; 
@@ -8,14 +8,14 @@ import { UserFormModal } from "@/components/UserFormModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { UserDetailModal } from "@/components/UserDetailModal";
-
-// ⬇️ NOU: Importem els components Select
 import {
     Select,
     SelectContent,
@@ -24,11 +24,9 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-
 const Users = () => {
   const { users, loading, addUser, updateUser, deleteUser } = useUsers();
   const [searchQuery, setSearchQuery] = useState("");
-  // ⬇️ NOU: Estat per guardar el filtre de centre
   const [centerFilter, setCenterFilter] = useState<string>("all"); 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -36,23 +34,19 @@ const Users = () => {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [showDeporsiteInstructions, setShowDeporsiteInstructions] = useState(false);
 
-  // 1. Apliquem l'ordenació alfabètica (Sense Canvis)
+  // Ordenació alfabètica
   const sortedUsers = [...users].sort((a, b) => 
     (a.name || '').localeCompare(b.name || '', 'ca', { sensitivity: 'base' })
   );
 
-  // 2. ⬇️ MODIFICACIÓ CLAU: Apliquem el filtratge
+  // Filtratge
   const filteredUsers = sortedUsers.filter(user => {
-    // 2.1. Filtre per Centre
     const matchesCenter = centerFilter === "all" || 
                           (user.center || '').toLowerCase() === centerFilter.toLowerCase();
-
-    // 2.2. Filtre per Cerca de Text
     const matchesSearch = (user.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (user.email || '').toLowerCase().includes(searchQuery.toLowerCase());
-
-    // Només mostrem si compleix amb AMBDÓS filtres
     return matchesCenter && matchesSearch;
   });
 
@@ -89,7 +83,125 @@ const Users = () => {
     setIsModalOpen(true);
   };
 
-  // FUNCIÓ PER IMPORTAR USUARIS DES D'EXCEL (Sense Canvis)
+  // 🆕 FUNCIÓ PER IMPORTAR USUARIS DES DE DEPORSITE JSON
+  const handleImportDeporsite = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    toast.info("Processant fitxer de Deporsite...");
+
+    try {
+      const text = await file.text();
+      const jsonData = JSON.parse(text);
+      
+      if (!jsonData.users || !Array.isArray(jsonData.users)) {
+        toast.error("Format de fitxer incorrecte");
+        return;
+      }
+
+      const importedUsers = jsonData.users;
+      let newCount = 0;
+      let updatedCount = 0;
+      let skippedCount = 0;
+
+      for (const importedUser of importedUsers) {
+        try {
+          // Busquem si l'usuari ja existeix per email
+          let existingUser = null;
+          
+          if (importedUser.email) {
+            // Busquem per email a Firebase
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('email', '==', importedUser.email));
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+              existingUser = {
+                id: querySnapshot.docs[0].id,
+                ...querySnapshot.docs[0].data()
+              } as User;
+            }
+          }
+          
+          // Si no trobem per email, busquem per nom (menys fiable)
+          if (!existingUser && importedUser.name) {
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('name', '==', importedUser.name));
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+              existingUser = {
+                id: querySnapshot.docs[0].id,
+                ...querySnapshot.docs[0].data()
+              } as User;
+            }
+          }
+
+          // Preparem les dades de l'usuari
+          const userData: Omit<User, 'id'> = {
+            name: importedUser.name || '',
+            email: importedUser.email || '',
+            phone: importedUser.phone || '',
+            birthday: importedUser.birthday || '',
+            age: importedUser.age || 0,
+            center: importedUser.center || 'Sant Hilari',
+            preferredPrograms: Array.isArray(importedUser.preferredPrograms) 
+              ? importedUser.preferredPrograms 
+              : [],
+            profileImageUrl: importedUser.profileImageUrl || '',
+            avatar: importedUser.profileImageUrl || importedUser.avatar || '',
+            notes: importedUser.notes || ''
+          };
+
+          if (!userData.name) {
+            skippedCount++;
+            continue;
+          }
+
+          if (existingUser) {
+            // Actualitzem l'usuari existent
+            // Fusionem les notes per mantenir l'historial
+            const combinedNotes = [
+              existingUser.notes,
+              userData.notes
+            ].filter(n => n).join('\n---\n');
+            
+            await updateUser(existingUser.id, {
+              ...userData,
+              notes: combinedNotes
+            });
+            updatedCount++;
+          } else {
+            // Creem nou usuari
+            await addUser(userData);
+            newCount++;
+          }
+
+        } catch (error) {
+          console.error('Error processant usuari:', importedUser.name, error);
+          skippedCount++;
+        }
+      }
+
+      // Missatge de resum
+      const messages = [];
+      if (newCount > 0) messages.push(`${newCount} nous usuaris`);
+      if (updatedCount > 0) messages.push(`${updatedCount} actualitzats`);
+      if (skippedCount > 0) messages.push(`${skippedCount} omesos`);
+      
+      toast.success(`✅ Importació completada! ${messages.join(', ')}`);
+
+    } catch (error) {
+      console.error('Error llegint fitxer JSON:', error);
+      toast.error('Error al processar el fitxer de Deporsite');
+    } finally {
+      setIsImporting(false);
+      event.target.value = '';
+    }
+  };
+
+  // FUNCIÓ PER IMPORTAR USUARIS DES D'EXCEL
   const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -158,7 +270,7 @@ const Users = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
-      {/* Capçalera amb botons (Sense Canvis) */}
+      {/* Capçalera amb botons */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
@@ -169,7 +281,29 @@ const Users = () => {
         </div>
         
         <div className="flex gap-2">
-          {/* Botó Importar Excel (Sense Canvis) */}
+          {/* 🆕 Botó Importar Deporsite */}
+          <label htmlFor="deporsite-upload" className="flex-1 sm:flex-none">
+            <Button 
+              className="shadow-neo hover:shadow-neo-sm gap-2 w-full sm:w-auto bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white" 
+              disabled={isImporting}
+              asChild
+            >
+              <span className="cursor-pointer">
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">{isImporting ? "Important..." : "Importar Deporsite"}</span>
+                <span className="sm:hidden">Deporsite</span>
+              </span>
+            </Button>
+          </label>
+          <input
+            id="deporsite-upload"
+            type="file"
+            accept=".json"
+            onChange={handleImportDeporsite}
+            className="hidden"
+          />
+
+          {/* Botó Importar Excel */}
           <label htmlFor="excel-upload" className="flex-1 sm:flex-none">
             <Button 
               className="shadow-neo hover:shadow-neo-sm gap-2 w-full sm:w-auto" 
@@ -192,7 +326,7 @@ const Users = () => {
             className="hidden"
           />
 
-          {/* Botó Afegir usuari (Sense Canvis) */}
+          {/* Botó Afegir usuari */}
           <Button onClick={handleAddNew} className="shadow-neo hover:shadow-neo-sm gap-2 flex-1 sm:flex-none">
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Afegir usuari</span>
@@ -201,7 +335,43 @@ const Users = () => {
         </div>
       </div>
 
-      {/* Instruccions desplegables (Sense Canvis) */}
+      {/* 🆕 Instruccions Deporsite */}
+      <Collapsible open={showDeporsiteInstructions} onOpenChange={setShowDeporsiteInstructions}>
+        <CollapsibleTrigger asChild>
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 p-2 h-auto"
+          >
+            <Info className="w-4 h-4" />
+            <span className="text-sm">Com sincronitzar amb Deporsite</span>
+            {showDeporsiteInstructions ? <ChevronUp className="w-4 h-4 ml-auto" /> : <ChevronDown className="w-4 h-4 ml-auto" />}
+          </Button>
+        </CollapsibleTrigger>
+        
+        <CollapsibleContent>
+          <NeoCard className="bg-red-50/50 mt-2">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-red-900 mb-2 text-sm sm:text-base">Pas a pas per sincronitzar</h3>
+                <ol className="text-xs sm:text-sm text-red-700 space-y-2 list-decimal list-inside">
+                  <li>Obre l'<strong>extensió de Chrome "Deporsite User Sync"</strong></li>
+                  <li>Inicia sessió a <strong>candelfi.deporsite.net</strong></li>
+                  <li>Clica l'extensió i tria les dates a sincronitzar</li>
+                  <li>Descarrega el fitxer <strong>deporsite-users-XXXX.json</strong></li>
+                  <li>Clica <strong>"Importar Deporsite"</strong> aquí dalt</li>
+                  <li>Selecciona el fitxer JSON descarregat</li>
+                </ol>
+                <p className="text-xs text-red-600 mt-3 bg-red-100 p-2 rounded">
+                  ✨ <strong>Màgia automàtica:</strong> Els usuaris nous es crearan, els existents s'actualitzaran, i el centre (Arbúcies/Sant Hilari) s'assignarà segons l'horari de les sessions!
+                </p>
+              </div>
+            </div>
+          </NeoCard>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Instruccions Excel */}
       <Collapsible open={showInstructions} onOpenChange={setShowInstructions}>
         <CollapsibleTrigger asChild>
           <Button 
@@ -233,19 +403,14 @@ const Users = () => {
                   <li><strong>URL Foto Perfil</strong> (opcional)</li>
                   <li><strong>Notes</strong> (opcional)</li>
                 </ul>
-                <p className="text-xs text-blue-600 mt-2">
-                  💡 <strong>Important:</strong> Ja no cal la columna "Edat", es calcularà automàticament!
-                </p>
               </div>
             </div>
           </NeoCard>
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ⬇️ MODIFICACIÓ CLAU: Cercador i Filtre en paral·lel */}
+      {/* Cercador i Filtre */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        
-        {/* Filtre per Centre */}
         <div className="sm:col-span-1">
             <NeoCard className="h-full">
                 <Select value={centerFilter} onValueChange={setCenterFilter}>
@@ -257,13 +422,11 @@ const Users = () => {
                         <SelectItem value="all">Tots els Centres</SelectItem>
                         <SelectItem value="Arbúcies">Arbúcies</SelectItem>
                         <SelectItem value="Sant Hilari">Sant Hilari</SelectItem>
-                        {/* ℹ️ Pots afegir més centres aquí si en tens! */}
                     </SelectContent>
                 </Select>
             </NeoCard>
         </div>
 
-        {/* Cercador de Text */}
         <div className="sm:col-span-2">
             <NeoCard className="h-full">
                 <div className="relative">
@@ -279,7 +442,7 @@ const Users = () => {
         </div>
       </div>
 
-      {/* Llista d'usuaris (Sense Canvis en el map) */}
+      {/* Llista d'usuaris */}
       <NeoCard>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
@@ -300,14 +463,12 @@ const Users = () => {
                 }`}
               >
                 <div className="flex items-start gap-3 sm:gap-4">
-                  {/* Foto de perfil */}
                   <img 
                     src={user.profileImageUrl || user.avatar} 
                     alt={user.name}
                     className="w-12 h-12 sm:w-16 sm:h-16 rounded-full shadow-neo object-cover flex-shrink-0"
                   />
                   
-                  {/* Informació de l'usuari */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <div className="flex-1 min-w-0">
@@ -315,7 +476,6 @@ const Users = () => {
                         <p className="text-xs sm:text-sm font-medium text-primary">{user.age} anys</p>
                       </div>
                       
-                      {/* Botons d'acció */}
                       <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                         <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs font-medium shadow-neo-inset ${
                           user.center === "Arbúcies" 
@@ -351,7 +511,6 @@ const Users = () => {
                     
                     <p className="text-xs sm:text-sm text-muted-foreground truncate mb-2">{user.email}</p>
                     
-                    {/* Informació extra */}
                     <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm">
                       <span className="text-muted-foreground">
                         🎂 {user.birthday}
@@ -365,7 +524,6 @@ const Users = () => {
                       )}
                     </div>
                     
-                    {/* Notes */}
                     {user.notes && (
                       <p className="text-[10px] sm:text-xs italic text-gray-500 mt-2 p-2 rounded-md bg-background/50 border shadow-neo-inset line-clamp-2">
                         📝 <strong>Notes:</strong> {user.notes}
@@ -379,7 +537,7 @@ const Users = () => {
         )}
       </NeoCard>
 
-      {/* Modals (Sense Canvis) */}
+      {/* Modals */}
       <UserDetailModal
         user={viewingUser}
         isOpen={!!viewingUser}
