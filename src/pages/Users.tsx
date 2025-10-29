@@ -36,12 +36,10 @@ const Users = () => {
   const [showInstructions, setShowInstructions] = useState(false);
   const [showDeporsiteInstructions, setShowDeporsiteInstructions] = useState(false);
 
-  // Ordenació alfabètica
   const sortedUsers = [...users].sort((a, b) => 
     (a.name || '').localeCompare(b.name || '', 'ca', { sensitivity: 'base' })
   );
 
-  // Filtratge
   const filteredUsers = sortedUsers.filter(user => {
     const matchesCenter = centerFilter === "all" || 
                           (user.center || '').toLowerCase() === centerFilter.toLowerCase();
@@ -83,7 +81,6 @@ const Users = () => {
     setIsModalOpen(true);
   };
 
-  // 🆕 FUNCIÓ PER IMPORTAR USUARIS DES DE DEPORSITE JSON
   const handleImportDeporsite = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -107,11 +104,9 @@ const Users = () => {
 
       for (const importedUser of importedUsers) {
         try {
-          // Busquem si l'usuari ja existeix per email
           let existingUser = null;
           
           if (importedUser.email) {
-            // Busquem per email a Firebase
             const usersRef = collection(db, 'users');
             const q = query(usersRef, where('email', '==', importedUser.email));
             const querySnapshot = await getDocs(q);
@@ -124,7 +119,6 @@ const Users = () => {
             }
           }
           
-          // Si no trobem per email, busquem per nom (menys fiable)
           if (!existingUser && importedUser.name) {
             const usersRef = collection(db, 'users');
             const q = query(usersRef, where('name', '==', importedUser.name));
@@ -138,7 +132,6 @@ const Users = () => {
             }
           }
 
-          // Preparem les dades de l'usuari
           const userData: Omit<User, 'id'> = {
             name: importedUser.name || '',
             email: importedUser.email || '',
@@ -160,8 +153,6 @@ const Users = () => {
           }
 
           if (existingUser) {
-            // Actualitzem l'usuari existent
-            // Fusionem les notes per mantenir l'historial
             const combinedNotes = [
               existingUser.notes,
               userData.notes
@@ -173,7 +164,6 @@ const Users = () => {
             });
             updatedCount++;
           } else {
-            // Creem nou usuari
             await addUser(userData);
             newCount++;
           }
@@ -184,7 +174,6 @@ const Users = () => {
         }
       }
 
-      // Missatge de resum
       const messages = [];
       if (newCount > 0) messages.push(`${newCount} nous usuaris`);
       if (updatedCount > 0) messages.push(`${updatedCount} actualitzats`);
@@ -201,7 +190,6 @@ const Users = () => {
     }
   };
 
-  // FUNCIÓ PER IMPORTAR USUARIS DES D'EXCEL
   const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -270,7 +258,6 @@ const Users = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
-      {/* Capçalera amb botons */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
@@ -281,7 +268,6 @@ const Users = () => {
         </div>
         
         <div className="flex gap-2">
-          {/* 🆕 Botó Importar Deporsite */}
           <label htmlFor="deporsite-upload" className="flex-1 sm:flex-none">
             <Button 
               className="shadow-neo hover:shadow-neo-sm gap-2 w-full sm:w-auto bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white" 
@@ -303,7 +289,6 @@ const Users = () => {
             className="hidden"
           />
 
-          {/* Botó Importar Excel */}
           <label htmlFor="excel-upload" className="flex-1 sm:flex-none">
             <Button 
               className="shadow-neo hover:shadow-neo-sm gap-2 w-full sm:w-auto" 
@@ -326,7 +311,6 @@ const Users = () => {
             className="hidden"
           />
 
-          {/* Botó Afegir usuari */}
           <Button onClick={handleAddNew} className="shadow-neo hover:shadow-neo-sm gap-2 flex-1 sm:flex-none">
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Afegir usuari</span>
@@ -335,7 +319,6 @@ const Users = () => {
         </div>
       </div>
 
-      {/* 🆕 Instruccions Deporsite */}
       <Collapsible open={showDeporsiteInstructions} onOpenChange={setShowDeporsiteInstructions}>
         <CollapsibleTrigger asChild>
           <Button 
@@ -371,7 +354,6 @@ const Users = () => {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Instruccions Excel */}
       <Collapsible open={showInstructions} onOpenChange={setShowInstructions}>
         <CollapsibleTrigger asChild>
           <Button 
@@ -396,8 +378,8 @@ const Users = () => {
                 <ul className="text-xs text-blue-600 space-y-1 list-disc list-inside">
                   <li><strong>Nom Complet</strong> (obligatori)</li>
                   <li><strong>Gimnàs</strong> (Arbúcies o Sant Hilari)</li>
-                  <li><strong>Data Aniversari</strong> (DD/MM/YYYY) - L'edat es calcularà automàticament ✨</li>
-                  <li><strong>Sessions Habituals</strong> (separats per comes: BP, BC, BB)</li>
+                  <li><strong>Data Aniversari</strong> (DD/MM/YYYY)</li>
+                  <li><strong>Sessions Habituals</strong> (separats per comes)</li>
                   <li><strong>Telèfon</strong></li>
                   <li><strong>Email</strong></li>
                   <li><strong>URL Foto Perfil</strong> (opcional)</li>
@@ -409,7 +391,6 @@ const Users = () => {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Cercador i Filtre */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="sm:col-span-1">
             <NeoCard className="h-full">
@@ -442,7 +423,7 @@ const Users = () => {
         </div>
       </div>
 
-      {/* Llista d'usuaris */}
+      {/* 🆕 GRID RESPONSIVE MILLORAT PER MÒBIL */}
       <NeoCard>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
@@ -451,85 +432,96 @@ const Users = () => {
             No s'han trobat usuaris amb els filtres aplicats.
           </div>
         ) : (
-          <div className="space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredUsers.map((user) => (
               <div
                 key={user.id}
                 onClick={() => handleViewUser(user)}
-                className={`p-3 sm:p-4 rounded-xl shadow-neo transition-all border-2 cursor-pointer hover:shadow-neo-lg hover:scale-[1.005] ${
+                className={`p-4 rounded-xl shadow-neo transition-all border-2 cursor-pointer hover:shadow-neo-lg hover:scale-[1.02] flex flex-col ${
                   user.center === "Arbúcies" 
                     ? "bg-blue-500/20 border-blue-500/30" 
                     : "bg-green-500/20 border-green-500/30"
                 }`}
               >
-                <div className="flex items-start gap-3 sm:gap-4">
+                {/* Foto més gran i centrada */}
+                <div className="flex justify-center mb-3">
                   <img 
                     src={user.profileImageUrl || user.avatar} 
                     alt={user.name}
-                    className="w-12 h-12 sm:w-16 sm:h-16 rounded-full shadow-neo object-cover flex-shrink-0"
+                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-full shadow-neo object-cover"
                   />
+                </div>
+                
+                {/* Nom i edat centrats */}
+                <div className="text-center mb-3">
+                  <h3 className="font-semibold text-lg mb-1 line-clamp-2">{user.name}</h3>
+                  <p className="text-sm font-medium text-primary">{user.age} anys</p>
                   
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-base sm:text-lg truncate">{user.name}</h3>
-                        <p className="text-xs sm:text-sm font-medium text-primary">{user.age} anys</p>
-                      </div>
-                      
-                      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-                        <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs font-medium shadow-neo-inset ${
-                          user.center === "Arbúcies" 
-                            ? "bg-blue-500/30 text-blue-700" 
-                            : "bg-green-500/30 text-green-700"
-                        }`}>
-                          {user.center}
+                  {/* Badge del centre */}
+                  <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium shadow-neo-inset ${
+                    user.center === "Arbúcies" 
+                      ? "bg-blue-500/30 text-blue-700" 
+                      : "bg-green-500/30 text-green-700"
+                  }`}>
+                    {user.center}
+                  </span>
+                </div>
+                
+                {/* Informació de contacte */}
+                <div className="space-y-2 text-sm mb-3 flex-grow">
+                  {user.email && (
+                    <p className="text-muted-foreground truncate text-center">
+                      ✉️ {user.email}
+                    </p>
+                  )}
+                  {user.phone && (
+                    <p className="text-muted-foreground text-center">
+                      📞 {user.phone}
+                    </p>
+                  )}
+                  {user.birthday && (
+                    <p className="text-muted-foreground text-center">
+                      🎂 {user.birthday}
+                    </p>
+                  )}
+                  
+                  {/* Programes preferits */}
+                  {user.preferredPrograms && user.preferredPrograms.length > 0 && (
+                    <div className="flex flex-wrap gap-1 justify-center mt-2">
+                      {user.preferredPrograms.map((program, idx) => (
+                        <span key={idx} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary-foreground shadow-neo-inset">
+                          {program}
                         </span>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="h-7 w-7 sm:h-8 sm:w-8"
-                          onClick={(e) => {
-                            e.stopPropagation(); 
-                            handleEditUser(user);
-                          }}
-                        >
-                          <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                          onClick={(e) => {
-                            e.stopPropagation(); 
-                            setDeletingUserId(user.id);
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                        </Button>
-                      </div>
+                      ))}
                     </div>
-                    
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate mb-2">{user.email}</p>
-                    
-                    <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm">
-                      <span className="text-muted-foreground">
-                        🎂 {user.birthday}
-                      </span>
-                      <span className="text-muted-foreground truncate">📞 {user.phone}</span>
-                      
-                      {user.preferredPrograms && user.preferredPrograms.length > 0 && (
-                        <span className="font-semibold text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary-foreground shadow-neo-inset truncate">
-                          🏋️‍♀️ {user.preferredPrograms.join(', ')}
-                        </span>
-                      )}
-                    </div>
-                    
-                    {user.notes && (
-                      <p className="text-[10px] sm:text-xs italic text-gray-500 mt-2 p-2 rounded-md bg-background/50 border shadow-neo-inset line-clamp-2">
-                        📝 <strong>Notes:</strong> {user.notes}
-                      </p>
-                    )}
-                  </div>
+                  )}
+                </div>
+                
+                {/* Botons d'acció */}
+                <div className="flex gap-2 pt-3 border-t">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation(); 
+                      handleEditUser(user);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation(); 
+                      setDeletingUserId(user.id);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             ))}
@@ -537,7 +529,6 @@ const Users = () => {
         )}
       </NeoCard>
 
-      {/* Modals */}
       <UserDetailModal
         user={viewingUser}
         isOpen={!!viewingUser}
