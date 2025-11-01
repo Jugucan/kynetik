@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Mail, Phone, Cake, MapPin, Calendar, TrendingUp, Award, Clock, Info } from 'lucide-react';
+import { Pencil, Mail, Phone, Cake, MapPin, Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus } from 'lucide-react';
 import { useMemo } from 'react';
 
 interface UserDetailModalProps {
@@ -33,7 +33,6 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit }: UserDetailMod
             programCount[session.activity] = (programCount[session.activity] || 0) + 1;
         });
         
-        // Ordenem per quantitat
         const programStats = Object.entries(programCount)
             .sort((a, b) => b[1] - a[1])
             .map(([name, count]) => ({ name, count }));
@@ -44,31 +43,54 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit }: UserDetailMod
             centerCount[session.center] = (centerCount[session.center] || 0) + 1;
         });
         
-        // Sessions per mes (últims 12 mesos)
-        const now = new Date();
-        const monthlyCount: { [key: string]: number } = {};
+        // 🆕 SESSIONS PER ANY
+        const yearlyCount: { [key: string]: number } = {};
         sessions.forEach(session => {
-            const sessionDate = new Date(session.date);
-            const monthKey = `${sessionDate.getFullYear()}-${String(sessionDate.getMonth() + 1).padStart(2, '0')}`;
-            monthlyCount[monthKey] = (monthlyCount[monthKey] || 0) + 1;
+            const year = new Date(session.date).getFullYear().toString();
+            yearlyCount[year] = (yearlyCount[year] || 0) + 1;
         });
+        
+        const yearlyStats = Object.entries(yearlyCount)
+            .sort((a, b) => a[0].localeCompare(b[0])) // Ordenem per any
+            .map(([year, count]) => ({ year, count }));
+        
+        // 🆕 CÀLCUL DE TENDÈNCIA
+        let trend: 'up' | 'down' | 'stable' = 'stable';
+        if (yearlyStats.length >= 2) {
+            const lastYear = yearlyStats[yearlyStats.length - 1].count;
+            const previousYear = yearlyStats[yearlyStats.length - 2].count;
+            const difference = lastYear - previousYear;
+            
+            if (difference > 0) trend = 'up';
+            else if (difference < 0) trend = 'down';
+        }
+        
+        // Millor i pitjor any
+        const bestYear = yearlyStats.length > 0 
+            ? yearlyStats.reduce((max, curr) => curr.count > max.count ? curr : max)
+            : null;
+        const worstYear = yearlyStats.length > 0
+            ? yearlyStats.reduce((min, curr) => curr.count < min.count ? curr : min)
+            : null;
         
         return {
             programStats,
             centerCount,
-            monthlyCount,
+            yearlyStats,
+            trend,
+            bestYear,
+            worstYear,
             totalSessions: sessions.length
         };
     }, [user.sessions]);
     
-    // 🆕 FORMATEM LA DATA
     const formatDate = (dateStr: string) => {
         if (!dateStr) return 'N/A';
         const date = new Date(dateStr);
         return date.toLocaleDateString('ca-ES', { day: '2-digit', month: 'long', year: 'numeric' });
     };
     
-    // 🆕 AGRUPEM SESSIONS PER DATA
+    // AGRUPEM SESSIONS PER DATA
     const sessionsByDate = useMemo(() => {
         const sessions = user.sessions || [];
         const grouped: { [key: string]: UserSession[] } = {};
@@ -80,7 +102,6 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit }: UserDetailMod
             grouped[session.date].push(session);
         });
         
-        // Ordenem per data (més recent primer)
         return Object.entries(grouped).sort((a, b) => b[0].localeCompare(a[0]));
     }, [user.sessions]);
 
@@ -226,6 +247,89 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit }: UserDetailMod
                                         </div>
                                         <div className="text-xs sm:text-sm text-orange-600 mt-1">Des de</div>
                                     </div>
+                                </div>
+
+                                <Separator />
+
+                                {/* 🆕 SESSIONS PER ANY */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="font-semibold text-base sm:text-lg flex items-center">
+                                            <Calendar className="w-5 h-5 mr-2 text-primary" />
+                                            Evolució per Any
+                                        </h3>
+                                        {stats.trend === 'up' && (
+                                            <Badge className="bg-green-500">
+                                                <TrendingUp className="w-3 h-3 mr-1" />
+                                                A l'alça
+                                            </Badge>
+                                        )}
+                                        {stats.trend === 'down' && (
+                                            <Badge className="bg-red-500">
+                                                <TrendingDown className="w-3 h-3 mr-1" />
+                                                A la baixa
+                                            </Badge>
+                                        )}
+                                        {stats.trend === 'stable' && (
+                                            <Badge variant="outline">
+                                                <Minus className="w-3 h-3 mr-1" />
+                                                Estable
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    
+                                    {stats.yearlyStats.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {/* Millor i pitjor any */}
+                                            <div className="grid grid-cols-2 gap-2 mb-3">
+                                                {stats.bestYear && (
+                                                    <div className="p-2 bg-green-50 border border-green-200 rounded text-center">
+                                                        <div className="text-xs text-green-600 mb-1">🏆 Millor any</div>
+                                                        <div className="text-lg font-bold text-green-700">{stats.bestYear.year}</div>
+                                                        <div className="text-xs text-green-600">{stats.bestYear.count} sessions</div>
+                                                    </div>
+                                                )}
+                                                {stats.worstYear && stats.yearlyStats.length > 1 && (
+                                                    <div className="p-2 bg-orange-50 border border-orange-200 rounded text-center">
+                                                        <div className="text-xs text-orange-600 mb-1">📉 Mínim</div>
+                                                        <div className="text-lg font-bold text-orange-700">{stats.worstYear.year}</div>
+                                                        <div className="text-xs text-orange-600">{stats.worstYear.count} sessions</div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Gràfic per any */}
+                                            {stats.yearlyStats.map((yearData) => {
+                                                const maxCount = Math.max(...stats.yearlyStats.map(y => y.count));
+                                                const percentage = (yearData.count / maxCount) * 100;
+                                                const isBest = stats.bestYear?.year === yearData.year;
+                                                const isWorst = stats.worstYear?.year === yearData.year;
+                                                
+                                                return (
+                                                    <div key={yearData.year} className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded">
+                                                        <span className={`font-medium text-sm sm:text-base min-w-[60px] ${isBest ? 'text-green-700' : isWorst ? 'text-orange-700' : ''}`}>
+                                                            {yearData.year}
+                                                        </span>
+                                                        <div className="flex items-center gap-3 flex-1 ml-3">
+                                                            <div className="h-6 sm:h-8 flex-1 bg-muted rounded-full overflow-hidden">
+                                                                <div 
+                                                                    className={`h-full transition-all ${isBest ? 'bg-green-500' : isWorst ? 'bg-orange-400' : 'bg-primary'}`}
+                                                                    style={{ width: `${percentage}%` }}
+                                                                />
+                                                            </div>
+                                                            <Badge variant="outline" className="min-w-[50px] justify-center">
+                                                                {yearData.count}
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground text-center py-4">
+                                            No hi ha dades d'assistència per any
+                                        </p>
+                                    )}
                                 </div>
 
                                 <Separator />
