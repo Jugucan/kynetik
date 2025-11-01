@@ -138,25 +138,15 @@ const Users = () => {
           }
 
           if (existingUser) {
-            // 🆕 FUSIÓ INTEL·LIGENT: Només actualitzem camps buits
+            // 🆕 FUSIÓ INTEL·LIGENT amb sessions
             const mergedData: Partial<User> = {};
             
-            // Nom: Mantenim l'existent (més fiable)
             mergedData.name = existingUser.name || importedUser.name;
-            
-            // Email: Mantenim l'existent si n'hi ha, sinó l'importat
             mergedData.email = existingUser.email || importedUser.email || '';
-            
-            // Telèfon: Mantenim l'existent si n'hi ha
             mergedData.phone = existingUser.phone || importedUser.phone || '';
-            
-            // Aniversari: Mantenim l'existent si n'hi ha
             mergedData.birthday = existingUser.birthday || importedUser.birthday || '';
-            
-            // Centre: Mantenim l'existent (pot haver estat corregit manualment)
             mergedData.center = existingUser.center || importedUser.center || 'Sant Hilari';
             
-            // Foto de perfil: Si l'importada és millor (de Deporsite), l'actualitzem
             if (importedUser.profileImageUrl && importedUser.profileImageUrl.includes('candelfi.deporsite.net')) {
               mergedData.profileImageUrl = importedUser.profileImageUrl;
               mergedData.avatar = importedUser.profileImageUrl;
@@ -165,21 +155,44 @@ const Users = () => {
               mergedData.avatar = existingUser.avatar || existingUser.profileImageUrl || importedUser.avatar || '';
             }
             
-            // Programes preferits: COMBINEM sense duplicats
             const existingPrograms = Array.isArray(existingUser.preferredPrograms) ? existingUser.preferredPrograms : [];
             const importedPrograms = Array.isArray(importedUser.preferredPrograms) ? importedUser.preferredPrograms : [];
             mergedData.preferredPrograms = [...new Set([...existingPrograms, ...importedPrograms])];
             
-            // Notes: FUSIONEM sempre
             const existingNotes = existingUser.notes || '';
             const importedNotes = importedUser.notes || '';
             const notesToMerge = [existingNotes, importedNotes].filter(n => n && n.trim().length > 0);
             mergedData.notes = notesToMerge.join('\n\n---\n\n');
             
+            // 🆕 FUSIONEM LES SESSIONS!
+            const existingSessions = Array.isArray(existingUser.sessions) ? existingUser.sessions : [];
+            const importedSessions = Array.isArray(importedUser.sessions) ? importedUser.sessions : [];
+            
+            // Combinem sessions eliminant duplicats per data+activitat
+            const sessionMap = new Map();
+            [...existingSessions, ...importedSessions].forEach(session => {
+              const key = `${session.date}-${session.activity}-${session.time}`;
+              sessionMap.set(key, session);
+            });
+            mergedData.sessions = Array.from(sessionMap.values());
+            
+            // 🆕 ACTUALITZEM ESTADÍSTIQUES
+            mergedData.totalSessions = mergedData.sessions.length;
+            
+            if (mergedData.sessions.length > 0) {
+              const dates = mergedData.sessions.map(s => s.date).sort();
+              mergedData.firstSession = dates[0];
+              mergedData.lastSession = dates[dates.length - 1];
+              
+              const lastDate = new Date(mergedData.lastSession);
+              const today = new Date();
+              mergedData.daysSinceLastSession = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+            }
+            
             await updateUser(existingUser.id, mergedData);
             updatedCount++;
           } else {
-            // Usuari nou: creem amb totes les dades
+            // 🆕 USUARI NOU AMB TOTES LES SESSIONS
             const userData: Omit<User, 'id'> = {
               name: importedUser.name || '',
               email: importedUser.email || '',
@@ -192,7 +205,14 @@ const Users = () => {
                 : [],
               profileImageUrl: importedUser.profileImageUrl || '',
               avatar: importedUser.profileImageUrl || importedUser.avatar || '',
-              notes: importedUser.notes || ''
+              notes: importedUser.notes || '',
+              
+              // 🆕 AFEGIM LES SESSIONS!
+              sessions: Array.isArray(importedUser.sessions) ? importedUser.sessions : [],
+              totalSessions: importedUser.totalSessions || 0,
+              firstSession: importedUser.firstSession || '',
+              lastSession: importedUser.lastSession || '',
+              daysSinceLastSession: importedUser.daysSinceLastSession || 0
             };
             
             await addUser(userData);
@@ -377,7 +397,7 @@ const Users = () => {
                   <li>Selecciona el fitxer JSON descarregat</li>
                 </ol>
                 <p className="text-xs text-red-600 mt-3 bg-red-100 p-2 rounded">
-                  ✨ <strong>Màgia automàtica:</strong> Els usuaris nous es crearan, els existents s'actualitzaran, i el centre (Arbúcies/Sant Hilari) s'assignarà segons l'horari de les sessions!
+                  ✨ <strong>Màgia automàtica:</strong> Els usuaris nous es crearan, els existents s'actualitzaran amb totes les sessions, i el centre (Arbúcies/Sant Hilari) s'assignarà automàticament!
                 </p>
               </div>
             </div>
@@ -454,7 +474,6 @@ const Users = () => {
         </div>
       </div>
 
-      {/* 🆕 GRID RESPONSIVE MILLORAT PER MÒBIL */}
       <NeoCard>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
@@ -474,7 +493,6 @@ const Users = () => {
                     : "bg-green-500/20 border-green-500/30"
                 }`}
               >
-                {/* Foto més gran i centrada */}
                 <div className="flex justify-center mb-3">
                   <img 
                     src={user.profileImageUrl || user.avatar} 
@@ -483,12 +501,10 @@ const Users = () => {
                   />
                 </div>
                 
-                {/* Nom i edat centrats */}
                 <div className="text-center mb-3">
                   <h3 className="font-semibold text-lg mb-1 line-clamp-2">{user.name}</h3>
                   <p className="text-sm font-medium text-primary">{user.age} anys</p>
                   
-                  {/* Badge del centre */}
                   <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium shadow-neo-inset ${
                     user.center === "Arbúcies" 
                       ? "bg-blue-500/30 text-blue-700" 
@@ -498,7 +514,6 @@ const Users = () => {
                   </span>
                 </div>
                 
-                {/* Informació de contacte */}
                 <div className="space-y-2 text-sm mb-3 flex-grow">
                   {user.email && (
                     <p className="text-muted-foreground truncate text-center">
@@ -516,7 +531,6 @@ const Users = () => {
                     </p>
                   )}
                   
-                  {/* Programes preferits */}
                   {user.preferredPrograms && user.preferredPrograms.length > 0 && (
                     <div className="flex flex-wrap gap-1 justify-center mt-2">
                       {user.preferredPrograms.map((program, idx) => (
@@ -528,7 +542,6 @@ const Users = () => {
                   )}
                 </div>
                 
-                {/* Botons d'acció */}
                 <div className="flex gap-2 pt-3 border-t">
                   <Button
                     size="sm"
