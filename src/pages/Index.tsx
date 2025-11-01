@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { DayInfoModalReadOnly } from "@/components/DayInfoModalReadOnly";
-import { Calendar, Users, TrendingUp, Cake, PartyPopper, ChevronLeft, ChevronRight, Dumbbell } from "lucide-react";
+import { Calendar, Users, TrendingUp, Cake, PartyPopper, ChevronLeft, ChevronRight, Dumbbell, Clock } from "lucide-react";
 import { programColors } from "@/lib/programColors";
 import { useSettings } from "@/hooks/useSettings";
 import { useSchedules } from "@/hooks/useSchedules";
@@ -30,6 +30,7 @@ interface Birthday {
   age: number;
   center: string;
   photo: string;
+  daysUntil: number; // Per ordenar cronològicament
 }
 
 const dateToKey = (date: Date): string => {
@@ -45,12 +46,22 @@ const Index = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentViewDate, setCurrentViewDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   // 🎉 Carregar dades des de Firebase
   const { vacations, closuresArbucies, closuresSantHilari, officialHolidays } = useSettings();
   const { schedules } = useSchedules();
   const { users } = useUsers();
   const { getAllActivePrograms, loading: programsLoading } = usePrograms();
+
+  // 🆕 Actualitzar el rellotge cada segon per al temporitzador
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Carregar sessions personalitzades de Firebase
   useEffect(() => {
@@ -78,66 +89,6 @@ const Index = () => {
 
   // 🆕 Obtenir programes actius reals
   const activePrograms = getAllActivePrograms();
-
-  // FUNCIÓ PER CALCULAR ELS ANIVERSARIS REALS DELS USUARIS
-  const getUpcomingBirthdays = (): Birthday[] => {
-    const today = new Date();
-    const currentYear = today.getFullYear();
-    const birthdays: Birthday[] = [];
-
-    users.forEach(user => {
-      const birthdayParts = user.birthday.toString().split('/');
-      if (birthdayParts.length !== 3) return;
-
-      const day = parseInt(birthdayParts[0], 10);
-      const month = parseInt(birthdayParts[1], 10) - 1;
-
-      const birthdayThisYear = new Date(currentYear, month, day);
-      
-      const diffTime = birthdayThisYear.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays >= -7 && diffDays <= 7) {
-        let status: "past" | "today" | "upcoming";
-        
-        if (diffDays < 0) {
-          status = "past";
-        } else if (diffDays === 0) {
-          status = "today";
-        } else {
-          status = "upcoming";
-        }
-
-        const dateString = `${day} ${getMonthName(month)}`;
-
-        birthdays.push({
-          name: user.name,
-          date: dateString,
-          status: status,
-          age: user.age,
-          center: user.center,
-          photo: user.profileImageUrl || user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`
-        });
-      }
-    });
-
-    birthdays.sort((a, b) => {
-      const statusOrder = { past: 0, today: 1, upcoming: 2 };
-      return statusOrder[a.status] - statusOrder[b.status];
-    });
-
-    return birthdays;
-  };
-
-  const getMonthName = (monthIndex: number): string => {
-    const months = [
-      "Gen", "Feb", "Mar", "Abr", "Mai", "Jun",
-      "Jul", "Ago", "Set", "Oct", "Nov", "Des"
-    ];
-    return months[monthIndex];
-  };
-
-  const upcomingBirthdays = getUpcomingBirthdays();
 
   const getScheduleForDate = useCallback((date: Date) => {
     const dateStr = dateToKey(date);
@@ -193,6 +144,148 @@ const Index = () => {
     
     return [];
   }, [customSessions, getScheduleForDate, isHoliday, isVacation, isClosure]);
+
+  // 🆕 FUNCIÓ PER CALCULAR TEMPS FINS A LA SEGÜENT CLASSE
+  const getNextClass = () => {
+    const now = currentTime;
+    const todayKey = dateToKey(now);
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    // Obtenir sessions d'avui
+    const todaySessions = getSessionsForDate(now).filter(s => !s.isDeleted);
+    
+    // Buscar la següent classe d'avui
+    for (const session of todaySessions) {
+      const [hours, minutes] = session.time.split(':').map(Number);
+      const sessionTimeInMinutes = hours * 60 + minutes;
+      
+      if (sessionTimeInMinutes > currentTimeInMinutes) {
+        const diffMinutes = sessionTimeInMinutes - currentTimeInMinutes;
+        const hoursLeft = Math.floor(diffMinutes / 60);
+        const minutesLeft = diffMinutes % 60;
+        
+        return {
+          time: session.time,
+          program: session.program,
+          center: session.center,
+          hoursLeft,
+          minutesLeft,
+          isToday: true
+        };
+      }
+    }
+
+    // Si no hi ha més classes avui, buscar la primera de demà
+    let searchDate = new Date(now);
+    searchDate.setDate(searchDate.getDate() + 1);
+    
+    // Buscar fins a 7 dies endavant
+    for (let i = 0; i < 7; i++) {
+      const searchKey = dateToKey(searchDate);
+      const sessions = getSessionsForDate(searchDate).filter(s => !s.isDeleted);
+      
+      if (sessions.length > 0) {
+        // Ordenar per hora i agafar la primera
+        const sortedSessions = [...sessions].sort((a, b) => {
+          const [aH, aM] = a.time.split(':').map(Number);
+          const [bH, bM] = b.time.split(':').map(Number);
+          return (aH * 60 + aM) - (bH * 60 + bM);
+        });
+        
+        const nextSession = sortedSessions[0];
+        const [hours, minutes] = nextSession.time.split(':').map(Number);
+        
+        // Calcular temps fins aquesta sessió
+        const targetDate = new Date(searchDate);
+        targetDate.setHours(hours, minutes, 0, 0);
+        
+        const diffMs = targetDate.getTime() - now.getTime();
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        const hoursLeft = Math.floor(diffMinutes / 60);
+        const minutesLeft = diffMinutes % 60;
+        
+        return {
+          time: nextSession.time,
+          program: nextSession.program,
+          center: nextSession.center,
+          hoursLeft,
+          minutesLeft,
+          isToday: false,
+          daysUntil: i + 1
+        };
+      }
+      
+      searchDate.setDate(searchDate.getDate() + 1);
+    }
+
+    return null;
+  };
+
+  const nextClass = getNextClass();
+
+  // 🆕 FUNCIÓ PER CALCULAR ELS ANIVERSARIS (3 DIES ABANS/DESPRÉS, ORDENATS CRONOLÒGICAMENT)
+  const getUpcomingBirthdays = (): Birthday[] => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const currentYear = today.getFullYear();
+    const birthdays: Birthday[] = [];
+
+    users.forEach(user => {
+      const birthdayParts = user.birthday.toString().split('/');
+      if (birthdayParts.length !== 3) return;
+
+      const day = parseInt(birthdayParts[0], 10);
+      const month = parseInt(birthdayParts[1], 10) - 1;
+
+      const birthdayThisYear = new Date(currentYear, month, day);
+      birthdayThisYear.setHours(0, 0, 0, 0);
+      
+      const diffTime = birthdayThisYear.getTime() - today.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      // 🆕 Canviat de -7/+7 a -3/+3
+      if (diffDays >= -3 && diffDays <= 3) {
+        let status: "past" | "today" | "upcoming";
+        
+        if (diffDays < 0) {
+          status = "past";
+        } else if (diffDays === 0) {
+          status = "today";
+        } else {
+          status = "upcoming";
+        }
+
+        const dateString = `${day} ${getMonthName(month)}`;
+
+        birthdays.push({
+          name: user.name,
+          date: dateString,
+          status: status,
+          age: user.age,
+          center: user.center,
+          photo: user.profileImageUrl || user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`,
+          daysUntil: diffDays // Per ordenar cronològicament
+        });
+      }
+    });
+
+    // 🆕 Ordenar cronològicament: del més antic al més recent
+    birthdays.sort((a, b) => a.daysUntil - b.daysUntil);
+
+    return birthdays;
+  };
+
+  const getMonthName = (monthIndex: number): string => {
+    const months = [
+      "Gen", "Feb", "Mar", "Abr", "Mai", "Jun",
+      "Jul", "Ago", "Set", "Oct", "Nov", "Des"
+    ];
+    return months[monthIndex];
+  };
+
+  const upcomingBirthdays = getUpcomingBirthdays();
 
   const handleDayClick = (date: Date) => {
     setSelectedDate(date);
@@ -350,6 +443,35 @@ const Index = () => {
         <p className="text-muted-foreground">Aquí tens un resum de l'activitat actual</p>
       </div>
 
+      {/* 🆕 TEMPORITZADOR SEGÜENT CLASSE */}
+      {nextClass && (
+        <NeoCard className="bg-gradient-to-r from-primary/10 to-accent/10 border-2 border-primary/30">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-xl bg-primary/20 flex items-center justify-center shadow-neo-inset">
+              <Clock className="w-8 h-8 text-primary animate-pulse" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-muted-foreground mb-1">Propera classe</p>
+              <p className="text-2xl font-bold text-primary mb-1">
+                {nextClass.time} - {nextClass.program}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {nextClass.center && `${nextClass.center} · `}
+                {nextClass.isToday ? (
+                  <span className="text-primary font-semibold">
+                    Comença en {nextClass.hoursLeft > 0 && `${nextClass.hoursLeft}h `}{nextClass.minutesLeft}min
+                  </span>
+                ) : (
+                  <span className="text-accent font-semibold">
+                    {nextClass.daysUntil === 1 ? 'Demà' : `D'aquí ${nextClass.daysUntil} dies`} a les {nextClass.time}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        </NeoCard>
+      )}
+
       {/* Estadístiques ràpides */}
       <div className="grid md:grid-cols-3 gap-6">
         <NeoCard>
@@ -452,7 +574,7 @@ const Index = () => {
         )}
       </NeoCard>
 
-      {/* Aniversaris */}
+      {/* 🆕 Aniversaris (3 dies, ordenats cronològicament) */}
       <NeoCard>
         <div className="flex items-center gap-2 mb-4">
           <Cake className="w-5 h-5 text-primary" />
@@ -461,7 +583,7 @@ const Index = () => {
         
         {upcomingBirthdays.length === 0 ? (
           <p className="text-center text-muted-foreground py-4">
-            No hi ha aniversaris propers (7 dies enrere/endavant)
+            No hi ha aniversaris propers (3 dies enrere/endavant)
           </p>
         ) : (
           <div className="space-y-2">
@@ -494,11 +616,23 @@ const Index = () => {
                     {birthday.age} anys · {birthday.center}
                   </p>
                 </div>
-                <span className={`text-sm ${
-                  birthday.status === "today" ? "text-primary font-bold" : "text-muted-foreground"
-                }`}>
-                  {birthday.date}
-                </span>
+                <div className="text-right">
+                  <span className={`text-sm ${
+                    birthday.status === "today" ? "text-primary font-bold" : "text-muted-foreground"
+                  }`}>
+                    {birthday.date}
+                  </span>
+                  {birthday.status === "past" && birthday.daysUntil < 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Fa {Math.abs(birthday.daysUntil)} {Math.abs(birthday.daysUntil) === 1 ? 'dia' : 'dies'}
+                    </p>
+                  )}
+                  {birthday.status === "upcoming" && birthday.daysUntil > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      En {birthday.daysUntil} {birthday.daysUntil === 1 ? 'dia' : 'dies'}
+                    </p>
+                  )}
+                </div>
               </div>
             ))}
           </div>
