@@ -13,6 +13,7 @@ import Users from "./pages/Users";
 import Programs from "./pages/Programs";
 import Mixtos from "./pages/Mixtos";
 import Schedules from "./pages/Schedules";
+import Stats from "./pages/Stats";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -49,6 +50,7 @@ const App = () => (
                           <Route path="/programs" element={<Programs />} />
                           <Route path="/mixtos" element={<Mixtos />} />
                           <Route path="/schedules" element={<Schedules />} />
+                          <Route path="/stats" element={<Stats />} />
                           <Route 
                             path="/settings" 
                             element={
