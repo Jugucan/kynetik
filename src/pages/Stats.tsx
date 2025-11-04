@@ -1,24 +1,34 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { BarChart3, Users, Calendar, TrendingUp, Award, MapPin, Target, UserCheck, UserX, Clock } from "lucide-react";
+import { BarChart3, Users, Calendar, TrendingUp, Award, MapPin, Target, UserCheck, UserX, Clock, ArrowUpDown, Percent, TrendingDown } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { UserDetailModal } from "@/components/UserDetailModal";
 
 const Stats = () => {
   const { users, loading } = useUsers();
+  const [centerFilter, setCenterFilter] = useState<string>("all");
+  const [inactiveSortOrder, setInactiveSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [viewingUser, setViewingUser] = useState<any>(null);
 
   // 📊 CÀLCUL DE TOTES LES ESTADÍSTIQUES
   const stats = useMemo(() => {
-    // Recollim totes les sessions de tots els usuaris
-    const allSessions = users.flatMap(user => user.sessions || []);
+    // Filtrem sessions per centre si cal
+    const filteredUsers = centerFilter === "all" 
+      ? users 
+      : users.map(user => ({
+          ...user,
+          sessions: (user.sessions || []).filter(s => s.center === centerFilter),
+          totalSessions: (user.sessions || []).filter(s => s.center === centerFilter).length
+        }));
     
-    // Total usuaris únics
-    const totalUsers = users.length;
-    
-    // Total sessions impartides
+    const allSessions = filteredUsers.flatMap(user => user.sessions || []);
+    const totalUsers = users.length; // Total sense filtrar
     const totalSessions = allSessions.length;
     
     // Sessions per any
@@ -37,7 +47,6 @@ const Stats = () => {
     const monthlyData: { month: string; count: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       const monthName = date.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
       const count = allSessions.filter(s => {
         const sessionDate = new Date(s.date);
@@ -46,6 +55,13 @@ const Stats = () => {
       }).length;
       monthlyData.push({ month: monthName, count });
     }
+    
+    // Creixement mensual (comparació mes actual vs anterior)
+    const currentMonthSessions = monthlyData[monthlyData.length - 1]?.count || 0;
+    const previousMonthSessions = monthlyData[monthlyData.length - 2]?.count || 0;
+    const monthlyGrowth = previousMonthSessions > 0 
+      ? (((currentMonthSessions - previousMonthSessions) / previousMonthSessions) * 100).toFixed(1)
+      : 0;
     
     // Assistents per sessió (mitjana)
     const usersPerSession: { [key: string]: number } = {};
@@ -65,6 +81,10 @@ const Stats = () => {
       const lastSession = new Date(user.lastSession);
       return lastSession >= thirtyDaysAgo;
     }).length;
+    
+    // Taxa de retenció (usuaris amb més d'1 sessió)
+    const recurrentUsers = filteredUsers.filter(u => (u.totalSessions || 0) > 1).length;
+    const retentionRate = totalUsers > 0 ? ((recurrentUsers / totalUsers) * 100).toFixed(1) : 0;
     
     // Nous usuaris per any
     const newUsersByYear: { [year: string]: number } = {};
@@ -89,15 +109,41 @@ const Stats = () => {
       centerCount[session.center] = (centerCount[session.center] || 0) + 1;
     });
     
+    // Dia de la setmana més popular
+    const dayCount: { [day: string]: number } = {};
+    const dayNames = ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte'];
+    allSessions.forEach(session => {
+      const day = dayNames[new Date(session.date).getDay()];
+      dayCount[day] = (dayCount[day] || 0) + 1;
+    });
+    const mostPopularDay = Object.entries(dayCount).sort((a, b) => b[1] - a[1])[0];
+    
+    // Franja horària preferida
+    const timeSlotCount: { morning: number; afternoon: number; evening: number } = { morning: 0, afternoon: 0, evening: 0 };
+    allSessions.forEach(session => {
+      const hour = parseInt(session.time.split(':')[0]);
+      if (hour < 12) timeSlotCount.morning++;
+      else if (hour < 18) timeSlotCount.afternoon++;
+      else timeSlotCount.evening++;
+    });
+    const preferredTimeSlot = Object.entries(timeSlotCount).sort((a, b) => b[1] - a[1])[0];
+    const timeSlotNames = { morning: 'Matí', afternoon: 'Tarda', evening: 'Vespre' };
+    
     // Usuaris més fidels (top 10)
-    const topUsers = [...users]
+    const topUsers = [...filteredUsers]
       .sort((a, b) => (b.totalSessions || 0) - (a.totalSessions || 0))
       .slice(0, 10);
     
     // Usuaris inactius (més de 60 dies sense venir)
-    const inactiveUsers = users.filter(user => (user.daysSinceLastSession || 0) > 60);
+    const inactiveUsers = users
+      .filter(user => (user.daysSinceLastSession || 0) > 60)
+      .sort((a, b) => {
+        const diffA = a.daysSinceLastSession || 0;
+        const diffB = b.daysSinceLastSession || 0;
+        return inactiveSortOrder === 'desc' ? diffB - diffA : diffA - diffB;
+      });
     
-    // Tendència (compara últims 2 anys)
+    // Tendència
     let trend: 'up' | 'down' | 'stable' = 'stable';
     if (yearlyData.length >= 2) {
       const lastYear = yearlyData[yearlyData.length - 1].count;
@@ -107,14 +153,6 @@ const Stats = () => {
       else if (diff < 0) trend = 'down';
     }
     
-    // Assistència mitjana per any
-    const avgByYear = yearlyData.map(y => ({
-      year: y.year,
-      avg: Object.keys(usersPerSession).filter(k => k.startsWith(y.year)).length > 0
-        ? (y.count / Object.keys(usersPerSession).filter(k => k.startsWith(y.year)).length).toFixed(1)
-        : 0
-    }));
-    
     return {
       totalUsers,
       totalSessions,
@@ -122,15 +160,19 @@ const Stats = () => {
       activeUsers,
       yearlyData,
       monthlyData,
+      monthlyGrowth,
       newUsersByYear,
       programData,
       centerCount,
       topUsers,
       inactiveUsers,
       trend,
-      avgByYear
+      retentionRate,
+      mostPopularDay,
+      preferredTimeSlot: preferredTimeSlot ? timeSlotNames[preferredTimeSlot[0] as keyof typeof timeSlotNames] : 'N/A',
+      recurrentUsers
     };
-  }, [users]);
+  }, [users, centerFilter, inactiveSortOrder]);
 
   if (loading) {
     return (
@@ -150,12 +192,27 @@ const Stats = () => {
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       {/* Capçalera */}
-      <div className="flex items-center gap-3">
-        <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Les Meves Estadístiques</h1>
-          <p className="text-sm text-muted-foreground">Anàlisi del teu rendiment com a instructora</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Les Meves Estadístiques</h1>
+            <p className="text-sm text-muted-foreground">Anàlisi del teu rendiment com a instructora</p>
+          </div>
         </div>
+        
+        {/* Filtre per centre */}
+        <Select value={centerFilter} onValueChange={setCenterFilter}>
+          <SelectTrigger className="w-full sm:w-[200px] shadow-neo">
+            <MapPin className="w-4 h-4 mr-2" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tots els Centres</SelectItem>
+            <SelectItem value="Arbúcies">Arbúcies</SelectItem>
+            <SelectItem value="Sant Hilari">Sant Hilari</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Resum General */}
@@ -185,7 +242,7 @@ const Stats = () => {
             <Target className="w-8 h-8 sm:w-10 sm:h-10 text-purple-600" />
             <div>
               <p className="text-2xl sm:text-3xl font-bold text-purple-700">{stats.avgAttendees}</p>
-              <p className="text-xs sm:text-sm text-purple-600">Mitjana per sessió</p>
+              <p className="text-xs sm:text-sm text-purple-600">Assistents/sessió</p>
             </div>
           </div>
         </NeoCard>
@@ -201,6 +258,41 @@ const Stats = () => {
         </NeoCard>
       </div>
 
+      {/* Estadístiques addicionals */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <NeoCard className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Percent className="w-4 h-4 text-blue-600" />
+            <p className="text-xs text-muted-foreground">Taxa de retenció</p>
+          </div>
+          <p className="text-xl sm:text-2xl font-bold">{stats.retentionRate}%</p>
+        </NeoCard>
+
+        <NeoCard className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="w-4 h-4 text-green-600" />
+            <p className="text-xs text-muted-foreground">Creixement mensual</p>
+          </div>
+          <p className="text-xl sm:text-2xl font-bold">{stats.monthlyGrowth}%</p>
+        </NeoCard>
+
+        <NeoCard className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Calendar className="w-4 h-4 text-purple-600" />
+            <p className="text-xs text-muted-foreground">Dia més popular</p>
+          </div>
+          <p className="text-base sm:text-lg font-bold">{stats.mostPopularDay?.[0] || 'N/A'}</p>
+        </NeoCard>
+
+        <NeoCard className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Clock className="w-4 h-4 text-orange-600" />
+            <p className="text-xs text-muted-foreground">Franja preferida</p>
+          </div>
+          <p className="text-base sm:text-lg font-bold">{stats.preferredTimeSlot}</p>
+        </NeoCard>
+      </div>
+
       {/* Pestanyes */}
       <Tabs defaultValue="evolution" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
@@ -212,7 +304,6 @@ const Stats = () => {
 
         {/* TAB 1: EVOLUCIÓ */}
         <TabsContent value="evolution" className="space-y-4">
-          {/* Tendència */}
           <NeoCard className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg sm:text-xl font-semibold">Tendència General</h3>
@@ -224,7 +315,7 @@ const Stats = () => {
               )}
               {stats.trend === 'down' && (
                 <Badge className="bg-red-500">
-                  <TrendingUp className="w-4 h-4 mr-1 rotate-180" />
+                  <TrendingDown className="w-4 h-4 mr-1" />
                   Decreixement
                 </Badge>
               )}
@@ -234,7 +325,6 @@ const Stats = () => {
             </div>
             <Separator className="mb-4" />
             
-            {/* Sessions per any */}
             <div className="space-y-3">
               <h4 className="font-medium text-sm sm:text-base">Sessions per Any</h4>
               {stats.yearlyData.map((yearData) => {
@@ -265,7 +355,6 @@ const Stats = () => {
             </div>
           </NeoCard>
 
-          {/* Sessions últims 12 mesos */}
           <NeoCard className="p-4 sm:p-6">
             <h3 className="text-lg sm:text-xl font-semibold mb-4">Últims 12 Mesos</h3>
             <Separator className="mb-4" />
@@ -331,7 +420,6 @@ const Stats = () => {
 
         {/* TAB 3: USUARIS */}
         <TabsContent value="users" className="space-y-4">
-          {/* Top 10 usuaris més fidels */}
           <NeoCard className="p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-yellow-600" />
@@ -340,7 +428,11 @@ const Stats = () => {
             <Separator className="mb-4" />
             <div className="space-y-2">
               {stats.topUsers.map((user, idx) => (
-                <div key={user.id} className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded">
+                <div 
+                  key={user.id} 
+                  onClick={() => setViewingUser(user)}
+                  className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded cursor-pointer hover:bg-muted/50 transition-colors"
+                >
                   <div className="flex items-center gap-3">
                     <Badge className={idx < 3 ? 'bg-yellow-500' : 'bg-muted'}>
                       #{idx + 1}
@@ -353,18 +445,32 @@ const Stats = () => {
             </div>
           </NeoCard>
 
-          {/* Usuaris inactius */}
           <NeoCard className="p-4 sm:p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <UserX className="w-5 h-5 text-red-600" />
-              <h3 className="text-lg sm:text-xl font-semibold">Usuaris Inactius (+60 dies)</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <UserX className="w-5 h-5 text-red-600" />
+                <h3 className="text-lg sm:text-xl font-semibold">Usuaris Inactius (+60 dies)</h3>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setInactiveSortOrder(inactiveSortOrder === 'desc' ? 'asc' : 'desc')}
+                className="gap-2"
+              >
+                <ArrowUpDown className="w-4 h-4" />
+                {inactiveSortOrder === 'desc' ? 'Més dies' : 'Menys dies'}
+              </Button>
             </div>
             <Separator className="mb-4" />
             {stats.inactiveUsers.length > 0 ? (
               <ScrollArea className="h-64">
                 <div className="space-y-2">
                   {stats.inactiveUsers.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-2 bg-red-50 rounded">
+                    <div 
+                      key={user.id} 
+                      onClick={() => setViewingUser(user)}
+                      className="flex items-center justify-between p-2 bg-red-50 rounded cursor-pointer hover:bg-red-100 transition-colors"
+                    >
                       <span className="font-medium text-sm truncate">{user.name}</span>
                       <Badge variant="outline" className="bg-white">
                         <Clock className="w-3 h-3 mr-1" />
@@ -414,6 +520,14 @@ const Stats = () => {
           </NeoCard>
         </TabsContent>
       </Tabs>
+
+      {/* Modal de detall d'usuari */}
+      <UserDetailModal
+        user={viewingUser}
+        isOpen={!!viewingUser}
+        onClose={() => setViewingUser(null)}
+        onEdit={() => {}}
+      />
     </div>
   );
 };
