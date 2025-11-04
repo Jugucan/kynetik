@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Home, Calendar, Users, Dumbbell, Shuffle, Clock, Settings, LogOut, User } from "lucide-react";
+import { Home, Calendar, Users, Dumbbell, Shuffle, Clock, Settings, LogOut, User, BarChart3 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -33,6 +33,7 @@ const menuItems = [
   { title: "Programes", icon: Dumbbell, path: "/programs" },
   { title: "Mixtos", icon: Shuffle, path: "/mixtos" },
   { title: "Horaris", icon: Clock, path: "/schedules" },
+  { title: "Les Meves Estadístiques", icon: BarChart3, path: "/stats" },
   { title: "Configuració", icon: Settings, path: "/settings" },
 ];
 
