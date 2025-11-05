@@ -1,4 +1,3 @@
-import { User, UserSession } from '@/hooks/useUsers';
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -19,6 +18,15 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
+// Local types (avoid external deps)
+export type UserSession = { date: string; activity: string; center?: string; time?: string };
+export type User = {
+  id: string;
+  name?: string; email?: string; phone?: string; birthday?: string;
+  age?: number; center?: string; preferredPrograms?: string[];
+  profileImageUrl?: string; avatar?: string; notes?: string;
+  sessions?: UserSession[]; firstSession?: string; daysSinceLastSession?: number;
+};
 interface UserDetailModalProps {
     user: User | null;
     isOpen: boolean;
