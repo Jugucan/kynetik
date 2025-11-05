@@ -10,9 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Mail, Phone, Cake, MapPin, Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, Zap } from 'lucide-react';
-import { useMemo } from 'react';
+import { Pencil, Mail, Phone, Cake, MapPin, Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { calculateAdvancedStats, calculateUserRanking, calculateProgramRanking } from '@/utils/advancedStats';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface UserDetailModalProps {
     user: User | null;
@@ -24,6 +29,9 @@ interface UserDetailModalProps {
 
 export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }: UserDetailModalProps) => {
     if (!user) return null;
+    
+    // ✅ Estat per al desplegable de freqüència mensual
+    const [isMonthlyFrequencyOpen, setIsMonthlyFrequencyOpen] = useState(false);
 
     // 🆕 CÀLCUL D'ESTADÍSTIQUES
     const stats = useMemo(() => {
@@ -78,7 +86,7 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
         const advancedStats = calculateAdvancedStats(user);
 
         const generalRanking = allUsers.length > 0 ? calculateUserRanking(allUsers, user, 'totalSessions') : { rank: 0, total: 0, percentile: 0 };
-        const consistencyRanking = allUsers.length > 0 ? calculateUserRanking(allUsers, user, 'consistency') : { rank: 0, total: 0, percentile: 0 };
+        const autodisciplineRanking = allUsers.length > 0 ? calculateUserRanking(allUsers, user, 'autodiscipline') : { rank: 0, total: 0, percentile: 0 }; // ✅ CANVIAT
 
         const programRankings: { [key: string]: any } = {};
         programStats.forEach(prog => {
@@ -97,7 +105,7 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
             totalSessions: sessions.length,
             advancedStats,
             generalRanking,
-            consistencyRanking,
+            autodisciplineRanking, // ✅ CANVIAT
             programRankings
         };
     }, [user.sessions, allUsers]);
@@ -289,12 +297,12 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
                                         </div>
                                         <div className="p-3 sm:p-4 bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg shadow-neo text-center">
                                             <div className="text-xl sm:text-2xl font-bold text-rose-700">
-                                                {stats.consistencyRanking.rank > 0 ? `#${stats.consistencyRanking.rank}` : 'N/A'}
+                                                {stats.autodisciplineRanking.rank > 0 ? `#${stats.autodisciplineRanking.rank}` : 'N/A'}
                                             </div>
-                                            <div className="text-xs sm:text-sm text-rose-600 mt-1">Consistència</div>
-                                            {stats.consistencyRanking.total > 0 && (
+                                            <div className="text-xs sm:text-sm text-rose-600 mt-1">Autodisciplina</div>
+                                            {stats.autodisciplineRanking.total > 0 && (
                                                 <div className="text-xs sm:text-sm text-rose-600 mt-1 font-medium">
-                                                    Top {stats.consistencyRanking.percentile}%
+                                                    Top {stats.autodisciplineRanking.percentile}%
                                                 </div>
                                             )}
                                         </div>
@@ -310,30 +318,49 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
                                         Anàlisi Detallada
                                     </h3>
 
-                                    {/* Freqüència Mensual */}
-                                    <div className="mb-4 p-3 sm:p-4 bg-muted/30 rounded-lg">
-                                        <h4 className="font-medium text-sm sm:text-base mb-3">Freqüència Mensual</h4>
-                                        {stats.advancedStats.monthlyFrequency.length > 0 ? (
-                                            <div className="space-y-2">
-                                                {stats.advancedStats.monthlyFrequency.map((month, idx) => (
-                                                    <div key={idx} className="flex items-center justify-between">
-                                                        <span className="text-xs sm:text-sm text-muted-foreground">{month.month}</span>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="h-2 w-16 sm:w-24 bg-muted rounded-full overflow-hidden">
-                                                                <div
-                                                                    className="h-full bg-blue-500 transition-all"
-                                                                    style={{ width: `${Math.min(month.count * 20, 100)}%` }}
-                                                                />
-                                                            </div>
-                                                            <Badge variant="outline" className="text-xs">{month.count}</Badge>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                    {/* ✅ Freqüència Mensual (DESPLEGABLE) */}
+                                    <Collapsible 
+                                        open={isMonthlyFrequencyOpen} 
+                                        onOpenChange={setIsMonthlyFrequencyOpen}
+                                        className="mb-4 p-3 sm:p-4 bg-muted/30 rounded-lg"
+                                    >
+                                        <CollapsibleTrigger className="flex items-center justify-between w-full">
+                                            <h4 className="font-medium text-sm sm:text-base">Freqüència Mensual</h4>
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="outline" className="text-xs">
+                                                    {stats.advancedStats.monthlyFrequency.length} mesos
+                                                </Badge>
+                                                {isMonthlyFrequencyOpen ? (
+                                                    <ChevronUp className="w-4 h-4" />
+                                                ) : (
+                                                    <ChevronDown className="w-4 h-4" />
+                                                )}
                                             </div>
-                                        ) : (
-                                            <p className="text-xs text-muted-foreground">No hi ha dades mensuals disponibles</p>
-                                        )}
-                                    </div>
+                                        </CollapsibleTrigger>
+                                        
+                                        <CollapsibleContent className="mt-3">
+                                            {stats.advancedStats.monthlyFrequency.length > 0 ? (
+                                                <div className="space-y-2">
+                                                    {stats.advancedStats.monthlyFrequency.map((month, idx) => (
+                                                        <div key={idx} className="flex items-center justify-between">
+                                                            <span className="text-xs sm:text-sm text-muted-foreground">{month.month}</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="h-2 w-16 sm:w-24 bg-muted rounded-full overflow-hidden">
+                                                                    <div
+                                                                        className="h-full bg-blue-500 transition-all"
+                                                                        style={{ width: `${Math.min(month.count * 20, 100)}%` }}
+                                                                    />
+                                                                </div>
+                                                                <Badge variant="outline" className="text-xs">{month.count}</Badge>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-muted-foreground">No hi ha dades mensuals disponibles</p>
+                                            )}
+                                        </CollapsibleContent>
+                                    </Collapsible>
 
                                     {/* Dies Entre Sessions */}
                                     <div className="mb-4 p-3 sm:p-4 bg-muted/30 rounded-lg">
@@ -346,39 +373,45 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
                                         </div>
                                     </div>
 
-                                    {/* Consistència */}
+                                    {/* ✅ CANVIAT: Autodisciplina */}
                                     <div className="mb-4 p-3 sm:p-4 bg-muted/30 rounded-lg">
-                                        <h4 className="font-medium text-sm sm:text-base mb-3">Consistència</h4>
+                                        <h4 className="font-medium text-sm sm:text-base mb-3">Autodisciplina</h4>
+                                        <p className="text-xs text-muted-foreground mb-2">
+                                            Mesura la regularitat amb què assisteixes al gimnàs
+                                        </p>
                                         <div className="flex items-end gap-3">
                                             <div className="flex-1">
                                                 <div className="h-3 bg-muted rounded-full overflow-hidden">
                                                     <div
                                                         className={`h-full transition-all ${
-                                                            stats.advancedStats.consistency >= 75 ? 'bg-green-500' :
-                                                            stats.advancedStats.consistency >= 50 ? 'bg-yellow-500' :
+                                                            stats.advancedStats.autodiscipline >= 75 ? 'bg-green-500' :
+                                                            stats.advancedStats.autodiscipline >= 50 ? 'bg-yellow-500' :
                                                             'bg-red-500'
                                                         }`}
-                                                        style={{ width: `${stats.advancedStats.consistency}%` }}
+                                                        style={{ width: `${stats.advancedStats.autodiscipline}%` }}
                                                     />
                                                 </div>
                                             </div>
                                             <div className="text-xl sm:text-2xl font-bold">
-                                                {stats.advancedStats.consistency}%
+                                                {stats.advancedStats.autodiscipline}%
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Millorada Recent */}
+                                    {/* ✅ CORREGIT: Millorada Recent */}
                                     <div className="p-3 sm:p-4 bg-muted/30 rounded-lg">
-                                        <h4 className="font-medium text-sm sm:text-base mb-3">Millorada Recent</h4>
+                                        <h4 className="font-medium text-sm sm:text-base mb-3">Evolució Recent</h4>
+                                        <p className="text-xs text-muted-foreground mb-3">
+                                            Comparació del darrer mes amb la mitjana dels 3 mesos anteriors
+                                        </p>
                                         <div className="grid grid-cols-2 gap-3">
-                                            <div className="text-center">
-                                                <div className="text-lg sm:text-xl font-bold">{stats.advancedStats.improvementRecent.lastMonth}</div>
-                                                <div className="text-xs sm:text-sm text-muted-foreground">Darrer mes</div>
+                                            <div className="text-center p-2 bg-blue-50 rounded">
+                                                <div className="text-lg sm:text-xl font-bold text-blue-700">{stats.advancedStats.improvementRecent.lastMonth}</div>
+                                                <div className="text-xs sm:text-sm text-blue-600">Darrer mes</div>
                                             </div>
-                                            <div className="text-center">
-                                                <div className="text-lg sm:text-xl font-bold">{stats.advancedStats.improvementRecent.lastQuarter}</div>
-                                                <div className="text-xs sm:text-sm text-muted-foreground">Últim trimestre</div>
+                                            <div className="text-center p-2 bg-purple-50 rounded">
+                                                <div className="text-lg sm:text-xl font-bold text-purple-700">{stats.advancedStats.improvementRecent.previousQuarterAverage}</div>
+                                                <div className="text-xs sm:text-sm text-purple-600">Mitjana 3 mesos ant.</div>
                                             </div>
                                         </div>
                                         <div className="mt-3 pt-3 border-t">
