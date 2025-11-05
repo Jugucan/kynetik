@@ -10,17 +10,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Mail, Phone, Cake, MapPin, Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus } from 'lucide-react';
+import { Pencil, Mail, Phone, Cake, MapPin, Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, Zap } from 'lucide-react';
 import { useMemo } from 'react';
+import { calculateAdvancedStats, calculateUserRanking, calculateProgramRanking } from '@/utils/advancedStats';
 
 interface UserDetailModalProps {
     user: User | null;
     isOpen: boolean;
     onClose: () => void;
     onEdit: (user: User) => void;
+    allUsers?: User[];
 }
 
-export const UserDetailModal = ({ user, isOpen, onClose, onEdit }: UserDetailModalProps) => {
+export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }: UserDetailModalProps) => {
     if (!user) return null;
 
     // 🆕 CÀLCUL D'ESTADÍSTIQUES
@@ -73,6 +75,18 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit }: UserDetailMod
             ? yearlyStats.reduce((min, curr) => curr.count < min.count ? curr : min)
             : null;
         
+        const advancedStats = calculateAdvancedStats(user);
+
+        const generalRanking = allUsers.length > 0 ? calculateUserRanking(allUsers, user, 'totalSessions') : { rank: 0, total: 0, percentile: 0 };
+        const consistencyRanking = allUsers.length > 0 ? calculateUserRanking(allUsers, user, 'consistency') : { rank: 0, total: 0, percentile: 0 };
+
+        const programRankings: { [key: string]: any } = {};
+        programStats.forEach(prog => {
+            if (allUsers.length > 0) {
+                programRankings[prog.name] = calculateProgramRanking(allUsers, user, prog.name);
+            }
+        });
+
         return {
             programStats,
             centerCount,
@@ -80,9 +94,13 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit }: UserDetailMod
             trend,
             bestYear,
             worstYear,
-            totalSessions: sessions.length
+            totalSessions: sessions.length,
+            advancedStats,
+            generalRanking,
+            consistencyRanking,
+            programRankings
         };
-    }, [user.sessions]);
+    }, [user.sessions, allUsers]);
     
     const formatDate = (dateStr: string) => {
         if (!dateStr) return 'N/A';
@@ -250,6 +268,178 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit }: UserDetailMod
                                 </div>
 
                                 <Separator />
+
+                                {/* 🆕 RANKINGS GENERALS */}
+                                <div>
+                                    <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
+                                        <Zap className="w-5 h-5 mr-2 text-primary" />
+                                        La teva Posició
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="p-3 sm:p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg shadow-neo text-center">
+                                            <div className="text-xl sm:text-2xl font-bold text-indigo-700">
+                                                #{stats.generalRanking.rank}
+                                            </div>
+                                            <div className="text-xs sm:text-sm text-indigo-600 mt-1">Ranking General</div>
+                                            {stats.generalRanking.total > 0 && (
+                                                <div className="text-xs sm:text-sm text-indigo-600 mt-1 font-medium">
+                                                    Top {stats.generalRanking.percentile}%
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="p-3 sm:p-4 bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg shadow-neo text-center">
+                                            <div className="text-xl sm:text-2xl font-bold text-rose-700">
+                                                {stats.consistencyRanking.rank > 0 ? `#${stats.consistencyRanking.rank}` : 'N/A'}
+                                            </div>
+                                            <div className="text-xs sm:text-sm text-rose-600 mt-1">Consistència</div>
+                                            {stats.consistencyRanking.total > 0 && (
+                                                <div className="text-xs sm:text-sm text-rose-600 mt-1 font-medium">
+                                                    Top {stats.consistencyRanking.percentile}%
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <Separator />
+
+                                {/* 🆕 ESTADÍSTIQUES AVANÇADES */}
+                                <div>
+                                    <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
+                                        <BarChart3 className="w-5 h-5 mr-2 text-primary" />
+                                        Anàlisi Detallada
+                                    </h3>
+
+                                    {/* Freqüència Mensual */}
+                                    <div className="mb-4 p-3 sm:p-4 bg-muted/30 rounded-lg">
+                                        <h4 className="font-medium text-sm sm:text-base mb-3">Freqüència Mensual</h4>
+                                        {stats.advancedStats.monthlyFrequency.length > 0 ? (
+                                            <div className="space-y-2">
+                                                {stats.advancedStats.monthlyFrequency.map((month, idx) => (
+                                                    <div key={idx} className="flex items-center justify-between">
+                                                        <span className="text-xs sm:text-sm text-muted-foreground">{month.month}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="h-2 w-16 sm:w-24 bg-muted rounded-full overflow-hidden">
+                                                                <div
+                                                                    className="h-full bg-blue-500 transition-all"
+                                                                    style={{ width: `${Math.min(month.count * 20, 100)}%` }}
+                                                                />
+                                                            </div>
+                                                            <Badge variant="outline" className="text-xs">{month.count}</Badge>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground">No hi ha dades mensuals disponibles</p>
+                                        )}
+                                    </div>
+
+                                    {/* Dies Entre Sessions */}
+                                    <div className="mb-4 p-3 sm:p-4 bg-muted/30 rounded-lg">
+                                        <h4 className="font-medium text-sm sm:text-base mb-2">Dies entre Sessions</h4>
+                                        <div className="flex items-baseline gap-2">
+                                            <div className="text-2xl sm:text-3xl font-bold text-green-600">
+                                                {stats.advancedStats.daysBetweenSessions}
+                                            </div>
+                                            <span className="text-xs sm:text-sm text-muted-foreground">dies de mitja</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Consistència */}
+                                    <div className="mb-4 p-3 sm:p-4 bg-muted/30 rounded-lg">
+                                        <h4 className="font-medium text-sm sm:text-base mb-3">Consistència</h4>
+                                        <div className="flex items-end gap-3">
+                                            <div className="flex-1">
+                                                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full transition-all ${
+                                                            stats.advancedStats.consistency >= 75 ? 'bg-green-500' :
+                                                            stats.advancedStats.consistency >= 50 ? 'bg-yellow-500' :
+                                                            'bg-red-500'
+                                                        }`}
+                                                        style={{ width: `${stats.advancedStats.consistency}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="text-xl sm:text-2xl font-bold">
+                                                {stats.advancedStats.consistency}%
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Millorada Recent */}
+                                    <div className="p-3 sm:p-4 bg-muted/30 rounded-lg">
+                                        <h4 className="font-medium text-sm sm:text-base mb-3">Millorada Recent</h4>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="text-center">
+                                                <div className="text-lg sm:text-xl font-bold">{stats.advancedStats.improvementRecent.lastMonth}</div>
+                                                <div className="text-xs sm:text-sm text-muted-foreground">Darrer mes</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-lg sm:text-xl font-bold">{stats.advancedStats.improvementRecent.lastQuarter}</div>
+                                                <div className="text-xs sm:text-sm text-muted-foreground">Últim trimestre</div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 pt-3 border-t">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs sm:text-sm text-muted-foreground">Tendència:</span>
+                                                <div className="flex items-center gap-2">
+                                                    {stats.advancedStats.improvementRecent.trend === 'up' && (
+                                                        <Badge className="bg-green-500 text-xs">
+                                                            <TrendingUp className="w-3 h-3 mr-1" />
+                                                            +{stats.advancedStats.improvementRecent.percentageChange}%
+                                                        </Badge>
+                                                    )}
+                                                    {stats.advancedStats.improvementRecent.trend === 'down' && (
+                                                        <Badge className="bg-red-500 text-xs">
+                                                            <TrendingDown className="w-3 h-3 mr-1" />
+                                                            {stats.advancedStats.improvementRecent.percentageChange}%
+                                                        </Badge>
+                                                    )}
+                                                    {stats.advancedStats.improvementRecent.trend === 'stable' && (
+                                                        <Badge variant="outline" className="text-xs">
+                                                            <Minus className="w-3 h-3 mr-1" />
+                                                            Estable
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <Separator />
+
+                                {/* 🆕 RANKING PER PROGRAMA */}
+                                {stats.programStats.length > 0 && (
+                                    <>
+                                        <div>
+                                            <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
+                                                <Award className="w-5 h-5 mr-2 text-primary" />
+                                                La teva Posició per Programa
+                                            </h3>
+                                            <div className="space-y-2">
+                                                {stats.programStats.map((prog, idx) => {
+                                                    const ranking = stats.programRankings[prog.name];
+                                                    return (
+                                                        <div key={idx} className="p-2 sm:p-3 bg-muted/30 rounded flex items-center justify-between">
+                                                            <span className="text-sm sm:text-base font-medium">{prog.name}</span>
+                                                            {ranking && ranking.total > 0 ? (
+                                                                <Badge className="text-xs">
+                                                                    #{ranking.rank} de {ranking.total} (Top {ranking.percentile}%)
+                                                                </Badge>
+                                                            ) : (
+                                                                <Badge variant="outline" className="text-xs">N/A</Badge>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                        <Separator />
+                                    </>
+                                )}
 
                                 {/* 🆕 SESSIONS PER ANY */}
                                 <div>
