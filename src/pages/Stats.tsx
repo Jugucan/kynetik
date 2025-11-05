@@ -18,23 +18,52 @@ const Stats = () => {
 
   // 📊 CÀLCUL DE TOTES LES ESTADÍSTIQUES
   const stats = useMemo(() => {
-    // Filtrem sessions per centre si cal
-    const filteredUsers = centerFilter === "all" 
-      ? users 
-      : users.map(user => ({
-          ...user,
-          sessions: (user.sessions || []).filter(s => s.center === centerFilter),
-          totalSessions: (user.sessions || []).filter(s => s.center === centerFilter).length
-        }));
+    // 🆕 PRIMER: Agrupem sessions per crear classes úniques
+    // Una classe única = mateixa data + hora + activitat + centre
+    const allSessionsRaw = users.flatMap(user => user.sessions || []);
     
-    const allSessions = filteredUsers.flatMap(user => user.sessions || []);
+    // Creem un Map per agrupar sessions en classes úniques
+    const uniqueClassesMap = new Map<string, {
+      date: string;
+      activity: string;
+      time: string;
+      center: string;
+      attendees: number;
+    }>();
+    
+    allSessionsRaw.forEach(session => {
+      const key = `${session.date}-${session.time}-${session.activity}-${session.center}`;
+      if (uniqueClassesMap.has(key)) {
+        // Si ja existeix aquesta classe, incrementem assistents
+        const existing = uniqueClassesMap.get(key)!;
+        existing.attendees += 1;
+      } else {
+        // Nova classe única
+        uniqueClassesMap.set(key, {
+          date: session.date,
+          activity: session.activity,
+          time: session.time,
+          center: session.center,
+          attendees: 1
+        });
+      }
+    });
+    
+    // Convertim el Map a array de classes úniques
+    const allUniqueClasses = Array.from(uniqueClassesMap.values());
+    
+    // Filtrem classes per centre si cal
+    const filteredClasses = centerFilter === "all" 
+      ? allUniqueClasses 
+      : allUniqueClasses.filter(c => c.center === centerFilter);
+    
     const totalUsers = users.length; // Total sense filtrar
-    const totalSessions = allSessions.length;
+    const totalSessions = filteredClasses.length; // Ara són classes úniques!
     
-    // Sessions per any
+    // Sessions per any (amb classes úniques)
     const sessionsByYear: { [year: string]: number } = {};
-    allSessions.forEach(session => {
-      const year = new Date(session.date).getFullYear().toString();
+    filteredClasses.forEach(classItem => {
+      const year = new Date(classItem.date).getFullYear().toString();
       sessionsByYear[year] = (sessionsByYear[year] || 0) + 1;
     });
     
@@ -42,14 +71,14 @@ const Stats = () => {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([year, count]) => ({ year, count }));
     
-    // Sessions per mes (últims 12 mesos)
+    // Sessions per mes (últims 12 mesos) amb classes úniques
     const now = new Date();
     const monthlyData: { month: string; count: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthName = date.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
-      const count = allSessions.filter(s => {
-        const sessionDate = new Date(s.date);
+      const count = filteredClasses.filter(c => {
+        const sessionDate = new Date(c.date);
         return sessionDate.getFullYear() === date.getFullYear() && 
                sessionDate.getMonth() === date.getMonth();
       }).length;
@@ -63,14 +92,10 @@ const Stats = () => {
       ? (((currentMonthSessions - previousMonthSessions) / previousMonthSessions) * 100).toFixed(1)
       : 0;
     
-    // Assistents per sessió (mitjana)
-    const usersPerSession: { [key: string]: number } = {};
-    allSessions.forEach(session => {
-      const key = `${session.date}-${session.activity}-${session.time}`;
-      usersPerSession[key] = (usersPerSession[key] || 0) + 1;
-    });
-    const avgAttendees = Object.keys(usersPerSession).length > 0
-      ? (totalSessions / Object.keys(usersPerSession).length).toFixed(1)
+    // Assistents per sessió (mitjana) - ara amb classes úniques
+    const totalAttendees = filteredClasses.reduce((sum, c) => sum + c.attendees, 0);
+    const avgAttendees = totalSessions > 0
+      ? (totalAttendees / totalSessions).toFixed(1)
       : 0;
     
     // Usuaris actius (últims 30 dies)
@@ -83,7 +108,7 @@ const Stats = () => {
     }).length;
     
     // Taxa de retenció (usuaris amb més d'1 sessió)
-    const recurrentUsers = filteredUsers.filter(u => (u.totalSessions || 0) > 1).length;
+    const recurrentUsers = users.filter(u => (u.totalSessions || 0) > 1).length;
     const retentionRate = totalUsers > 0 ? ((recurrentUsers / totalUsers) * 100).toFixed(1) : 0;
     
     // Nous usuaris per any
@@ -94,34 +119,34 @@ const Stats = () => {
       newUsersByYear[year] = (newUsersByYear[year] || 0) + 1;
     });
     
-    // Sessions per programa
+    // Sessions per programa (amb classes úniques)
     const programCount: { [program: string]: number } = {};
-    allSessions.forEach(session => {
-      programCount[session.activity] = (programCount[session.activity] || 0) + 1;
+    filteredClasses.forEach(classItem => {
+      programCount[classItem.activity] = (programCount[classItem.activity] || 0) + 1;
     });
     const programData = Object.entries(programCount)
       .sort((a, b) => b[1] - a[1])
       .map(([name, count]) => ({ name, count }));
     
-    // Sessions per centre
+    // Sessions per centre (amb classes úniques)
     const centerCount: { [center: string]: number } = {};
-    allSessions.forEach(session => {
-      centerCount[session.center] = (centerCount[session.center] || 0) + 1;
+    allUniqueClasses.forEach(classItem => {
+      centerCount[classItem.center] = (centerCount[classItem.center] || 0) + 1;
     });
     
     // Dia de la setmana més popular
     const dayCount: { [day: string]: number } = {};
     const dayNames = ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte'];
-    allSessions.forEach(session => {
-      const day = dayNames[new Date(session.date).getDay()];
+    filteredClasses.forEach(classItem => {
+      const day = dayNames[new Date(classItem.date).getDay()];
       dayCount[day] = (dayCount[day] || 0) + 1;
     });
     const mostPopularDay = Object.entries(dayCount).sort((a, b) => b[1] - a[1])[0];
     
     // Franja horària preferida
     const timeSlotCount: { morning: number; afternoon: number; evening: number } = { morning: 0, afternoon: 0, evening: 0 };
-    allSessions.forEach(session => {
-      const hour = parseInt(session.time.split(':')[0]);
+    filteredClasses.forEach(classItem => {
+      const hour = parseInt(classItem.time.split(':')[0]);
       if (hour < 12) timeSlotCount.morning++;
       else if (hour < 18) timeSlotCount.afternoon++;
       else timeSlotCount.evening++;
@@ -129,7 +154,14 @@ const Stats = () => {
     const preferredTimeSlot = Object.entries(timeSlotCount).sort((a, b) => b[1] - a[1])[0];
     const timeSlotNames = { morning: 'Matí', afternoon: 'Tarda', evening: 'Vespre' };
     
-    // Usuaris més fidels (top 10)
+    // Usuaris més fidels (top 10) - ara filtrant per centre
+    const filteredUsers = centerFilter === "all" 
+      ? users 
+      : users.map(user => ({
+          ...user,
+          totalSessions: (user.sessions || []).filter(s => s.center === centerFilter).length
+        }));
+    
     const topUsers = [...filteredUsers]
       .sort((a, b) => (b.totalSessions || 0) - (a.totalSessions || 0))
       .slice(0, 10);
@@ -232,7 +264,7 @@ const Stats = () => {
             <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-green-600" />
             <div>
               <p className="text-2xl sm:text-3xl font-bold text-green-700">{stats.totalSessions}</p>
-              <p className="text-xs sm:text-sm text-green-600">Sessions totals</p>
+              <p className="text-xs sm:text-sm text-green-600">Classes totals</p>
             </div>
           </div>
         </NeoCard>
@@ -242,7 +274,7 @@ const Stats = () => {
             <Target className="w-8 h-8 sm:w-10 sm:h-10 text-purple-600" />
             <div>
               <p className="text-2xl sm:text-3xl font-bold text-purple-700">{stats.avgAttendees}</p>
-              <p className="text-xs sm:text-sm text-purple-600">Assistents/sessió</p>
+              <p className="text-xs sm:text-sm text-purple-600">Assistents/classe</p>
             </div>
           </div>
         </NeoCard>
@@ -326,7 +358,7 @@ const Stats = () => {
             <Separator className="mb-4" />
             
             <div className="space-y-3">
-              <h4 className="font-medium text-sm sm:text-base">Sessions per Any</h4>
+              <h4 className="font-medium text-sm sm:text-base">Classes per Any</h4>
               {stats.yearlyData.map((yearData) => {
                 const maxCount = Math.max(...stats.yearlyData.map(y => y.count));
                 const percentage = (yearData.count / maxCount) * 100;
@@ -335,7 +367,7 @@ const Stats = () => {
                   <div key={yearData.year} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium">{yearData.year}</span>
-                      <Badge variant="outline">{yearData.count} sessions</Badge>
+                      <Badge variant="outline">{yearData.count} classes</Badge>
                     </div>
                     <div className="h-8 bg-muted rounded-full overflow-hidden">
                       <div 
@@ -387,7 +419,7 @@ const Stats = () => {
           <NeoCard className="p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-primary" />
-              <h3 className="text-lg sm:text-xl font-semibold">Sessions per Programa</h3>
+              <h3 className="text-lg sm:text-xl font-semibold">Classes per Programa</h3>
             </div>
             <Separator className="mb-4" />
             <div className="space-y-3">
@@ -498,7 +530,8 @@ const Stats = () => {
             <Separator className="mb-4" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {Object.entries(stats.centerCount).map(([center, count]) => {
-                const percentage = (count / stats.totalSessions) * 100;
+                const totalAllCenters = Object.values(stats.centerCount).reduce((a, b) => a + b, 0);
+                const percentage = (count / totalAllCenters) * 100;
                 
                 return (
                   <div key={center} className="p-4 sm:p-6 bg-muted/30 rounded-lg text-center">
