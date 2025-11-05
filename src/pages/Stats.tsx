@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { BarChart3, Users, Calendar, TrendingUp, Award, MapPin, Target, UserCheck, UserX, Clock, ArrowUpDown, Percent, TrendingDown } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
+import { useSettings } from "@/hooks/useSettings";
+import { useSchedules } from "@/hooks/useSchedules";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,61 +11,170 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { UserDetailModal } from "@/components/UserDetailModal";
+import { db } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+
+interface Session {
+  time: string;
+  program: string;
+  center?: string;
+  isCustom?: boolean;
+  isDeleted?: boolean;
+  deleteReason?: string;
+  addReason?: string;
+}
+
+const dateToKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const Stats = () => {
-  const { users, loading } = useUsers();
+  const { users, loading: usersLoading } = useUsers();
+  const { vacations, closuresArbucies, closuresSantHilari, officialHolidays, loading: settingsLoading } = useSettings();
+  const { schedules, loading: schedulesLoading } = useSchedules();
   const [centerFilter, setCenterFilter] = useState<string>("all");
   const [inactiveSortOrder, setInactiveSortOrder] = useState<'asc' | 'desc'>('desc');
   const [viewingUser, setViewingUser] = useState<any>(null);
+  const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
 
-  // 📊 CÀLCUL DE TOTES LES ESTADÍSTIQUES
-  const stats = useMemo(() => {
-    // 🆕 PRIMER: Agrupem sessions per crear classes úniques
-    // Una classe única = mateixa data + hora + activitat + centre
-    const allSessionsRaw = users.flatMap(user => user.sessions || []);
+  const loading = usersLoading || settingsLoading || schedulesLoading;
+
+  // Carregar sessions personalitzades
+  useEffect(() => {
+    const customSessionsDocRef = doc(db, 'settings', 'customSessions');
     
-    // Creem un Map per agrupar sessions en classes úniques
-    const uniqueClassesMap = new Map<string, {
+    const unsubscribe = onSnapshot(customSessionsDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const sessionsMap: Record<string, Session[]> = {};
+        
+        Object.entries(data).forEach(([dateKey, sessions]) => {
+          if (Array.isArray(sessions)) {
+            sessionsMap[dateKey] = sessions as Session[];
+          }
+        });
+        
+        setCustomSessions(sessionsMap);
+      } else {
+        setCustomSessions({});
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const getScheduleForDate = useCallback((date: Date) => {
+    const dateStr = dateToKey(date);
+    return schedules.find(schedule => {
+      const startDate = schedule.startDate;
+      const endDate = schedule.endDate || '9999-12-31';
+      return dateStr >= startDate && dateStr <= endDate;
+    });
+  }, [schedules]);
+
+  const isHoliday = useCallback((date: Date) => {
+    const dateKey = dateToKey(date);
+    return officialHolidays && officialHolidays.hasOwnProperty(dateKey);
+  }, [officialHolidays]);
+
+  const isVacation = useCallback((date: Date) => {
+    const dateKey = dateToKey(date);
+    return vacations && vacations.hasOwnProperty(dateKey);
+  }, [vacations]);
+  
+  const isClosure = useCallback((date: Date) => {
+    const dateKey = dateToKey(date);
+    return (closuresArbucies && closuresArbucies.hasOwnProperty(dateKey)) || 
+           (closuresSantHilari && closuresSantHilari.hasOwnProperty(dateKey));
+  }, [closuresArbucies, closuresSantHilari]);
+
+  const getSessionsForDate = useCallback((date: Date): Session[] => {
+    const dateKey = dateToKey(date);
+    
+    // Si té sessions personalitzades, retornem aquestes
+    if (customSessions[dateKey]) {
+      return customSessions[dateKey];
+    }
+    
+    // Si és festiu, vacances o tancament, no hi ha sessions
+    if (isHoliday(date) || isVacation(date) || isClosure(date)) {
+      return [];
+    }
+    
+    // Busquem l'horari estàndard
+    const scheduleForDate = getScheduleForDate(date);
+    
+    if (scheduleForDate) {
+      const dayOfWeek = date.getDay();
+      const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
+      const scheduleSessions = scheduleForDate.sessions[adjustedDay] || [];
+      
+      return scheduleSessions.map(s => ({
+        time: s.time,
+        program: s.program,
+        center: s.center,
+        isCustom: false,
+        isDeleted: false,
+      }));
+    }
+    
+    return [];
+  }, [customSessions, getScheduleForDate, isHoliday, isVacation, isClosure]);
+
+  // 📊 CÀLCUL DE TOTES LES ESTADÍSTIQUES BASADES EN EL CALENDARI
+  const stats = useMemo(() => {
+    // 🆕 Generem TOTES les classes des de l'inici fins avui basant-nos en el calendari
+    const allRealClasses: Array<{
       date: string;
       activity: string;
       time: string;
       center: string;
-      attendees: number;
-    }>();
-    
-    allSessionsRaw.forEach(session => {
-      const key = `${session.date}-${session.time}-${session.activity}-${session.center}`;
-      if (uniqueClassesMap.has(key)) {
-        // Si ja existeix aquesta classe, incrementem assistents
-        const existing = uniqueClassesMap.get(key)!;
-        existing.attendees += 1;
-      } else {
-        // Nova classe única
-        uniqueClassesMap.set(key, {
-          date: session.date,
-          activity: session.activity,
+    }> = [];
+
+    // Troba la data més antiga dels horaris
+    const oldestScheduleDate = schedules.length > 0 
+      ? schedules.reduce((oldest, schedule) => {
+          return schedule.startDate < oldest ? schedule.startDate : oldest;
+        }, schedules[0].startDate)
+      : '2020-01-01';
+
+    const startDate = new Date(oldestScheduleDate);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+
+    // Recorrem cada dia des de l'inici fins avui
+    const currentDate = new Date(startDate);
+    while (currentDate <= today) {
+      const sessions = getSessionsForDate(currentDate);
+      const activeSessions = sessions.filter(s => !s.isDeleted);
+      
+      activeSessions.forEach(session => {
+        allRealClasses.push({
+          date: dateToKey(currentDate),
+          activity: session.program,
           time: session.time,
-          center: session.center,
-          attendees: 1
+          center: session.center || 'N/A'
         });
-      }
-    });
-    
-    // Convertim el Map a array de classes úniques
-    const allUniqueClasses = Array.from(uniqueClassesMap.values());
-    
-    // Filtrem classes per centre si cal
+      });
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Filtrem per centre si cal
     const filteredClasses = centerFilter === "all" 
-      ? allUniqueClasses 
-      : allUniqueClasses.filter(c => c.center === centerFilter);
+      ? allRealClasses 
+      : allRealClasses.filter(c => c.center === centerFilter);
+
+    const totalUsers = users.length;
+    const totalSessions = filteredClasses.length;
     
-    const totalUsers = users.length; // Total sense filtrar
-    const totalSessions = filteredClasses.length; // Ara són classes úniques!
-    
-    // Sessions per any (amb classes úniques)
+    // Sessions per any
     const sessionsByYear: { [year: string]: number } = {};
     filteredClasses.forEach(classItem => {
-      const year = new Date(classItem.date).getFullYear().toString();
+      const year = classItem.date.split('-')[0];
       sessionsByYear[year] = (sessionsByYear[year] || 0) + 1;
     });
     
@@ -71,31 +182,37 @@ const Stats = () => {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([year, count]) => ({ year, count }));
     
-    // Sessions per mes (últims 12 mesos) amb classes úniques
+    // Sessions per mes (últims 12 mesos)
     const now = new Date();
     const monthlyData: { month: string; count: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthName = date.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
-      const count = filteredClasses.filter(c => {
-        const sessionDate = new Date(c.date);
-        return sessionDate.getFullYear() === date.getFullYear() && 
-               sessionDate.getMonth() === date.getMonth();
-      }).length;
+      const yearMonth = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+      
+      const count = filteredClasses.filter(c => c.date.startsWith(yearMonth)).length;
       monthlyData.push({ month: monthName, count });
     }
     
-    // Creixement mensual (comparació mes actual vs anterior)
+    // Creixement mensual
     const currentMonthSessions = monthlyData[monthlyData.length - 1]?.count || 0;
     const previousMonthSessions = monthlyData[monthlyData.length - 2]?.count || 0;
     const monthlyGrowth = previousMonthSessions > 0 
       ? (((currentMonthSessions - previousMonthSessions) / previousMonthSessions) * 100).toFixed(1)
       : 0;
     
-    // Assistents per sessió (mitjana) - ara amb classes úniques
-    const totalAttendees = filteredClasses.reduce((sum, c) => sum + c.attendees, 0);
-    const avgAttendees = totalSessions > 0
-      ? (totalAttendees / totalSessions).toFixed(1)
+    // Assistents per sessió (de les dades dels usuaris)
+    const allUserSessions = users.flatMap(user => user.sessions || []);
+    const uniqueClassesMap = new Map<string, number>();
+    
+    allUserSessions.forEach(session => {
+      const key = `${session.date}-${session.time}-${session.activity}-${session.center}`;
+      uniqueClassesMap.set(key, (uniqueClassesMap.get(key) || 0) + 1);
+    });
+    
+    const totalAttendees = Array.from(uniqueClassesMap.values()).reduce((sum, count) => sum + count, 0);
+    const avgAttendees = uniqueClassesMap.size > 0
+      ? (totalAttendees / uniqueClassesMap.size).toFixed(1)
       : 0;
     
     // Usuaris actius (últims 30 dies)
@@ -107,7 +224,7 @@ const Stats = () => {
       return lastSession >= thirtyDaysAgo;
     }).length;
     
-    // Taxa de retenció (usuaris amb més d'1 sessió)
+    // Taxa de retenció
     const recurrentUsers = users.filter(u => (u.totalSessions || 0) > 1).length;
     const retentionRate = totalUsers > 0 ? ((recurrentUsers / totalUsers) * 100).toFixed(1) : 0;
     
@@ -119,7 +236,7 @@ const Stats = () => {
       newUsersByYear[year] = (newUsersByYear[year] || 0) + 1;
     });
     
-    // Sessions per programa (amb classes úniques)
+    // Sessions per programa
     const programCount: { [program: string]: number } = {};
     filteredClasses.forEach(classItem => {
       programCount[classItem.activity] = (programCount[classItem.activity] || 0) + 1;
@@ -128,9 +245,9 @@ const Stats = () => {
       .sort((a, b) => b[1] - a[1])
       .map(([name, count]) => ({ name, count }));
     
-    // Sessions per centre (amb classes úniques)
+    // Sessions per centre
     const centerCount: { [center: string]: number } = {};
-    allUniqueClasses.forEach(classItem => {
+    allRealClasses.forEach(classItem => {
       centerCount[classItem.center] = (centerCount[classItem.center] || 0) + 1;
     });
     
@@ -138,8 +255,10 @@ const Stats = () => {
     const dayCount: { [day: string]: number } = {};
     const dayNames = ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte'];
     filteredClasses.forEach(classItem => {
-      const day = dayNames[new Date(classItem.date).getDay()];
-      dayCount[day] = (dayCount[day] || 0) + 1;
+      const [year, month, day] = classItem.date.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      const dayName = dayNames[date.getDay()];
+      dayCount[dayName] = (dayCount[dayName] || 0) + 1;
     });
     const mostPopularDay = Object.entries(dayCount).sort((a, b) => b[1] - a[1])[0];
     
@@ -154,7 +273,7 @@ const Stats = () => {
     const preferredTimeSlot = Object.entries(timeSlotCount).sort((a, b) => b[1] - a[1])[0];
     const timeSlotNames = { morning: 'Matí', afternoon: 'Tarda', evening: 'Vespre' };
     
-    // Usuaris més fidels (top 10) - ara filtrant per centre
+    // Usuaris més fidels
     const filteredUsers = centerFilter === "all" 
       ? users 
       : users.map(user => ({
@@ -166,7 +285,7 @@ const Stats = () => {
       .sort((a, b) => (b.totalSessions || 0) - (a.totalSessions || 0))
       .slice(0, 10);
     
-    // Usuaris inactius (més de 60 dies sense venir)
+    // Usuaris inactius
     const inactiveUsers = users
       .filter(user => (user.daysSinceLastSession || 0) > 60)
       .sort((a, b) => {
@@ -204,7 +323,7 @@ const Stats = () => {
       preferredTimeSlot: preferredTimeSlot ? timeSlotNames[preferredTimeSlot[0] as keyof typeof timeSlotNames] : 'N/A',
       recurrentUsers
     };
-  }, [users, centerFilter, inactiveSortOrder]);
+  }, [users, centerFilter, inactiveSortOrder, schedules, customSessions, getSessionsForDate]);
 
   if (loading) {
     return (
@@ -229,7 +348,7 @@ const Stats = () => {
           <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Les Meves Estadístiques</h1>
-            <p className="text-sm text-muted-foreground">Anàlisi del teu rendiment com a instructora</p>
+            <p className="text-sm text-muted-foreground">Classes reals segons el teu calendari</p>
           </div>
         </div>
         
@@ -264,7 +383,7 @@ const Stats = () => {
             <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-green-600" />
             <div>
               <p className="text-2xl sm:text-3xl font-bold text-green-700">{stats.totalSessions}</p>
-              <p className="text-xs sm:text-sm text-green-600">Classes totals</p>
+              <p className="text-xs sm:text-sm text-green-600">Classes fetes</p>
             </div>
           </div>
         </NeoCard>
