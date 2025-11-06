@@ -40,17 +40,30 @@ export const useSchedules = (): SchedulesData & {
 } => {
   const [data, setData] = useState<SchedulesData>(defaultSchedulesData);
 
+  // ✅ FIX: Assegurar que el listener està sempre actiu
   useEffect(() => {
+    console.log("📡 Iniciant listener de Firebase per horaris...");
+    
     const unsubscribe = onSnapshot(
       SCHEDULES_DOC_REF,
       (docSnap) => {
+        console.log("🔄 Firebase ha detectat canvi en horaris!");
+        
         if (docSnap.exists()) {
           const firebaseData = docSnap.data();
+          const schedulesData = firebaseData.schedules || [];
+          
+          console.log("✅ Horaris carregats:", schedulesData.length, "horaris");
+          schedulesData.forEach((schedule: Schedule) => {
+            console.log(`   - ${schedule.name || 'Horari sense nom'} (${schedule.isActive ? 'ACTIU' : 'inactiu'})`);
+          });
+          
           setData({
-            schedules: firebaseData.schedules || [],
+            schedules: schedulesData,
             loading: false,
           });
         } else {
+          console.log("ℹ️ No hi ha document de horaris a Firebase");
           setData({
             schedules: [],
             loading: false,
@@ -58,25 +71,36 @@ export const useSchedules = (): SchedulesData & {
         }
       },
       (error) => {
-        console.error('Error loading schedules from Firebase:', error);
+        console.error('❌ Error carregant horaris de Firebase:', error);
         setData((prev) => ({ ...prev, loading: false }));
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      console.log("🛑 Tancant listener de Firebase");
+      unsubscribe();
+    };
   }, []);
 
   const saveSchedules = async (schedules: Schedule[]) => {
     try {
-      await setDoc(SCHEDULES_DOC_REF, { schedules });
-      console.log('✅ Horaris guardats a Firebase');
+      console.log("💾 Desant horaris a Firebase...", schedules.length, "horaris");
+      await setDoc(SCHEDULES_DOC_REF, { schedules }, { merge: true });
+      console.log("✅ Horaris guardats correctament a Firebase");
     } catch (error) {
       console.error('❌ Error al guardar horaris:', error);
+      throw error;
     }
   };
 
   const getActiveSchedule = (): Schedule | null => {
-    return data.schedules.find((s) => s.isActive) || null;
+    const active = data.schedules.find((s) => s.isActive) || null;
+    if (active) {
+      console.log("🟢 Horari actiu:", active.name || 'Sense nom');
+    } else {
+      console.log("⚠️ No hi ha horari actiu");
+    }
+    return active;
   };
 
   const createNewSchedule = (copyFrom?: Schedule): Schedule => {
@@ -92,6 +116,7 @@ export const useSchedules = (): SchedulesData & {
       name: copyFrom ? `${copyFrom.name || 'Horari'} (còpia)` : 'Horari nou',
     };
 
+    console.log("📝 Creat horari nou:", newSchedule.id, newSchedule.name);
     return newSchedule;
   };
 
@@ -106,6 +131,7 @@ export const useSchedules = (): SchedulesData & {
         : s
     );
 
+    console.log("🔴 Desactivant horari:", scheduleId);
     saveSchedules(updatedSchedules);
   };
 
