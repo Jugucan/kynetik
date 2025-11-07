@@ -167,6 +167,9 @@ const Stats = () => {
   }, [customSessions, getScheduleForDate, isHoliday, isVacation, isClosure]);
 
   const stats = useMemo(() => {
+    // Normalitzem el filtre de centre
+    const normalizedCenterFilter = centerFilter === "all" ? "all" : normalizeCenterName(centerFilter);
+    
     const allRealClasses: Array<{
       date: string;
       activity: string;
