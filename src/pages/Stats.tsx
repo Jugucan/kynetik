@@ -200,7 +200,13 @@ const Stats = () => {
       ? allUserAttendances
       : allUserAttendances.filter(a => a.center === centerFilter);
 
-    const totalUsers = users.length;
+    // Usuaris únics que han vingut al centre filtrat
+    const totalUsers = centerFilter === "all"
+      ? users.length
+      : users.filter(user => 
+          (user.sessions || []).some(s => s.center === centerFilter)
+        ).length;
+    
     const totalSessions = filteredClasses.length;
     const totalAttendances = filteredAttendances.length;
     
