@@ -32,6 +32,22 @@ const dateToKey = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
+// Funció per normalitzar noms de centres
+const normalizeCenterName = (center: string | undefined): string => {
+  if (!center) return 'N/A';
+  // Convertim a minúscules, treiem accents i espais
+  return center
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Treu accents
+    .replace(/\s+/g, ''); // Treu espais
+};
+
+// Funció per comparar centres
+const centersMatch = (center1: string | undefined, center2: string | undefined): boolean => {
+  return normalizeCenterName(center1) === normalizeCenterName(center2);
+};
+
 // Component per mostrar info
 const InfoButton = ({ title, description }: { title: string; description: string }) => {
   const [isOpen, setIsOpen] = useState(false);
