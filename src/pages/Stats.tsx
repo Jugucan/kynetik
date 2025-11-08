@@ -414,8 +414,8 @@ const Stats = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tots els Centres</SelectItem>
-            <SelectItem value="Arbúcies">Arbúcies</SelectItem>
-            <SelectItem value="Sant Hilari">Sant Hilari</SelectItem>
+            <SelectItem value="arbucies">Arbúcies</SelectItem>
+            <SelectItem value="santhilari">Sant Hilari</SelectItem>
           </SelectContent>
         </Select>
       </div>
