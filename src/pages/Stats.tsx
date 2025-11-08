@@ -179,6 +179,9 @@ const Stats = () => {
     // Normalitzem el filtre de centre
     const normalizedCenterFilter = centerFilter === "all" ? "all" : normalizeCenterName(centerFilter);
     
+    console.log("🔍 DEBUG - Center Filter:", centerFilter);
+    console.log("🔍 DEBUG - Normalized Filter:", normalizedCenterFilter);
+    
     const allRealClasses: Array<{
       date: string;
       activity: string;
