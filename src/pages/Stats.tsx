@@ -34,13 +34,22 @@ const dateToKey = (date: Date): string => {
 
 // Funció per normalitzar noms de centres
 const normalizeCenterName = (center: string | undefined): string => {
-  if (!center) return 'N/A';
-  // Convertim a minúscules, treiem accents i espais
-  return center
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Treu accents
-    .replace(/\s+/g, ''); // Treu espais
+  if (!center) return 'na';
+  
+  // Convertim a minúscules i creem un map manual per als accents
+  let normalized = center.toLowerCase().replace(/\s+/g, '');
+  
+  // Reemplacem accents manualment
+  const accentsMap: { [key: string]: string } = {
+    'á': 'a', 'à': 'a', 'ä': 'a', 'â': 'a',
+    'é': 'e', 'è': 'e', 'ë': 'e', 'ê': 'e',
+    'í': 'i', 'ì': 'i', 'ï': 'i', 'î': 'i',
+    'ó': 'o', 'ò': 'o', 'ö': 'o', 'ô': 'o',
+    'ú': 'u', 'ù': 'u', 'ü': 'u', 'û': 'u',
+    'ç': 'c', 'ñ': 'n'
+  };
+  
+  return normalized.split('').map(char => accentsMap[char] || char).join('');
 };
 
 // Funció per comparar centres
