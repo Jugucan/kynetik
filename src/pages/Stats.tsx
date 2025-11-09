@@ -291,6 +291,14 @@ const Stats = () => {
       ? (totalAttendeesInClasses / uniqueClassesMap.size).toFixed(1)
       : 0;
     
+    // ⭐ AQUESTA ÉS LA CORRECCIÓ: Definim filteredUsers ABANS d'utilitzar-lo
+    const filteredUsers = centerFilter === "all"
+      ? users
+      : users.map(user => ({
+          ...user,
+          totalSessions: (user.sessions || []).filter(s => centersMatch(s.center, centerFilter)).length
+        }));
+    
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const activeUsers = filteredUsers.filter(user => {
@@ -341,13 +349,6 @@ const Stats = () => {
     });
     const preferredTimeSlot = Object.entries(timeSlotCount).sort((a, b) => b[1] - a[1])[0];
     const timeSlotNames = { morning: 'Matí', afternoon: 'Tarda', evening: 'Vespre' };
-    
-    const filteredUsers = centerFilter === "all"
-      ? users
-      : users.map(user => ({
-          ...user,
-          totalSessions: (user.sessions || []).filter(s => centersMatch(s.center, centerFilter)).length
-        }));
     
     const topUsers = [...filteredUsers]
       .sort((a, b) => (b.totalSessions || 0) - (a.totalSessions || 0))
