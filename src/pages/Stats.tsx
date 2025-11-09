@@ -213,6 +213,13 @@ const Stats = () => {
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
+    // DEBUG: Comprovem allRealClasses
+    const sampleClasses = allRealClasses.slice(0, 5).map(c => ({
+      date: c.date,
+      center: c.center,
+      normalized: normalizeCenterName(c.center)
+    }));
+
     const allUserAttendances = users.flatMap(user => 
       (user.sessions || []).map(s => ({
         ...s,
