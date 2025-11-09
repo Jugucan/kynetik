@@ -179,9 +179,6 @@ const Stats = () => {
     // Normalitzem el filtre de centre
     const normalizedCenterFilter = centerFilter === "all" ? "all" : normalizeCenterName(centerFilter);
     
-    console.log("🔍 DEBUG - Center Filter:", centerFilter);
-    console.log("🔍 DEBUG - Normalized Filter:", normalizedCenterFilter);
-    
     const allRealClasses: Array<{
       date: string;
       activity: string;
@@ -410,6 +407,17 @@ const Stats = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+      {/* DEBUG INFO - TEMPORAL */}
+      {centerFilter !== "all" && (
+        <div className="p-4 bg-yellow-100 border-2 border-yellow-500 rounded">
+          <p className="font-bold">🔍 DEBUG INFO:</p>
+          <p>Centre seleccionat: {centerFilter}</p>
+          <p>Centre normalitzat: {normalizeCenterName(centerFilter)}</p>
+          <p>Total classes: {stats.totalSessions}</p>
+          <p>Total assistències: {stats.totalAttendances}</p>
+        </div>
+      )}
+      
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
