@@ -32,29 +32,23 @@ const dateToKey = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-// Funció per normalitzar noms de centres
-const normalizeCenterName = (center: string | undefined): string => {
-  if (!center) return 'na';
+// Funció per comprovar si un centre coincideix amb el filtre
+const centerMatches = (centerName: string | undefined, filterValue: string): boolean => {
+  if (!centerName || filterValue === "all") return filterValue === "all";
   
-  // Convertim a minúscules i creem un map manual per als accents
-  let normalized = center.toLowerCase().replace(/\s+/g, '');
+  const centerLower = centerName.toLowerCase();
   
-  // Reemplacem accents manualment
-  const accentsMap: { [key: string]: string } = {
-    'á': 'a', 'à': 'a', 'ä': 'a', 'â': 'a',
-    'é': 'e', 'è': 'e', 'ë': 'e', 'ê': 'e',
-    'í': 'i', 'ì': 'i', 'ï': 'i', 'î': 'i',
-    'ó': 'o', 'ò': 'o', 'ö': 'o', 'ô': 'o',
-    'ú': 'u', 'ù': 'u', 'ü': 'u', 'û': 'u',
-    'ç': 'c', 'ñ': 'n'
-  };
+  // Arbúcies: acceptem totes les variants
+  if (filterValue === "arbucies") {
+    return centerLower.includes("arbuc") || centerLower.includes("arbúc");
+  }
   
-  return normalized.split('').map(char => accentsMap[char] || char).join('');
-};
-
-// Funció per comparar centres
-const centersMatch = (center1: string | undefined, center2: string | undefined): boolean => {
-  return normalizeCenterName(center1) === normalizeCenterName(center2);
+  // Sant Hilari: acceptem totes les variants
+  if (filterValue === "santhilari") {
+    return centerLower.includes("sant") && centerLower.includes("hilar");
+  }
+  
+  return false;
 };
 
 // Component per mostrar info
@@ -420,8 +414,9 @@ const Stats = () => {
           <p className="font-bold">🔍 DEBUG INFO:</p>
           <p>Centre seleccionat: {centerFilter}</p>
           <p>Centre normalitzat: {normalizeCenterName(centerFilter)}</p>
-          <p>Total classes: {stats.totalSessions}</p>
-          <p>Total assistències: {stats.totalAttendances}</p>
+          <p>Total classes generades: {stats.totalSessions}</p>
+          <p>Schedules carregats: {schedules.length}</p>
+          <p>Custom sessions: {Object.keys(customSessions).length} dies</p>
         </div>
       )}
       
