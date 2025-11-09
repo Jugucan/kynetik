@@ -223,19 +223,19 @@ const Stats = () => {
       }))
     );
 
-    const filteredClasses = centerFilter === "all" 
-      ? allRealClasses 
-      : allRealClasses.filter(c => c.center === centerFilter);
+    const filteredClasses = centerFilter === "all"
+      ? allRealClasses
+      : allRealClasses.filter(c => centersMatch(c.center, centerFilter));
 
     const filteredAttendances = centerFilter === "all"
       ? allUserAttendances
-      : allUserAttendances.filter(a => a.center === centerFilter);
+      : allUserAttendances.filter(a => centersMatch(a.center, centerFilter));
 
     // Usuaris únics que han vingut al centre filtrat
     const totalUsers = centerFilter === "all"
       ? users.length
-      : users.filter(user => 
-          (user.sessions || []).some(s => s.center === centerFilter)
+      : users.filter(user =>
+          (user.sessions || []).some(s => centersMatch(s.center, centerFilter))
         ).length;
     
     const totalSessions = filteredClasses.length;
@@ -342,11 +342,11 @@ const Stats = () => {
     const preferredTimeSlot = Object.entries(timeSlotCount).sort((a, b) => b[1] - a[1])[0];
     const timeSlotNames = { morning: 'Matí', afternoon: 'Tarda', evening: 'Vespre' };
     
-    const filteredUsers = centerFilter === "all" 
-      ? users 
+    const filteredUsers = centerFilter === "all"
+      ? users
       : users.map(user => ({
           ...user,
-          totalSessions: (user.sessions || []).filter(s => s.center === centerFilter).length
+          totalSessions: (user.sessions || []).filter(s => centersMatch(s.center, centerFilter)).length
         }));
     
     const topUsers = [...filteredUsers]
