@@ -281,11 +281,11 @@ const Stats = () => {
       : 0;
     
     const uniqueClassesMap = new Map<string, number>();
-    allUserAttendances.forEach(attendance => {
+    filteredAttendances.forEach(attendance => {
       const key = `${attendance.date}-${attendance.time}-${attendance.activity}-${attendance.center}`;
       uniqueClassesMap.set(key, (uniqueClassesMap.get(key) || 0) + 1);
     });
-    
+
     const totalAttendeesInClasses = Array.from(uniqueClassesMap.values()).reduce((sum, count) => sum + count, 0);
     const avgAttendees = uniqueClassesMap.size > 0
       ? (totalAttendeesInClasses / uniqueClassesMap.size).toFixed(1)
@@ -293,14 +293,14 @@ const Stats = () => {
     
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const activeUsers = users.filter(user => {
+    const activeUsers = filteredUsers.filter(user => {
       if (!user.lastSession) return false;
       const lastSession = new Date(user.lastSession);
       return lastSession >= thirtyDaysAgo;
     }).length;
     
-    const recurrentUsers = users.filter(u => (u.totalSessions || 0) > 1).length;
-    const retentionRate = totalUsers > 0 ? ((recurrentUsers / totalUsers) * 100).toFixed(1) : 0;
+    const recurrentUsersFiltered = filteredUsers.filter(u => (u.totalSessions || 0) > 1).length;
+    const retentionRate = totalUsers > 0 ? ((recurrentUsersFiltered / totalUsers) * 100).toFixed(1) : 0;
     
     const newUsersByYear: { [year: string]: number } = {};
     users.forEach(user => {
@@ -389,7 +389,7 @@ const Stats = () => {
       retentionRate,
       mostPopularDay,
       preferredTimeSlot: preferredTimeSlot ? timeSlotNames[preferredTimeSlot[0] as keyof typeof timeSlotNames] : 'N/A',
-      recurrentUsers
+      recurrentUsers: recurrentUsersFiltered
     };
   }, [users, centerFilter, inactiveSortOrder, schedules, customSessions, getSessionsForDate]);
 
