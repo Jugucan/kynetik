@@ -110,7 +110,14 @@ const Calendar = () => {
 
   const getScheduleForDate = useCallback((date: Date) => {
     const dateStr = dateToKey(date);
-    return schedules.find(schedule => {
+    
+    // 🎯 CANVI IMPORTANT: Ordenar horaris per data d'inici (més recent primer)
+    const sortedSchedules = [...schedules].sort((a, b) => {
+      return b.startDate.localeCompare(a.startDate);
+    });
+    
+    // Buscar el primer horari que compleixi les condicions
+    return sortedSchedules.find(schedule => {
       const startDate = schedule.startDate;
       const endDate = schedule.endDate || '9999-12-31';
       return dateStr >= startDate && dateStr <= endDate;
