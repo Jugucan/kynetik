@@ -310,23 +310,23 @@ const Stats = () => {
           totalSessions: (user.sessions || []).filter(s => centersMatch(s.center, centerFilter)).length
         }));
     
+    // 🎯 CORRECCIÓ: Filtrar usuaris actius segons el centre seleccionat
     const thirtyDaysAgo = new Date();
-thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-const activeUsers = centerFilter === "all"
-  ? users.filter(user => {
-      if (!user.lastSession) return false;
-      const lastSession = new Date(user.lastSession);
-      return lastSession >= thirtyDaysAgo;
-    }).length
-  : users.filter(user => {
-      if (!user.lastSession) return false;
-      const lastSession = new Date(user.lastSession);
-      if (lastSession < thirtyDaysAgo) return false;
-      // Comprovar que l'usuari té sessions al centre filtrat en els últims 30 dies
-      return (user.sessions || []).some(s => {
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const activeUsers = users.filter(user => {
+      // Comprovar si té sessions en els últims 30 dies
+      const recentSessions = (user.sessions || []).filter(s => {
         const sessionDate = new Date(s.date);
-        return sessionDate >= thirtyDaysAgo && centersMatch(s.center, centerFilter);
+        return sessionDate >= thirtyDaysAgo;
       });
+      
+      if (recentSessions.length === 0) return false;
+      
+      // Si és "tots els centres", comptar l'usuari
+      if (centerFilter === "all") return true;
+      
+      // Si és un centre específic, comprovar si té sessions en aquest centre
+      return recentSessions.some(s => centersMatch(s.center, centerFilter));
     }).length;
     
     const recurrentUsersFiltered = filteredUsers.filter(u => (u.totalSessions || 0) > 1).length;
@@ -533,7 +533,7 @@ const activeUsers = centerFilter === "all"
       </div>
 
       {/* 🎉 NOVES ESTADÍSTIQUES */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-pink-50 to-pink-100">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -565,8 +565,25 @@ const activeUsers = centerFilter === "all"
             />
           </div>
         </NeoCard>
-       
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+
+        <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-teal-50 to-teal-100">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-teal-600" />
+              <div>
+                <p className="text-2xl sm:text-3xl font-bold text-teal-700">{stats.mostPopularDay?.[0] || 'N/A'}</p>
+                <p className="text-xs sm:text-sm text-teal-600">Dia més actiu</p>
+              </div>
+            </div>
+            <InfoButton 
+              title="Dia més actiu" 
+              description={`El dia de la setmana en què fas més classes.\n\n${stats.mostPopularDay ? `Total de classes els ${stats.mostPopularDay[0]}: ${stats.mostPopularDay[1]}` : 'Sense dades'}`}
+            />
+          </div>
+        </NeoCard>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <NeoCard className="p-3 sm:p-4">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
@@ -588,386 +605,365 @@ const activeUsers = centerFilter === "all"
               <p className="text-xs text-muted-foreground">Creixement mensual</p>
             </div>
             <InfoButton 
-          title="Creixement mensual" 
-          description="Comparació del nombre de classes entre el mes actual i l'anterior. Un valor positiu indica que has fet més classes aquest mes que l'anterior."
-        />
-      </div>
-      <p className="text-xl sm:text-2xl font-bold">{stats.monthlyGrowth}%</p>
-    </NeoCard>
-
-    <NeoCard className="p-3 sm:p-4">
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-purple-600" />
-          <p className="text-xs text-muted-foreground">Dia més popular</p>
-        </div>
-        <InfoButton 
-          title="Dia més popular" 
-          description="El dia de la setmana en què fas més classes habitualment."
-        />
-      </div>
-      <p className="text-base sm:text-lg font-bold">{stats.mostPopularDay?.[0] || 'N/A'}</p>
-    </NeoCard>
-
-    <NeoCard className="p-3 sm:p-4">
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-orange-600" />
-          <p className="text-xs text-muted-foreground">Franja preferida</p>
-        </div>
-        <InfoButton 
-          title="Franja horària preferida" 
-          description="La franja horària on fas més classes:\n• Matí: abans de les 12h\n• Tarda: de 12h a 18h\n• Vespre: després de les 18h"
-        />
-      </div>
-      <p className="text-base sm:text-lg font-bold">{stats.preferredTimeSlot}</p>
-    </NeoCard>
-  </div>
-
-  <Tabs defaultValue="evolution" className="space-y-4">
-    <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 gap-1">
-      <TabsTrigger value="evolution" className="text-[10px] sm:text-sm px-1 sm:px-3">
-    Evolució
-      </TabsTrigger>
-      <TabsTrigger value="programs" className="text-[10px] sm:text-sm px-1 sm:px-3">
-    Programes
-      </TabsTrigger>
-      <TabsTrigger value="users" className="text-[10px] sm:text-sm px-1 sm:px-3">
-    Usuaris
-      </TabsTrigger>
-      <TabsTrigger value="centers" className="text-[10px] sm:text-sm px-1 sm:px-3">
-    Centres
-      </TabsTrigger>
-      <TabsTrigger value="weekdays" className="text-[10px] sm:text-sm px-1 sm:px-3 col-span-3 sm:col-span-1">
-    Dies setmana
-      </TabsTrigger>
-    </TabsList>
-
-    <TabsContent value="evolution" className="space-y-4">
-      <NeoCard className="p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg sm:text-xl font-semibold">Tendència General</h3>
-          {stats.trend === 'up' && (
-            <Badge className="bg-green-500">
-              <TrendingUp className="w-4 h-4 mr-1" />
-              Creixement
-            </Badge>
-          )}
-          {stats.trend === 'down' && (
-            <Badge className="bg-red-500">
-              <TrendingDown className="w-4 h-4 mr-1" />
-              Decreixement
-            </Badge>
-          )}
-          {stats.trend === 'stable' && (
-            <Badge variant="outline">Estable</Badge>
-          )}
-        </div>
-        <Separator className="mb-4" />
-        
-        <div className="space-y-3">
-          <h4 className="font-medium text-sm sm:text-base">Classes Realitzades per Any</h4>
-          {stats.yearlyData.map((yearData) => {
-            const maxCount = Math.max(...stats.yearlyData.map(y => y.count));
-            const percentage = (yearData.count / maxCount) * 100;
-            
-            return (
-              <div key={yearData.year} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{yearData.year}</span>
-                  <Badge variant="outline">{yearData.count} classes</Badge>
-                </div>
-                <div className="h-8 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary transition-all flex items-center justify-end pr-2"
-                    style={{ width: `${percentage}%` }}
-                  >
-                    {percentage > 20 && (
-                      <span className="text-xs text-white font-medium">
-                        {yearData.count}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </NeoCard>
-
-      <NeoCard className="p-4 sm:p-6">
-        <h3 className="text-lg sm:text-xl font-semibold mb-4">Total Assistències per Any</h3>
-        <Separator className="mb-4" />
-        <div className="space-y-3">
-          {stats.yearlyAttendanceData.map((yearData) => {
-            const maxCount = Math.max(...stats.yearlyAttendanceData.map(y => y.count));
-            const percentage = (yearData.count / maxCount) * 100;
-            
-            return (
-              <div key={yearData.year} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{yearData.year}</span>
-                  <Badge variant="outline" className="bg-blue-50">{yearData.count} assistències</Badge>
-                </div>
-                <div className="h-8 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-500 transition-all flex items-center justify-end pr-2"
-                    style={{ width: `${percentage}%` }}
-                  >
-                    {percentage > 20 && (
-                      <span className="text-xs text-white font-medium">
-                        {yearData.count}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </NeoCard>
-
-      <NeoCard className="p-4 sm:p-6">
-        <h3 className="text-lg sm:text-xl font-semibold mb-4">Últims 12 Mesos</h3>
-        <Separator className="mb-4" />
-        <ScrollArea className="h-80">
-          <div className="space-y-4">
-            {stats.monthlyData.map((month) => {
-              const maxClasses = Math.max(...stats.monthlyData.map(m => m.classes));
-              const maxAttendances = Math.max(...stats.monthlyData.map(m => m.attendances));
-              const classesPercentage = maxClasses > 0 ? (month.classes / maxClasses) * 100 : 0;
-              const attendancesPercentage = maxAttendances > 0 ? (month.attendances / maxAttendances) * 100 : 0;
-              
-              return (
-                <div key={month.month} className="space-y-2">
-                  <span className="text-xs sm:text-sm font-medium block">{month.month}</span>
-                  
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground min-w-[70px]">Classes:</span>
-                    <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-green-500 transition-all"
-                        style={{ width: `${classesPercentage}%` }}
-                      />
-                    </div>
-                    <Badge variant="outline" className="text-xs min-w-[45px] justify-center">{month.classes}</Badge>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground min-w-[70px]">Assistències:</span>
-                    <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-blue-500 transition-all"
-                        style={{ width: `${attendancesPercentage}%` }}
-                      />
-                    </div>
-                    <Badge variant="outline" className="text-xs bg-blue-50 min-w-[45px] justify-center">{month.attendances}</Badge>
-                  </div>
-                </div>
-              );
-            })}
+              title="Creixement mensual" 
+              description="Comparació del nombre de classes entre el mes actual i l'anterior. Un valor positiu indica que has fet més classes aquest mes que l'anterior."
+            />
           </div>
-        </ScrollArea>
-        <div className="flex gap-4 text-xs text-muted-foreground border-t pt-3 mt-3">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-green-500"></div>
-            <span>Classes fetes</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-blue-500"></div>
-            <span>Total assistències</span>
-          </div>
-        </div>
-      </NeoCard>
-    </TabsContent>
+          <p className="text-xl sm:text-2xl font-bold">{stats.monthlyGrowth}%</p>
+        </NeoCard>
 
-    <TabsContent value="programs" className="space-y-4">
-      <NeoCard className="p-4 sm:p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Award className="w-5 h-5 text-primary" />
-          <h3 className="text-lg sm:text-xl font-semibold">Classes per Programa</h3>
-        </div>
-        <Separator className="mb-4" />
-        <div className="space-y-3">
-          {stats.programData.map((prog) => {
-            const percentage = (prog.count / stats.totalSessions) * 100;
-            
-            return (
-              <div key={prog.name} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{prog.name}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-xs">
-                      {percentage.toFixed(1)}%
-                    </span>
-                    <Badge variant="outline">{prog.count}</Badge>
-                  </div>
-                </div>
-                <div className="h-6 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all"
-                    style={{ width: `${percentage}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </NeoCard>
-    </TabsContent>
-
-    <TabsContent value="users" className="space-y-4">
-      <NeoCard className="p-4 sm:p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Award className="w-5 h-5 text-yellow-600" />
-          <h3 className="text-lg sm:text-xl font-semibold">Top 10 Usuaris Més Fidels</h3>
-        </div>
-        <Separator className="mb-4" />
-        <div className="space-y-2">
-          {stats.topUsers.map((user, idx) => (
-            <div 
-              key={user.id} 
-              onClick={() => setViewingUser(user)}
-              className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded cursor-pointer hover:bg-muted/50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Badge className={idx < 3 ? 'bg-yellow-500' : 'bg-muted'}>
-                  #{idx + 1}
-                </Badge>
-                <span className="font-medium text-sm sm:text-base truncate">{user.name}</span>
-              </div>
-              <Badge variant="outline">{user.totalSessions || 0} sessions</Badge>
+        <NeoCard className="p-3 sm:p-4">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-orange-600" />
+              <p className="text-xs text-muted-foreground">Franja preferida</p>
             </div>
-          ))}
-        </div>
-      </NeoCard>
-
-      <NeoCard className="p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <UserX className="w-5 h-5 text-red-600" />
-            <h3 className="text-lg sm:text-xl font-semibold">Usuaris Inactius (+60 dies)</h3>
+            <InfoButton 
+              title="Franja horària preferida" 
+              description="La franja horària on fas més classes:\n• Matí: abans de les 12h\n• Tarda: de 12h a 18h\n• Vespre: després de les 18h"
+            />
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setInactiveSortOrder(inactiveSortOrder === 'desc' ? 'asc' : 'desc')}
-            className="gap-2"
-          >
-            <ArrowUpDown className="w-4 h-4" />
-            {inactiveSortOrder === 'desc' ? 'Més dies' : 'Menys dies'}
-          </Button>
-        </div>
-        <Separator className="mb-4" />
-        {stats.inactiveUsers.length > 0 ? (
-          <ScrollArea className="h-64">
+          <p className="text-base sm:text-lg font-bold">{stats.preferredTimeSlot}</p>
+        </NeoCard>
+      </div>
+
+      <Tabs defaultValue="evolution" className="space-y-4">
+        <ScrollArea className="w-full whitespace-nowrap pb-2">
+          <TabsList className="inline-flex w-auto sm:grid sm:w-full sm:grid-cols-5">
+            <TabsTrigger value="evolution" className="text-xs sm:text-sm">Evolució</TabsTrigger>
+            <TabsTrigger value="programs" className="text-xs sm:text-sm">Programes</TabsTrigger>
+            <TabsTrigger value="users" className="text-xs sm:text-sm">Usuaris</TabsTrigger>
+            <TabsTrigger value="centers" className="text-xs sm:text-sm">Centres</TabsTrigger>
+            <TabsTrigger value="weekdays" className="text-xs sm:text-sm">Dies setmana</TabsTrigger>
+          </TabsList>
+        </ScrollArea>
+
+        <TabsContent value="evolution" className="space-y-4">
+          <NeoCard className="p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg sm:text-xl font-semibold">Tendència General</h3>
+              {stats.trend === 'up' && (
+                <Badge className="bg-green-500">
+                  <TrendingUp className="w-4 h-4 mr-1" />
+                  Creixement
+                </Badge>
+              )}
+              {stats.trend === 'down' && (
+                <Badge className="bg-red-500">
+                  <TrendingDown className="w-4 h-4 mr-1" />
+                  Decreixement
+                </Badge>
+              )}
+              {stats.trend === 'stable' && (
+                <Badge variant="outline">Estable</Badge>
+              )}
+            </div>
+            <Separator className="mb-4" />
+            
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm sm:text-base">Classes Realitzades per Any</h4>
+              {stats.yearlyData.map((yearData) => {
+                const maxCount = Math.max(...stats.yearlyData.map(y => y.count));
+                const percentage = (yearData.count / maxCount) * 100;
+                
+                return (
+                  <div key={yearData.year} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{yearData.year}</span>
+                      <Badge variant="outline">{yearData.count} classes</Badge>
+                    </div>
+                    <div className="h-8 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all flex items-center justify-end pr-2"
+                        style={{ width: `${percentage}%` }}
+                      >
+                        {percentage > 20 && (
+                          <span className="text-xs text-white font-medium">
+                            {yearData.count}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </NeoCard>
+
+          <NeoCard className="p-4 sm:p-6">
+            <h3 className="text-lg sm:text-xl font-semibold mb-4">Total Assistències per Any</h3>
+            <Separator className="mb-4" />
+            <div className="space-y-3">
+              {stats.yearlyAttendanceData.map((yearData) => {
+                const maxCount = Math.max(...stats.yearlyAttendanceData.map(y => y.count));
+                const percentage = (yearData.count / maxCount) * 100;
+                
+                return (
+                  <div key={yearData.year} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{yearData.year}</span>
+                      <Badge variant="outline" className="bg-blue-50">{yearData.count} assistències</Badge>
+                    </div>
+                    <div className="h-8 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-blue-500 transition-all flex items-center justify-end pr-2"
+                        style={{ width: `${percentage}%` }}
+                      >
+                        {percentage > 20 && (
+                          <span className="text-xs text-white font-medium">
+                            {yearData.count}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </NeoCard>
+
+          <NeoCard className="p-4 sm:p-6">
+            <h3 className="text-lg sm:text-xl font-semibold mb-4">Últims 12 Mesos</h3>
+            <Separator className="mb-4" />
+            <ScrollArea className="h-80">
+              <div className="space-y-4">
+                {stats.monthlyData.map((month) => {
+                  const maxClasses = Math.max(...stats.monthlyData.map(m => m.classes));
+                  const maxAttendances = Math.max(...stats.monthlyData.map(m => m.attendances));
+                  const classesPercentage = maxClasses > 0 ? (month.classes / maxClasses) * 100 : 0;
+                  const attendancesPercentage = maxAttendances > 0 ? (month.attendances / maxAttendances) * 100 : 0;
+                  
+                  return (
+                    <div key={month.month} className="space-y-2">
+                      <span className="text-xs sm:text-sm font-medium block">{month.month}</span>
+                      
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground min-w-[70px]">Classes:</span>
+                        <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-green-500 transition-all"
+                            style={{ width: `${classesPercentage}%` }}
+                          />
+                        </div>
+                        <Badge variant="outline" className="text-xs min-w-[45px] justify-center">{month.classes}</Badge>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground min-w-[70px]">Assistències:</span>
+                        <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-blue-500 transition-all"
+                            style={{ width: `${attendancesPercentage}%` }}
+                          />
+                        </div>
+                        <Badge variant="outline" className="text-xs bg-blue-50 min-w-[45px] justify-center">{month.attendances}</Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+            <div className="flex gap-4 text-xs text-muted-foreground border-t pt-3 mt-3">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded bg-green-500"></div>
+                <span>Classes fetes</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded bg-blue-500"></div>
+                <span>Total assistències</span>
+              </div>
+            </div>
+          </NeoCard>
+        </TabsContent>
+
+        <TabsContent value="programs" className="space-y-4">
+          <NeoCard className="p-4 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Award className="w-5 h-5 text-primary" />
+              <h3 className="text-lg sm:text-xl font-semibold">Classes per Programa</h3>
+            </div>
+            <Separator className="mb-4" />
+            <div className="space-y-3">
+              {stats.programData.map((prog) => {
+                const percentage = (prog.count / stats.totalSessions) * 100;
+                
+                return (
+                  <div key={prog.name} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{prog.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs">
+                          {percentage.toFixed(1)}%
+                        </span>
+                        <Badge variant="outline">{prog.count}</Badge>
+                      </div>
+                    </div>
+                    <div className="h-6 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </NeoCard>
+        </TabsContent>
+
+        <TabsContent value="users" className="space-y-4">
+          <NeoCard className="p-4 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Award className="w-5 h-5 text-yellow-600" />
+              <h3 className="text-lg sm:text-xl font-semibold">Top 10 Usuaris Més Fidels</h3>
+            </div>
+            <Separator className="mb-4" />
             <div className="space-y-2">
-              {stats.inactiveUsers.map((user) => (
+              {stats.topUsers.map((user, idx) => (
                 <div 
                   key={user.id} 
                   onClick={() => setViewingUser(user)}
-                  className="flex items-center justify-between p-2 bg-red-50 rounded cursor-pointer hover:bg-red-100 transition-colors"
+                  className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded cursor-pointer hover:bg-muted/50 transition-colors"
                 >
-                  <span className="font-medium text-sm truncate">{user.name}</span>
-                  <Badge variant="outline" className="bg-white">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {user.daysSinceLastSession} dies
-                  </Badge>
+                  <div className="flex items-center gap-3">
+                    <Badge className={idx < 3 ? 'bg-yellow-500' : 'bg-muted'}>
+                      #{idx + 1}
+                    </Badge>
+                    <span className="font-medium text-sm sm:text-base truncate">{user.name}</span>
+                  </div>
+                  <Badge variant="outline">{user.totalSessions || 0} sessions</Badge>
                 </div>
               ))}
             </div>
-          </ScrollArea>
-        ) : (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            🎉 No hi ha usuaris inactius!
-          </p>
-        )}
-      </NeoCard>
-    </TabsContent>
+          </NeoCard>
 
-    <TabsContent value="centers" className="space-y-4">
-      <NeoCard className="p-4 sm:p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <MapPin className="w-5 h-5 text-primary" />
-          <h3 className="text-lg sm:text-xl font-semibold">Distribució per Centre</h3>
-        </div>
-        <Separator className="mb-4" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {Object.entries(stats.centerCount).map(([center, count]) => {
-            const totalAllCenters = Object.values(stats.centerCount).reduce((a, b) => a + b, 0);
-            const percentage = (count / totalAllCenters) * 100;
-            
-            return (
-              <div key={center} className="p-4 sm:p-6 bg-muted/30 rounded-lg text-center">
-                <p className="text-3xl sm:text-4xl font-bold mb-2">{count}</p>
-                <p className="text-sm font-medium mb-3">{center}</p>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full ${center === 'Arbúcies' ? 'bg-blue-500' : 'bg-green-500'}`}
-                    style={{ width: `${percentage}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {percentage.toFixed(1)}% del total
-                </p>
+          <NeoCard className="p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <UserX className="w-5 h-5 text-red-600" />
+                <h3 className="text-lg sm:text-xl font-semibold">Usuaris Inactius (+60 dies)</h3>
               </div>
-            );
-          })}
-        </div>
-      </NeoCard>
-    </TabsContent>
-
-    {/* 🎉 NOVA PESTANYA: Classes per dies de la setmana */}
-    <TabsContent value="weekdays" className="space-y-4">
-      <NeoCard className="p-4 sm:p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5 text-primary" />
-          <h3 className="text-lg sm:text-xl font-semibold">Classes per Dia de la Setmana</h3>
-        </div>
-        <Separator className="mb-4" />
-        <div className="space-y-3">
-          {stats.classesByWeekday.map((dayData) => {
-            const maxCount = Math.max(...stats.classesByWeekday.map(d => d.count));
-            const percentage = maxCount > 0 ? (dayData.count / maxCount) * 100 : 0;
-            
-            return (
-              <div key={dayData.day} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{dayData.day}</span>
-                  <Badge variant="outline">{dayData.count} classes</Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setInactiveSortOrder(inactiveSortOrder === 'desc' ? 'asc' : 'desc')}
+                className="gap-2"
+              >
+                <ArrowUpDown className="w-4 h-4" />
+                {inactiveSortOrder === 'desc' ? 'Més dies' : 'Menys dies'}
+              </Button>
+            </div>
+            <Separator className="mb-4" />
+            {stats.inactiveUsers.length > 0 ? (
+              <ScrollArea className="h-64">
+                <div className="space-y-2">
+                  {stats.inactiveUsers.map((user) => (
+                    <div 
+                      key={user.id} 
+                      onClick={() => setViewingUser(user)}
+                      className="flex items-center justify-between p-2 bg-red-50 rounded cursor-pointer hover:bg-red-100 transition-colors"
+                    >
+                      <span className="font-medium text-sm truncate">{user.name}</span>
+                      <Badge variant="outline" className="bg-white">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {user.daysSinceLastSession} dies
+                      </Badge>
+                    </div>
+                  ))}
                 </div>
-                <div className="h-8 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-teal-500 to-teal-400 transition-all flex items-center justify-end pr-2"
-                    style={{ width: `${percentage}%` }}
-                  >
-                    {percentage > 20 && (
-                      <span className="text-xs text-white font-medium">
-                        {dayData.count}
-                      </span>
-                    )}
+              </ScrollArea>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                🎉 No hi ha usuaris inactius!
+              </p>
+            )}
+          </NeoCard>
+        </TabsContent>
+
+        <TabsContent value="centers" className="space-y-4">
+          <NeoCard className="p-4 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <MapPin className="w-5 h-5 text-primary" />
+              <h3 className="text-lg sm:text-xl font-semibold">Distribució per Centre</h3>
+            </div>
+            <Separator className="mb-4" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {Object.entries(stats.centerCount).map(([center, count]) => {
+                const totalAllCenters = Object.values(stats.centerCount).reduce((a, b) => a + b, 0);
+                const percentage = (count / totalAllCenters) * 100;
+                
+                return (
+                  <div key={center} className="p-4 sm:p-6 bg-muted/30 rounded-lg text-center">
+                    <p className="text-3xl sm:text-4xl font-bold mb-2">{count}</p>
+                    <p className="text-sm font-medium mb-3">{center}</p>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full ${center === 'Arbúcies' ? 'bg-blue-500' : 'bg-green-500'}`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {percentage.toFixed(1)}% del total
+                    </p>
                   </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="mt-4 p-3 bg-muted/30 rounded-lg">
-          <p className="text-sm text-muted-foreground">
-            <strong>Total classes:</strong> {stats.classesByWeekday.reduce((sum, d) => sum + d.count, 0)}
-          </p>
-        </div>
-      </NeoCard>
-    </TabsContent>
-  </Tabs>
+                );
+              })}
+            </div>
+          </NeoCard>
+        </TabsContent>
 
-  <UserDetailModal
-    user={viewingUser}
-    isOpen={!!viewingUser}
-    onClose={() => setViewingUser(null)}
-    onEdit={() => {}}
-  />
-</div>
-);
+        {/* 🎉 NOVA PESTANYA: Classes per dies de la setmana */}
+        <TabsContent value="weekdays" className="space-y-4">
+          <NeoCard className="p-4 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Calendar className="w-5 h-5 text-primary" />
+              <h3 className="text-lg sm:text-xl font-semibold">Classes per Dia de la Setmana</h3>
+            </div>
+            <Separator className="mb-4" />
+            <div className="space-y-3">
+              {stats.classesByWeekday.map((dayData) => {
+                const maxCount = Math.max(...stats.classesByWeekday.map(d => d.count));
+                const percentage = maxCount > 0 ? (dayData.count / maxCount) * 100 : 0;
+                
+                return (
+                  <div key={dayData.day} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{dayData.day}</span>
+                      <Badge variant="outline">{dayData.count} classes</Badge>
+                    </div>
+                    <div className="h-8 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-teal-500 to-teal-400 transition-all flex items-center justify-end pr-2"
+                        style={{ width: `${percentage}%` }}
+                      >
+                        {percentage > 20 && (
+                          <span className="text-xs text-white font-medium">
+                            {dayData.count}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                <strong>Total classes:</strong> {stats.classesByWeekday.reduce((sum, d) => sum + d.count, 0)}
+              </p>
+            </div>
+          </NeoCard>
+        </TabsContent>
+      </Tabs>
+
+      <UserDetailModal
+        user={viewingUser}
+        isOpen={!!viewingUser}
+        onClose={() => setViewingUser(null)}
+        onEdit={() => {}}
+      />
+    </div>
+  );
 };
+
 export default Stats;
