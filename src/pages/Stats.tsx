@@ -311,11 +311,22 @@ const Stats = () => {
         }));
     
     const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const activeUsers = filteredUsers.filter(user => {
+thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+const activeUsers = centerFilter === "all"
+  ? users.filter(user => {
       if (!user.lastSession) return false;
       const lastSession = new Date(user.lastSession);
       return lastSession >= thirtyDaysAgo;
+    }).length
+  : users.filter(user => {
+      if (!user.lastSession) return false;
+      const lastSession = new Date(user.lastSession);
+      if (lastSession < thirtyDaysAgo) return false;
+      // Comprovar que l'usuari té sessions al centre filtrat en els últims 30 dies
+      return (user.sessions || []).some(s => {
+        const sessionDate = new Date(s.date);
+        return sessionDate >= thirtyDaysAgo && centersMatch(s.center, centerFilter);
+      });
     }).length;
     
     const recurrentUsersFiltered = filteredUsers.filter(u => (u.totalSessions || 0) > 1).length;
@@ -522,7 +533,7 @@ const Stats = () => {
       </div>
 
       {/* 🎉 NOVES ESTADÍSTIQUES */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-pink-50 to-pink-100">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -554,24 +565,7 @@ const Stats = () => {
             />
           </div>
         </NeoCard>
-
-        <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-teal-50 to-teal-100">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-teal-600" />
-              <div>
-                <p className="text-2xl sm:text-3xl font-bold text-teal-700">{stats.mostPopularDay?.[0] || 'N/A'}</p>
-                <p className="text-xs sm:text-sm text-teal-600">Dia més actiu</p>
-              </div>
-            </div>
-            <InfoButton 
-              title="Dia més actiu" 
-              description={`El dia de la setmana en què fas més classes.\n\n${stats.mostPopularDay ? `Total de classes els ${stats.mostPopularDay[0]}: ${stats.mostPopularDay[1]}` : 'Sense dades'}`}
-            />
-          </div>
-        </NeoCard>
-      </div>
-
+       
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <NeoCard className="p-3 sm:p-4">
           <div className="flex items-center justify-between mb-1">
@@ -631,12 +625,22 @@ const Stats = () => {
   </div>
 
   <Tabs defaultValue="evolution" className="space-y-4">
-    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
-      <TabsTrigger value="evolution" className="text-xs sm:text-sm">Evolució</TabsTrigger>
-      <TabsTrigger value="programs" className="text-xs sm:text-sm">Programes</TabsTrigger>
-      <TabsTrigger value="users" className="text-xs sm:text-sm">Usuaris</TabsTrigger>
-      <TabsTrigger value="centers" className="text-xs sm:text-sm">Centres</TabsTrigger>
-      <TabsTrigger value="weekdays" className="text-xs sm:text-sm">Dies setmana</TabsTrigger>
+    <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 gap-1">
+      <TabsTrigger value="evolution" className="text-[10px] sm:text-sm px-1 sm:px-3">
+    Evolució
+      </TabsTrigger>
+      <TabsTrigger value="programs" className="text-[10px] sm:text-sm px-1 sm:px-3">
+    Programes
+      </TabsTrigger>
+      <TabsTrigger value="users" className="text-[10px] sm:text-sm px-1 sm:px-3">
+    Usuaris
+      </TabsTrigger>
+      <TabsTrigger value="centers" className="text-[10px] sm:text-sm px-1 sm:px-3">
+    Centres
+      </TabsTrigger>
+      <TabsTrigger value="weekdays" className="text-[10px] sm:text-sm px-1 sm:px-3 col-span-3 sm:col-span-1">
+    Dies setmana
+      </TabsTrigger>
     </TabsList>
 
     <TabsContent value="evolution" className="space-y-4">
