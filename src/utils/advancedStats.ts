@@ -16,7 +16,7 @@ export interface AdvancedStats {
 // 🆕 NOVA INTERFÍCIE per l'autodisciplina amb nivells descriptius
 export interface AutodisciplineLevel {
   label: string; // "cal millorar", "ho pots fer millor", "bona", "notable", "excel·lent"
-  emoji: string; // 😞, 😐, 🙂, 😊, 🤩
+  emoji: string; // 🙄, 😐, 🙂, 😊, 🤩
   color: string; // Classe de Tailwind per al color
   bgColor: string; // Color de fons
   percentage: number; // 0-100 per a la barra
