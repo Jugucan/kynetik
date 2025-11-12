@@ -63,14 +63,14 @@ const InfoButton = ({ title, description }: { title: string; description: string
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="ml-2 p-1 rounded-full hover:bg-primary/10 transition-colors"
+        className="ml-2 p-1 rounded-full hover:bg-primary/10 transition-colors flex-shrink-0"
         aria-label="Més informació"
       >
         <Info className="w-4 h-4 text-primary" />
       </button>
 
       <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>{title}</AlertDialogTitle>
             <AlertDialogDescription className="text-base pt-2">
@@ -92,7 +92,6 @@ const Stats = () => {
   const [inactiveSortOrder, setInactiveSortOrder] = useState<'asc' | 'desc'>('desc');
   const [viewingUser, setViewingUser] = useState<any>(null);
   const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
-  // New state: toggle between yearly totals and monthly-average-per-month view
   const [attendanceView, setAttendanceView] = useState<'year' | 'monthlyAverage'>('year');
 
   const loading = usersLoading || settingsLoading || schedulesLoading;
@@ -261,7 +260,6 @@ const Stats = () => {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([year, count]) => ({ year, count }));
 
-    // Mitjana d'assistències per any
     const avgAttendancesPerYear = yearlyAttendanceData.length > 0
       ? (totalAttendances / yearlyAttendanceData.length).toFixed(1)
       : 0;
@@ -389,22 +387,18 @@ const Stats = () => {
       else if (diff < 0) trend = 'down';
     }
 
-    // --- CALCUL: mitjana per cada mes (promig per mes al llarg dels anys) ---
-    // Agrupem assistències per YYYY-MM
     const attendancesByYearMonth: { [ym: string]: number } = {};
     filteredAttendances.forEach(a => {
-      const ym = a.date.slice(0, 7); // 'YYYY-MM'
+      const ym = a.date.slice(0, 7);
       attendancesByYearMonth[ym] = (attendancesByYearMonth[ym] || 0) + 1;
     });
-    // Agrupem per mes (1..12) amb array de valors per any
     const monthBuckets: { [m: string]: number[] } = {};
     Object.entries(attendancesByYearMonth).forEach(([ym, count]) => {
-      const month = parseInt(ym.split('-')[1], 10); // 1..12
+      const month = parseInt(ym.split('-')[1], 10);
       const key = month.toString().padStart(2, '0');
       monthBuckets[key] = monthBuckets[key] || [];
       monthBuckets[key].push(count);
     });
-    // Calculem la mitjana per mes (si no hi ha dades per un mes, 0)
     const monthNames = Array.from({length:12}).map((_, i) => {
       const dt = new Date(2000, i, 1);
       return dt.toLocaleDateString('ca-ES', { month: 'short' });
@@ -444,11 +438,11 @@ const Stats = () => {
 
   if (loading) {
     return (
-      <div className="space-y-4 sm:space-y-6 px-2 sm:px-0 overflow-x-hidden">
+      <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
-          <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Les Meves Estadístiques</h1>
+          <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">Les Meves Estadístiques</h1>
             <p className="text-sm text-muted-foreground">Anàlisi del teu rendiment com a instructora</p>
           </div>
         </div>
@@ -458,12 +452,13 @@ const Stats = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0 overflow-x-hidden">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 max-w-7xl mx-auto">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Les Meves Estadístiques</h1>
+        <div className="flex items-center gap-3 min-w-0">
+          <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">Les Meves Estadístiques</h1>
             <p className="text-sm text-muted-foreground">Classes reals segons el teu calendari</p>
           </div>
         </div>
@@ -471,7 +466,7 @@ const Stats = () => {
         <Select value={centerFilter} onValueChange={setCenterFilter}>
           <SelectTrigger className="w-full sm:w-56 shadow-neo">
             <div className="flex items-center">
-              <MapPin className="w-4 h-4 mr-2" />
+              <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
               <SelectValue />
             </div>
           </SelectTrigger>
@@ -483,13 +478,14 @@ const Stats = () => {
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      {/* Estadístiques principals - 4 targetes */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-blue-100">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <Users className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600" />
-              <div>
-                <p className="text-2xl sm:text-3xl font-bold text-blue-700">{stats.totalUsers}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <Users className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-2xl sm:text-3xl font-bold text-blue-700 truncate">{stats.totalUsers}</p>
                 <p className="text-xs sm:text-sm text-blue-600">Usuaris únics</p>
               </div>
             </div>
@@ -501,11 +497,11 @@ const Stats = () => {
         </NeoCard>
 
         <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-green-50 to-green-100">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-green-600" />
-              <div>
-                <p className="text-2xl sm:text-3xl font-bold text-green-700">{stats.totalSessions}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-green-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-2xl sm:text-3xl font-bold text-green-700 truncate">{stats.totalSessions}</p>
                 <p className="text-xs sm:text-sm text-green-600">Classes fetes</p>
               </div>
             </div>
@@ -517,11 +513,11 @@ const Stats = () => {
         </NeoCard>
 
         <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-purple-50 to-purple-100">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <Target className="w-8 h-8 sm:w-10 sm:h-10 text-purple-600" />
-              <div>
-                <p className="text-2xl sm:text-3xl font-bold text-purple-700">{stats.avgAttendees}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <Target className="w-8 h-8 sm:w-10 sm:h-10 text-purple-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-2xl sm:text-3xl font-bold text-purple-700 truncate">{stats.avgAttendees}</p>
                 <p className="text-xs sm:text-sm text-purple-600">Assistents/classe</p>
               </div>
             </div>
@@ -533,11 +529,11 @@ const Stats = () => {
         </NeoCard>
 
         <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-orange-50 to-orange-100">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <UserCheck className="w-8 h-8 sm:w-10 sm:h-10 text-orange-600" />
-              <div>
-                <p className="text-2xl sm:text-3xl font-bold text-orange-700">{stats.activeUsers}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <UserCheck className="w-8 h-8 sm:w-10 sm:h-10 text-orange-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-2xl sm:text-3xl font-bold text-orange-700 truncate">{stats.activeUsers}</p>
                 <p className="text-xs sm:text-sm text-orange-600">Actius (30d)</p>
               </div>
             </div>
@@ -549,115 +545,121 @@ const Stats = () => {
         </NeoCard>
       </div>
 
-      {/* 🎉 NOVES ESTADÍSTIQUES */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-pink-50 to-pink-100">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <Users className="w-8 h-8 sm:w-10 sm:h-10 text-pink-600" />
-              <div>
-                <p className="text-2xl sm:text-3xl font-bold text-pink-700">{stats.totalAttendances}</p>
-                <p className="text-xs sm:text-sm text-pink-600">Total assistències</p>
-              </div>
-            </div>
-            <InfoButton 
-              title="Total assistències" 
-              description="Nombre total de vegades que els usuaris han assistit a les teves classes. Un mateix usuari pot comptar múltiples vegades."
-            />
-          </div>
-        </NeoCard>
-
-        <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-indigo-50 to-indigo-100">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600" />
-              <div>
-                <p className="text-2xl sm:text-3xl font-bold text-indigo-700">{stats.avgAttendancesPerYear}</p>
-                <p className="text-xs sm:text-sm text-indigo-600">Mitjana assist./any</p>
-              </div>
-            </div>
-            <InfoButton 
-              title="Mitjana d'assistències per any" 
-              description="Mitjana d'assistències que reps cada any. Es calcula dividint el total d'assistències entre el nombre d'anys amb dades."
-            />
-          </div>
-        </NeoCard>
-
-        <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-teal-50 to-teal-100">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-teal-600" />
-              <div>
-                <p className="text-2xl sm:text-3xl font-bold text-teal-700">{stats.mostPopularDay?.[0] || 'N/A'}</p>
-                <p className="text-xs sm:text-sm text-teal-600">Dia més actiu</p>
-              </div>
-            </div>
-            <InfoButton 
-              title="Dia més actiu" 
-              description={`El dia de la setmana en què fas més classes.\n\n${stats.mostPopularDay ? `Total de classes els ${stats.mostPopularDay[0]}: ${stats.mostPopularDay[1]}` : 'Sense dades'}`}
-            />
-          </div>
-        </NeoCard>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <NeoCard className="p-3 sm:p-4">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <Percent className="w-4 h-4 text-blue-600" />
-              <p className="text-xs text-muted-foreground">Taxa de retenció</p>
-            </div>
-            <InfoButton
-              title="Taxa de retenció"
-              description={`Percentatge d'usuaris que han vingut més d'una vegada a les teves classes. Indica la fidelitat dels teus alumnes.\n\n📊 ${stats.recurrentUsers} de ${stats.totalUsers} usuaris han repetit.`}
-            />
-          </div>
-          <p className="text-xl sm:text-2xl font-bold">{stats.retentionRate}%</p>
-        </NeoCard>
-
-        <NeoCard className="p-3 sm:p-4">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-green-600" />
-              <p className="text-xs text-muted-foreground">Creixement mensual</p>
-            </div>
-            <InfoButton 
-              title="Creixement mensual" 
-              description="Comparació del nombre de classes entre el mes actual i l'anterior. Un valor positiu indica que has fet més classes aquest mes que l'anterior."
-            />
-          </div>
-          <p className="text-xl sm:text-2xl font-bold">{stats.monthlyGrowth}%</p>
-        </NeoCard>
-
-        <NeoCard className="p-3 sm:p-4">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-orange-600" />
-              <p className="text-xs sm:text-sm text-muted-foreground">Franja preferida</p>
-            </div>
-            <InfoButton 
-              title="Franja horària preferida" 
-              description="La franja horària on fas més classes:\n• Matí: abans de les 12h\n• Tarda: de 12h a 18h\n• Vespre: després de les 18h"
-            />
-          </div>
-          <p className="text-base sm:text-lg font-bold">{stats.preferredTimeSlot}</p>
-        </NeoCard>
-      </div>
-
-      <Tabs defaultValue="evolution" className="space-y-4">
+      {/* Pestanyes amb tota la resta d'informació */}
+      <Tabs defaultValue="overview" className="space-y-4">
         <ScrollArea className="w-full whitespace-nowrap pb-2">
-          <TabsList className="inline-flex w-auto sm:grid sm:w-full sm:grid-cols-5">
-            <TabsTrigger value="evolution" className="text-xs sm:text-sm">Evolució</TabsTrigger>
-            <TabsTrigger value="programs" className="text-xs sm:text-sm">Programes</TabsTrigger>
-            <TabsTrigger value="users" className="text-xs sm:text-sm">Usuaris</TabsTrigger>
-            <TabsTrigger value="centers" className="text-xs sm:text-sm">Centres</TabsTrigger>
-            <TabsTrigger value="weekdays" className="text-xs sm:text-sm">Dies setmana</TabsTrigger>
+          <TabsList className="inline-flex w-auto sm:grid sm:w-full sm:grid-cols-6">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm px-3">Resum</TabsTrigger>
+            <TabsTrigger value="evolution" className="text-xs sm:text-sm px-3">Evolució</TabsTrigger>
+            <TabsTrigger value="programs" className="text-xs sm:text-sm px-3">Programes</TabsTrigger>
+            <TabsTrigger value="users" className="text-xs sm:text-sm px-3">Usuaris</TabsTrigger>
+            <TabsTrigger value="centers" className="text-xs sm:text-sm px-3">Centres</TabsTrigger>
+            <TabsTrigger value="weekdays" className="text-xs sm:text-sm px-3">Dies setmana</TabsTrigger>
           </TabsList>
         </ScrollArea>
 
+        {/* Nova pestanya: Resum General */}
+        <TabsContent value="overview" className="space-y-4">
+          {/* Estadístiques secundàries */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-pink-50 to-pink-100">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Users className="w-8 h-8 sm:w-10 sm:h-10 text-pink-600 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-2xl sm:text-3xl font-bold text-pink-700 truncate">{stats.totalAttendances}</p>
+                    <p className="text-xs sm:text-sm text-pink-600">Total assistències</p>
+                  </div>
+                </div>
+                <InfoButton 
+                  title="Total assistències" 
+                  description="Nombre total de vegades que els usuaris han assistit a les teves classes. Un mateix usuari pot comptar múltiples vegades."
+                />
+              </div>
+            </NeoCard>
+
+            <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-indigo-50 to-indigo-100">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-2xl sm:text-3xl font-bold text-indigo-700 truncate">{stats.avgAttendancesPerYear}</p>
+                    <p className="text-xs sm:text-sm text-indigo-600">Mitjana assist./any</p>
+                  </div>
+                </div>
+                <InfoButton 
+                  title="Mitjana d'assistències per any" 
+                  description="Mitjana d'assistències que reps cada any. Es calcula dividint el total d'assistències entre el nombre d'anys amb dades."
+                />
+              </div>
+            </NeoCard>
+
+            <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-teal-50 to-teal-100">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-teal-600 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-2xl sm:text-3xl font-bold text-teal-700 truncate">{stats.mostPopularDay?.[0] || 'N/A'}</p>
+                    <p className="text-xs sm:text-sm text-teal-600">Dia més actiu</p>
+                  </div>
+                </div>
+                <InfoButton 
+                  title="Dia més actiu" 
+                  description={`El dia de la setmana en què fas més classes.\n\n${stats.mostPopularDay ? `Total de classes els ${stats.mostPopularDay[0]}: ${stats.mostPopularDay[1]}` : 'Sense dades'}`}
+                />
+              </div>
+            </NeoCard>
+          </div>
+
+          {/* Indicadors petits */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <NeoCard className="p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-1 gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Percent className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground truncate">Taxa de retenció</p>
+                </div>
+                <InfoButton
+                  title="Taxa de retenció"
+                  description={`Percentatge d'usuaris que han vingut més d'una vegada a les teves classes. Indica la fidelitat dels teus alumnes.\n\n📊 ${stats.recurrentUsers} de ${stats.totalUsers} usuaris han repetit.`}
+                />
+              </div>
+              <p className="text-xl sm:text-2xl font-bold">{stats.retentionRate}%</p>
+            </NeoCard>
+
+            <NeoCard className="p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-1 gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <TrendingUp className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground truncate">Creixement mensual</p>
+                </div>
+                <InfoButton 
+                  title="Creixement mensual" 
+                  description="Comparació del nombre de classes entre el mes actual i l'anterior. Un valor positiu indica que has fet més classes aquest mes que l'anterior."
+                />
+              </div>
+              <p className="text-xl sm:text-2xl font-bold">{stats.monthlyGrowth}%</p>
+            </NeoCard>
+
+            <NeoCard className="p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-1 gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Clock className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground truncate">Franja preferida</p>
+                </div>
+                <InfoButton 
+                  title="Franja horària preferida" 
+                  description="La franja horària on fas més classes:\n• Matí: abans de les 12h\n• Tarda: de 12h a 18h\n• Vespre: després de les 18h"
+                />
+              </div>
+              <p className="text-base sm:text-lg font-bold">{stats.preferredTimeSlot}</p>
+            </NeoCard>
+          </div>
+        </TabsContent>
+
         <TabsContent value="evolution" className="space-y-4">
           <NeoCard className="p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <h3 className="text-lg sm:text-xl font-semibold">Tendència General</h3>
               {stats.trend === 'up' && (
                 <Badge className="bg-green-500">
@@ -685,7 +687,7 @@ const Stats = () => {
 
                 return (
                   <div key={yearData.year} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-sm gap-2">
                       <span className="font-medium">{yearData.year}</span>
                       <Badge variant="outline">{yearData.count} classes</Badge>
                     </div>
@@ -708,10 +710,11 @@ const Stats = () => {
           </NeoCard>
 
           <NeoCard className="p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg sm:text-xl font-semibold">{attendanceView === 'year' ? 'Total Assistències per Any' : 'Mitjana Mensual d\'Assistències'}</h3>
-              <div className="flex items-center gap-2">
-                {/* Toggle buttons */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
+              <h3 className="text-lg sm:text-xl font-semibold">
+                {attendanceView === 'year' ? 'Total Assistències per Any' : 'Mitjana Mensual d\'Assistències'}
+              </h3>
+              <div className="flex items-center gap-2 flex-wrap">
                 <div className="bg-muted/40 rounded-full p-1 flex items-center gap-1">
                   <button
                     onClick={() => setAttendanceView('year')}
@@ -741,7 +744,7 @@ const Stats = () => {
 
                   return (
                     <div key={yearData.year} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center justify-between text-sm gap-2">
                         <span className="font-medium">{yearData.year}</span>
                         <Badge variant="outline" className="bg-blue-50">{yearData.count} assistències</Badge>
                       </div>
@@ -761,14 +764,13 @@ const Stats = () => {
                   );
                 })
               ) : (
-                // Monthly averages view (Jan..Dec)
                 <div className="space-y-2">
                   {stats.monthlyAverages.map((m) => {
                     const maxAvg = Math.max(...stats.monthlyAverages.map(mm => mm.avg));
                     const pct = maxAvg > 0 ? (m.avg / maxAvg) * 100 : 0;
                     return (
                       <div key={m.month} className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center justify-between text-sm gap-2">
                           <span className="font-medium">{m.month}</span>
                           <Badge variant="outline" className="bg-blue-50">{m.avg}</Badge>
                         </div>
@@ -807,39 +809,39 @@ const Stats = () => {
                     <div key={month.month} className="space-y-2">
                       <span className="text-xs sm:text-sm font-medium block">{month.month}</span>
 
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground min-w-0 w-[70px] sm:w-[90px]">Classes:</span>
-                        <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <span className="text-xs text-muted-foreground min-w-[70px] sm:min-w-[90px] flex-shrink-0">Classes:</span>
+                        <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden min-w-0">
                           <div 
                             className="h-full bg-green-500 transition-all"
                             style={{ width: `${classesPercentage}%` }}
                           />
                         </div>
-                        <Badge variant="outline" className="text-xs min-w-[45px] justify-center">{month.classes}</Badge>
+                        <Badge variant="outline" className="text-xs min-w-[45px] justify-center flex-shrink-0">{month.classes}</Badge>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground min-w-0 w-[70px] sm:w-[90px]">Assistències:</span>
-                        <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <span className="text-xs text-muted-foreground min-w-[70px] sm:min-w-[90px] flex-shrink-0">Assistències:</span>
+                        <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden min-w-0">
                           <div 
                             className="h-full bg-blue-500 transition-all"
                             style={{ width: `${attendancesPercentage}%` }}
                           />
                         </div>
-                        <Badge variant="outline" className="text-xs bg-blue-50 min-w-[45px] justify-center">{month.attendances}</Badge>
+                        <Badge variant="outline" className="text-xs bg-blue-50 min-w-[45px] justify-center flex-shrink-0">{month.attendances}</Badge>
                       </div>
                     </div>
                   );
                 })}
               </div>
             </ScrollArea>
-            <div className="flex gap-4 text-xs text-muted-foreground border-t pt-3 mt-3">
+            <div className="flex gap-4 text-xs text-muted-foreground border-t pt-3 mt-3 flex-wrap">
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded bg-green-500"></div>
+                <div className="w-3 h-3 rounded bg-green-500 flex-shrink-0"></div>
                 <span>Classes fetes</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded bg-blue-500"></div>
+                <div className="w-3 h-3 rounded bg-blue-500 flex-shrink-0"></div>
                 <span>Total assistències</span>
               </div>
             </div>
@@ -849,7 +851,7 @@ const Stats = () => {
         <TabsContent value="programs" className="space-y-4">
           <NeoCard className="p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Award className="w-5 h-5 text-primary" />
+              <Award className="w-5 h-5 text-primary flex-shrink-0" />
               <h3 className="text-lg sm:text-xl font-semibold">Classes per Programa</h3>
             </div>
             <Separator className="mb-4" />
@@ -859,9 +861,9 @@ const Stats = () => {
 
                 return (
                   <div key={prog.name} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{prog.name}</span>
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between text-sm gap-2">
+                      <span className="font-medium truncate">{prog.name}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <span className="text-muted-foreground text-xs">
                           {percentage.toFixed(1)}%
                         </span>
@@ -884,7 +886,7 @@ const Stats = () => {
         <TabsContent value="users" className="space-y-4">
           <NeoCard className="p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Award className="w-5 h-5 text-yellow-600" />
+              <Award className="w-5 h-5 text-yellow-600 flex-shrink-0" />
               <h3 className="text-lg sm:text-xl font-semibold">Top 10 Usuaris Més Fidels</h3>
             </div>
             <Separator className="mb-4" />
@@ -893,31 +895,31 @@ const Stats = () => {
                 <div 
                   key={user.id} 
                   onClick={() => setViewingUser(user)}
-                  className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded cursor-pointer hover:bg-muted/50 transition-colors gap-2"
                 >
-                  <div className="flex items-center gap-3">
-                    <Badge className={idx < 3 ? 'bg-yellow-500' : 'bg-muted'}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Badge className={`${idx < 3 ? 'bg-yellow-500' : 'bg-muted'} flex-shrink-0`}>
                       #{idx + 1}
                     </Badge>
                     <span className="font-medium text-sm sm:text-base truncate">{user.name}</span>
                   </div>
-                  <Badge variant="outline">{user.totalSessions || 0} sessions</Badge>
+                  <Badge variant="outline" className="flex-shrink-0">{user.totalSessions || 0} sessions</Badge>
                 </div>
               ))}
             </div>
           </NeoCard>
 
           <NeoCard className="p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
               <div className="flex items-center gap-2">
-                <UserX className="w-5 h-5 text-red-600" />
+                <UserX className="w-5 h-5 text-red-600 flex-shrink-0" />
                 <h3 className="text-lg sm:text-xl font-semibold">Usuaris Inactius (+60 dies)</h3>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setInactiveSortOrder(inactiveSortOrder === 'desc' ? 'asc' : 'desc')}
-                className="gap-2"
+                className="gap-2 w-full sm:w-auto"
               >
                 <ArrowUpDown className="w-4 h-4" />
                 {inactiveSortOrder === 'desc' ? 'Més dies' : 'Menys dies'}
@@ -931,10 +933,10 @@ const Stats = () => {
                     <div 
                       key={user.id} 
                       onClick={() => setViewingUser(user)}
-                      className="flex items-center justify-between p-2 bg-red-50 rounded cursor-pointer hover:bg-red-100 transition-colors"
+                      className="flex items-center justify-between p-2 bg-red-50 rounded cursor-pointer hover:bg-red-100 transition-colors gap-2"
                     >
                       <span className="font-medium text-sm truncate">{user.name}</span>
-                      <Badge variant="outline" className="bg-white">
+                      <Badge variant="outline" className="bg-white flex-shrink-0">
                         <Clock className="w-3 h-3 mr-1" />
                         {user.daysSinceLastSession} dies
                       </Badge>
@@ -953,7 +955,7 @@ const Stats = () => {
         <TabsContent value="centers" className="space-y-4">
           <NeoCard className="p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
-              <MapPin className="w-5 h-5 text-primary" />
+              <MapPin className="w-5 h-5 text-primary flex-shrink-0" />
               <h3 className="text-lg sm:text-xl font-semibold">Distribució per Centre</h3>
             </div>
             <Separator className="mb-4" />
@@ -965,7 +967,7 @@ const Stats = () => {
                 return (
                   <div key={center} className="p-4 sm:p-6 bg-muted/30 rounded-lg text-center">
                     <p className="text-3xl sm:text-4xl font-bold mb-2">{count}</p>
-                    <p className="text-sm font-medium mb-3">{center}</p>
+                    <p className="text-sm font-medium mb-3 truncate">{center}</p>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div 
                         className={`h-full ${center === 'Arbúcies' ? 'bg-blue-500' : 'bg-green-500'}`}
@@ -985,7 +987,7 @@ const Stats = () => {
         <TabsContent value="weekdays" className="space-y-4">
           <NeoCard className="p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-5 h-5 text-primary" />
+              <Calendar className="w-5 h-5 text-primary flex-shrink-0" />
               <h3 className="text-lg sm:text-xl font-semibold">Classes per Dia de la Setmana</h3>
             </div>
             <Separator className="mb-4" />
@@ -996,7 +998,7 @@ const Stats = () => {
 
                 return (
                   <div key={dayData.day} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-sm gap-2">
                       <span className="font-medium">{dayData.day}</span>
                       <Badge variant="outline">{dayData.count} classes</Badge>
                     </div>
