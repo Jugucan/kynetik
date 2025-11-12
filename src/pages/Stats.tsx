@@ -35,11 +35,9 @@ const dateToKey = (date: Date): string => {
 // Funció per normalitzar noms de centres
 const normalizeCenterName = (center: string | undefined): string => {
   if (!center) return 'na';
-  
-  // Convertim a minúscules i creem un map manual per als accents
+
   let normalized = center.toLowerCase().replace(/\s+/g, '');
-  
-  // Reemplacem accents manualment
+
   const accentsMap: { [key: string]: string } = {
     'á': 'a', 'à': 'a', 'ä': 'a', 'â': 'a',
     'é': 'e', 'è': 'e', 'ë': 'e', 'ê': 'e',
@@ -48,7 +46,7 @@ const normalizeCenterName = (center: string | undefined): string => {
     'ú': 'u', 'ù': 'u', 'ü': 'u', 'û': 'u',
     'ç': 'c', 'ñ': 'n'
   };
-  
+
   return normalized.split('').map(char => accentsMap[char] || char).join('');
 };
 
@@ -60,7 +58,7 @@ const centersMatch = (center1: string | undefined, center2: string | undefined):
 // Component per mostrar info
 const InfoButton = ({ title, description }: { title: string; description: string }) => {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   return (
     <>
       <button
@@ -70,7 +68,7 @@ const InfoButton = ({ title, description }: { title: string; description: string
       >
         <Info className="w-4 h-4 text-primary" />
       </button>
-      
+
       <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -94,23 +92,25 @@ const Stats = () => {
   const [inactiveSortOrder, setInactiveSortOrder] = useState<'asc' | 'desc'>('desc');
   const [viewingUser, setViewingUser] = useState<any>(null);
   const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
+  // New state: toggle between yearly totals and monthly-average-per-month view
+  const [attendanceView, setAttendanceView] = useState<'year' | 'monthlyAverage'>('year');
 
   const loading = usersLoading || settingsLoading || schedulesLoading;
 
   useEffect(() => {
     const customSessionsDocRef = doc(db, 'settings', 'customSessions');
-    
+
     const unsubscribe = onSnapshot(customSessionsDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         const sessionsMap: Record<string, Session[]> = {};
-        
+
         Object.entries(data).forEach(([dateKey, sessions]) => {
           if (Array.isArray(sessions)) {
             sessionsMap[dateKey] = sessions as Session[];
           }
         });
-        
+
         setCustomSessions(sessionsMap);
       } else {
         setCustomSessions({});
@@ -122,12 +122,11 @@ const Stats = () => {
 
   const getScheduleForDate = useCallback((date: Date) => {
     const dateStr = dateToKey(date);
-    
-    // 🎯 CORRECCIÓ: Ordenar horaris per data d'inici (més recent primer)
+
     const sortedSchedules = [...schedules].sort((a, b) => {
       return b.startDate.localeCompare(a.startDate);
     });
-    
+
     return sortedSchedules.find(schedule => {
       const startDate = schedule.startDate;
       const endDate = schedule.endDate || '9999-12-31';
@@ -144,7 +143,7 @@ const Stats = () => {
     const dateKey = dateToKey(date);
     return vacations && vacations.hasOwnProperty(dateKey);
   }, [vacations]);
-  
+
   const isClosure = useCallback((date: Date) => {
     const dateKey = dateToKey(date);
     return (closuresArbucies && closuresArbucies.hasOwnProperty(dateKey)) || 
@@ -153,22 +152,22 @@ const Stats = () => {
 
   const getSessionsForDate = useCallback((date: Date): Session[] => {
     const dateKey = dateToKey(date);
-    
+
     if (customSessions[dateKey]) {
       return customSessions[dateKey];
     }
-    
+
     if (isHoliday(date) || isVacation(date) || isClosure(date)) {
       return [];
     }
-    
+
     const scheduleForDate = getScheduleForDate(date);
-    
+
     if (scheduleForDate) {
       const dayOfWeek = date.getDay();
       const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
       const scheduleSessions = scheduleForDate.sessions[adjustedDay] || [];
-      
+
       return scheduleSessions.map(s => ({
         time: s.time,
         program: s.program,
@@ -177,17 +176,13 @@ const Stats = () => {
         isDeleted: false,
       }));
     }
-    
+
     return [];
   }, [customSessions, getScheduleForDate, isHoliday, isVacation, isClosure]);
 
   const stats = useMemo(() => {
-    // Normalitzem el filtre de centre
     const normalizedCenterFilter = centerFilter === "all" ? "all" : normalizeCenterName(centerFilter);
-    
-    console.log("🔍 DEBUG - Center Filter:", centerFilter);
-    console.log("🔍 DEBUG - Normalized Filter:", normalizedCenterFilter);
-    
+
     const allRealClasses: Array<{
       date: string;
       activity: string;
@@ -208,9 +203,8 @@ const Stats = () => {
     const currentDate = new Date(startDate);
     while (currentDate <= today) {
       const sessions = getSessionsForDate(currentDate);
-      // 🎯 CORRECCIÓ: Filtrem sessions eliminades IMMEDIATAMENT
       const activeSessions = sessions.filter(s => !s.isDeleted);
-      
+
       activeSessions.forEach(session => {
         allRealClasses.push({
           date: dateToKey(currentDate),
@@ -219,7 +213,7 @@ const Stats = () => {
           center: session.center || 'N/A'
         });
       });
-      
+
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
@@ -238,60 +232,59 @@ const Stats = () => {
       ? allUserAttendances
       : allUserAttendances.filter(a => centersMatch(a.center, centerFilter));
 
-    // Usuaris únics que han vingut al centre filtrat
     const totalUsers = centerFilter === "all"
       ? users.length
       : users.filter(user =>
           (user.sessions || []).some(s => centersMatch(s.center, centerFilter))
         ).length;
-    
+
     const totalSessions = filteredClasses.length;
     const totalAttendances = filteredAttendances.length;
-    
+
     const sessionsByYear: { [year: string]: number } = {};
     filteredClasses.forEach(classItem => {
       const year = classItem.date.split('-')[0];
       sessionsByYear[year] = (sessionsByYear[year] || 0) + 1;
     });
-    
+
     const yearlyData = Object.entries(sessionsByYear)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([year, count]) => ({ year, count }));
-    
+
     const attendancesByYear: { [year: string]: number } = {};
     filteredAttendances.forEach(attendance => {
       const year = attendance.date.split('-')[0];
       attendancesByYear[year] = (attendancesByYear[year] || 0) + 1;
     });
-    
+
     const yearlyAttendanceData = Object.entries(attendancesByYear)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([year, count]) => ({ year, count }));
-    
-    // 🎉 NOVA ESTADÍSTICA: Mitjana d'assistències per any
+
+    // Mitjana d'assistències per any
     const avgAttendancesPerYear = yearlyAttendanceData.length > 0
       ? (totalAttendances / yearlyAttendanceData.length).toFixed(1)
       : 0;
-    
+
     const now = new Date();
     const monthlyData: { month: string; classes: number; attendances: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthName = date.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
       const yearMonth = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-      
+
       const classesCount = filteredClasses.filter(c => c.date.startsWith(yearMonth)).length;
       const attendancesCount = filteredAttendances.filter(a => a.date.startsWith(yearMonth)).length;
-      
+
       monthlyData.push({ month: monthName, classes: classesCount, attendances: attendancesCount });
     }
-    
+
     const currentMonthSessions = monthlyData[monthlyData.length - 1]?.classes || 0;
     const previousMonthSessions = monthlyData[monthlyData.length - 2]?.classes || 0;
     const monthlyGrowth = previousMonthSessions > 0 
       ? (((currentMonthSessions - previousMonthSessions) / previousMonthSessions) * 100).toFixed(1)
       : 0;
-    
+
     const uniqueClassesMap = new Map<string, number>();
     filteredAttendances.forEach(attendance => {
       const key = `${attendance.date}-${attendance.time}-${attendance.activity}-${attendance.center}`;
@@ -302,43 +295,39 @@ const Stats = () => {
     const avgAttendees = uniqueClassesMap.size > 0
       ? (totalAttendeesInClasses / uniqueClassesMap.size).toFixed(1)
       : 0;
-    
+
     const filteredUsers = centerFilter === "all"
       ? users
       : users.map(user => ({
           ...user,
           totalSessions: (user.sessions || []).filter(s => centersMatch(s.center, centerFilter)).length
         }));
-    
-    // 🎯 CORRECCIÓ: Filtrar usuaris actius segons el centre seleccionat
+
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const activeUsers = users.filter(user => {
-      // Comprovar si té sessions en els últims 30 dies
       const recentSessions = (user.sessions || []).filter(s => {
         const sessionDate = new Date(s.date);
         return sessionDate >= thirtyDaysAgo;
       });
-      
+
       if (recentSessions.length === 0) return false;
-      
-      // Si és "tots els centres", comptar l'usuari
+
       if (centerFilter === "all") return true;
-      
-      // Si és un centre específic, comprovar si té sessions en aquest centre
+
       return recentSessions.some(s => centersMatch(s.center, centerFilter));
     }).length;
-    
+
     const recurrentUsersFiltered = filteredUsers.filter(u => (u.totalSessions || 0) > 1).length;
     const retentionRate = totalUsers > 0 ? ((recurrentUsersFiltered / totalUsers) * 100).toFixed(1) : 0;
-    
+
     const newUsersByYear: { [year: string]: number } = {};
     users.forEach(user => {
       if (!user.firstSession) return;
       const year = new Date(user.firstSession).getFullYear().toString();
       newUsersByYear[year] = (newUsersByYear[year] || 0) + 1;
     });
-    
+
     const programCount: { [program: string]: number } = {};
     filteredClasses.forEach(classItem => {
       programCount[classItem.activity] = (programCount[classItem.activity] || 0) + 1;
@@ -346,13 +335,12 @@ const Stats = () => {
     const programData = Object.entries(programCount)
       .sort((a, b) => b[1] - a[1])
       .map(([name, count]) => ({ name, count }));
-    
+
     const centerCount: { [center: string]: number } = {};
     allRealClasses.forEach(classItem => {
       centerCount[classItem.center] = (centerCount[classItem.center] || 0) + 1;
     });
-    
-    // 🎉 NOVA ESTADÍSTICA: Classes per dia de la setmana
+
     const dayCount: { [day: string]: number } = {};
     const dayNames = ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte'];
     filteredClasses.forEach(classItem => {
@@ -361,16 +349,15 @@ const Stats = () => {
       const dayName = dayNames[date.getDay()];
       dayCount[dayName] = (dayCount[dayName] || 0) + 1;
     });
-    
-    // Ordenem els dies de dilluns a diumenge
+
     const orderedDays = ['Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte', 'Diumenge'];
     const classesByWeekday = orderedDays.map(day => ({
       day,
       count: dayCount[day] || 0
     }));
-    
+
     const mostPopularDay = Object.entries(dayCount).sort((a, b) => b[1] - a[1])[0];
-    
+
     const timeSlotCount: { morning: number; afternoon: number; evening: number } = { morning: 0, afternoon: 0, evening: 0 };
     filteredClasses.forEach(classItem => {
       const hour = parseInt(classItem.time.split(':')[0]);
@@ -380,11 +367,11 @@ const Stats = () => {
     });
     const preferredTimeSlot = Object.entries(timeSlotCount).sort((a, b) => b[1] - a[1])[0];
     const timeSlotNames = { morning: 'Matí', afternoon: 'Tarda', evening: 'Vespre' };
-    
+
     const topUsers = [...filteredUsers]
       .sort((a, b) => (b.totalSessions || 0) - (a.totalSessions || 0))
       .slice(0, 10);
-    
+
     const inactiveUsers = users
       .filter(user => (user.daysSinceLastSession || 0) > 60)
       .sort((a, b) => {
@@ -392,7 +379,7 @@ const Stats = () => {
         const diffB = b.daysSinceLastSession || 0;
         return inactiveSortOrder === 'desc' ? diffB - diffA : diffA - diffB;
       });
-    
+
     let trend: 'up' | 'down' | 'stable' = 'stable';
     if (yearlyData.length >= 2) {
       const lastYear = yearlyData[yearlyData.length - 1].count;
@@ -401,7 +388,34 @@ const Stats = () => {
       if (diff > 0) trend = 'up';
       else if (diff < 0) trend = 'down';
     }
-    
+
+    // --- CALCUL: mitjana per cada mes (promig per mes al llarg dels anys) ---
+    // Agrupem assistències per YYYY-MM
+    const attendancesByYearMonth: { [ym: string]: number } = {};
+    filteredAttendances.forEach(a => {
+      const ym = a.date.slice(0, 7); // 'YYYY-MM'
+      attendancesByYearMonth[ym] = (attendancesByYearMonth[ym] || 0) + 1;
+    });
+    // Agrupem per mes (1..12) amb array de valors per any
+    const monthBuckets: { [m: string]: number[] } = {};
+    Object.entries(attendancesByYearMonth).forEach(([ym, count]) => {
+      const month = parseInt(ym.split('-')[1], 10); // 1..12
+      const key = month.toString().padStart(2, '0');
+      monthBuckets[key] = monthBuckets[key] || [];
+      monthBuckets[key].push(count);
+    });
+    // Calculem la mitjana per mes (si no hi ha dades per un mes, 0)
+    const monthNames = Array.from({length:12}).map((_, i) => {
+      const dt = new Date(2000, i, 1);
+      return dt.toLocaleDateString('ca-ES', { month: 'short' });
+    });
+    const monthlyAverages = monthNames.map((name, idx) => {
+      const key = (idx + 1).toString().padStart(2, '0');
+      const arr = monthBuckets[key] || [];
+      const avg = arr.length > 0 ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length) : 0;
+      return { month: name, avg };
+    });
+
     return {
       totalUsers,
       totalSessions,
@@ -423,13 +437,14 @@ const Stats = () => {
       mostPopularDay,
       preferredTimeSlot: preferredTimeSlot ? timeSlotNames[preferredTimeSlot[0] as keyof typeof timeSlotNames] : 'N/A',
       recurrentUsers: recurrentUsersFiltered,
-      classesByWeekday
+      classesByWeekday,
+      monthlyAverages
     };
   }, [users, centerFilter, inactiveSortOrder, schedules, customSessions, getSessionsForDate]);
 
   if (loading) {
     return (
-      <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+      <div className="space-y-4 sm:space-y-6 px-2 sm:px-0 overflow-x-hidden">
         <div className="flex items-center gap-3">
           <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
           <div>
@@ -443,7 +458,7 @@ const Stats = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0 overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
@@ -452,11 +467,13 @@ const Stats = () => {
             <p className="text-sm text-muted-foreground">Classes reals segons el teu calendari</p>
           </div>
         </div>
-        
+
         <Select value={centerFilter} onValueChange={setCenterFilter}>
-          <SelectTrigger className="w-full sm:w-[200px] shadow-neo">
-            <MapPin className="w-4 h-4 mr-2" />
-            <SelectValue />
+          <SelectTrigger className="w-full sm:w-56 shadow-neo">
+            <div className="flex items-center">
+              <MapPin className="w-4 h-4 mr-2" />
+              <SelectValue />
+            </div>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tots els Centres</SelectItem>
@@ -616,7 +633,7 @@ const Stats = () => {
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-orange-600" />
-              <p className="text-xs text-muted-foreground">Franja preferida</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Franja preferida</p>
             </div>
             <InfoButton 
               title="Franja horària preferida" 
@@ -659,13 +676,13 @@ const Stats = () => {
               )}
             </div>
             <Separator className="mb-4" />
-            
+
             <div className="space-y-3">
               <h4 className="font-medium text-sm sm:text-base">Classes Realitzades per Any</h4>
               {stats.yearlyData.map((yearData) => {
                 const maxCount = Math.max(...stats.yearlyData.map(y => y.count));
                 const percentage = (yearData.count / maxCount) * 100;
-                
+
                 return (
                   <div key={yearData.year} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
@@ -691,34 +708,87 @@ const Stats = () => {
           </NeoCard>
 
           <NeoCard className="p-4 sm:p-6">
-            <h3 className="text-lg sm:text-xl font-semibold mb-4">Total Assistències per Any</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg sm:text-xl font-semibold">{attendanceView === 'year' ? 'Total Assistències per Any' : 'Mitjana Mensual d\'Assistències'}</h3>
+              <div className="flex items-center gap-2">
+                {/* Toggle buttons */}
+                <div className="bg-muted/40 rounded-full p-1 flex items-center gap-1">
+                  <button
+                    onClick={() => setAttendanceView('year')}
+                    className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium transition ${attendanceView === 'year' ? 'bg-white shadow' : 'bg-transparent'}`}
+                  >
+                    Per any
+                  </button>
+                  <button
+                    onClick={() => setAttendanceView('monthlyAverage')}
+                    className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium transition ${attendanceView === 'monthlyAverage' ? 'bg-white shadow' : 'bg-transparent'}`}
+                  >
+                    Mitjana mensual
+                  </button>
+                </div>
+                <InfoButton 
+                  title="Visió assistències" 
+                  description="Canvia entre la vista per anys (totals) i la vista de la mitjana mensual per veure patrons estacionals al llarg dels mesos."
+                />
+              </div>
+            </div>
             <Separator className="mb-4" />
             <div className="space-y-3">
-              {stats.yearlyAttendanceData.map((yearData) => {
-                const maxCount = Math.max(...stats.yearlyAttendanceData.map(y => y.count));
-                const percentage = (yearData.count / maxCount) * 100;
-                
-                return (
-                  <div key={yearData.year} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{yearData.year}</span>
-                      <Badge variant="outline" className="bg-blue-50">{yearData.count} assistències</Badge>
-                    </div>
-                    <div className="h-8 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-blue-500 transition-all flex items-center justify-end pr-2"
-                        style={{ width: `${percentage}%` }}
-                      >
-                        {percentage > 20 && (
-                          <span className="text-xs text-white font-medium">
-                            {yearData.count}
-                          </span>
-                        )}
+              {attendanceView === 'year' ? (
+                stats.yearlyAttendanceData.map((yearData) => {
+                  const maxCount = Math.max(...stats.yearlyAttendanceData.map(y => y.count));
+                  const percentage = (yearData.count / maxCount) * 100;
+
+                  return (
+                    <div key={yearData.year} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">{yearData.year}</span>
+                        <Badge variant="outline" className="bg-blue-50">{yearData.count} assistències</Badge>
+                      </div>
+                      <div className="h-8 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-blue-500 transition-all flex items-center justify-end pr-2"
+                          style={{ width: `${percentage}%` }}
+                        >
+                          {percentage > 20 && (
+                            <span className="text-xs text-white font-medium">
+                              {yearData.count}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                // Monthly averages view (Jan..Dec)
+                <div className="space-y-2">
+                  {stats.monthlyAverages.map((m) => {
+                    const maxAvg = Math.max(...stats.monthlyAverages.map(mm => mm.avg));
+                    const pct = maxAvg > 0 ? (m.avg / maxAvg) * 100 : 0;
+                    return (
+                      <div key={m.month} className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-medium">{m.month}</span>
+                          <Badge variant="outline" className="bg-blue-50">{m.avg}</Badge>
+                        </div>
+                        <div className="h-8 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-blue-500 transition-all flex items-center justify-end pr-2"
+                            style={{ width: `${pct}%` }}
+                          >
+                            {pct > 20 && (
+                              <span className="text-xs text-white font-medium">
+                                {m.avg}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </NeoCard>
 
@@ -732,13 +802,13 @@ const Stats = () => {
                   const maxAttendances = Math.max(...stats.monthlyData.map(m => m.attendances));
                   const classesPercentage = maxClasses > 0 ? (month.classes / maxClasses) * 100 : 0;
                   const attendancesPercentage = maxAttendances > 0 ? (month.attendances / maxAttendances) * 100 : 0;
-                  
+
                   return (
                     <div key={month.month} className="space-y-2">
                       <span className="text-xs sm:text-sm font-medium block">{month.month}</span>
-                      
+
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground min-w-[70px]">Classes:</span>
+                        <span className="text-xs text-muted-foreground min-w-0 w-[70px] sm:w-[90px]">Classes:</span>
                         <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-green-500 transition-all"
@@ -747,9 +817,9 @@ const Stats = () => {
                         </div>
                         <Badge variant="outline" className="text-xs min-w-[45px] justify-center">{month.classes}</Badge>
                       </div>
-                      
+
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground min-w-[70px]">Assistències:</span>
+                        <span className="text-xs text-muted-foreground min-w-0 w-[70px] sm:w-[90px]">Assistències:</span>
                         <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-blue-500 transition-all"
@@ -786,7 +856,7 @@ const Stats = () => {
             <div className="space-y-3">
               {stats.programData.map((prog) => {
                 const percentage = (prog.count / stats.totalSessions) * 100;
-                
+
                 return (
                   <div key={prog.name} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
@@ -891,7 +961,7 @@ const Stats = () => {
               {Object.entries(stats.centerCount).map(([center, count]) => {
                 const totalAllCenters = Object.values(stats.centerCount).reduce((a, b) => a + b, 0);
                 const percentage = (count / totalAllCenters) * 100;
-                
+
                 return (
                   <div key={center} className="p-4 sm:p-6 bg-muted/30 rounded-lg text-center">
                     <p className="text-3xl sm:text-4xl font-bold mb-2">{count}</p>
@@ -912,7 +982,6 @@ const Stats = () => {
           </NeoCard>
         </TabsContent>
 
-        {/* 🎉 NOVA PESTANYA: Classes per dies de la setmana */}
         <TabsContent value="weekdays" className="space-y-4">
           <NeoCard className="p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
@@ -924,7 +993,7 @@ const Stats = () => {
               {stats.classesByWeekday.map((dayData) => {
                 const maxCount = Math.max(...stats.classesByWeekday.map(d => d.count));
                 const percentage = maxCount > 0 ? (dayData.count / maxCount) * 100 : 0;
-                
+
                 return (
                   <div key={dayData.day} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
