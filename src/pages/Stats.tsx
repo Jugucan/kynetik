@@ -451,8 +451,8 @@ const Stats = () => {
     );
   }
   
-  // Hem canviat pb-20 a pb-8, no necessitem tant espai extra si els contenidors no desborden
   return (
+    // Aplicació de pb-8 i px-2 sm:px-4 com a contenidor general.
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 max-w-7xl mx-auto pb-8"> 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -479,10 +479,10 @@ const Stats = () => {
         </Select>
       </div>
 
-      {/* Estadístiques principals - 2 columnes en mòbil, 4 en pantalla gran */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-        {/* TARGETA 1: Usuaris únics - p-2 en mòbil per ajustar l'ample */}
-        <NeoCard className="p-2 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100"> 
+      {/* Estadístiques principals - Reducció del gap a gap-1.5 en mòbil per a grid-cols-2 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 sm:gap-4">
+        {/* TARGETA 1: Usuaris únics - p-3 en mòbil, p-4 en desktop */}
+        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100"> 
           <div className="flex flex-col gap-1"> 
             <div className="flex items-center justify-between gap-1">
               <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" /> 
@@ -498,8 +498,8 @@ const Stats = () => {
           </div>
         </NeoCard>
 
-        {/* TARGETA 2: Classes fetes - p-2 en mòbil per ajustar l'ample */}
-        <NeoCard className="p-2 sm:p-4 bg-gradient-to-br from-green-50 to-green-100">
+        {/* TARGETA 2: Classes fetes */}
+        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-green-50 to-green-100">
           <div className="flex flex-col gap-1"> 
             <div className="flex items-center justify-between gap-1">
               <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 flex-shrink-0" />
@@ -515,8 +515,8 @@ const Stats = () => {
           </div>
         </NeoCard>
 
-        {/* TARGETA 3: Assistents per classe - p-2 en mòbil per ajustar l'ample */}
-        <NeoCard className="p-2 sm:p-4 bg-gradient-to-br from-purple-50 to-purple-100">
+        {/* TARGETA 3: Assistents per classe - Mantenim la correcció de text i p-3 */}
+        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-purple-50 to-purple-100">
           <div className="flex flex-col gap-1"> 
             <div className="flex items-center justify-between gap-1">
               <Target className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 flex-shrink-0" />
@@ -533,8 +533,8 @@ const Stats = () => {
           </div>
         </NeoCard>
 
-        {/* TARGETA 4: Usuaris actius - p-2 en mòbil per ajustar l'ample */}
-        <NeoCard className="p-2 sm:p-4 bg-gradient-to-br from-orange-50 to-orange-100">
+        {/* TARGETA 4: Usuaris actius */}
+        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-orange-50 to-orange-100">
           <div className="flex flex-col gap-1"> 
             <div className="flex items-center justify-between gap-1">
               <UserCheck className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600 flex-shrink-0" />
@@ -553,8 +553,6 @@ const Stats = () => {
 
       {/* Pestanyes amb tota la resta d'informació */}
       <Tabs defaultValue="overview" className="space-y-4">
-        {/* Aquesta ScrollArea és la causa d'algun desbordament, però és necessària per a les pestanyes. */}
-        {/* L'scroll horitzontal dins d'aquí és correcte. */}
         <ScrollArea className="w-full whitespace-nowrap pb-2">
           <TabsList className="inline-flex w-auto sm:grid sm:w-full sm:grid-cols-6">
             <TabsTrigger value="overview" className="text-xs sm:text-sm px-3">Resum</TabsTrigger>
@@ -568,7 +566,7 @@ const Stats = () => {
 
         {/* Nova pestanya: Resum General */}
         <TabsContent value="overview" className="space-y-4">
-          {/* Estadístiques secundàries. Mantenim el p-4 perquè són 1 columna en mòbil. */}
+          {/* Estadístiques secundàries - Mantenim p-4/p-6 perquè són 1 columna en mòbil. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-pink-50 to-pink-100">
               <div className="flex items-start justify-between gap-2">
@@ -619,9 +617,9 @@ const Stats = () => {
             </NeoCard>
           </div>
 
-          {/* Indicadors petits - p-2 en mòbil per ajustar l'ample */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <NeoCard className="p-2 sm:p-3">
+          {/* Indicadors petits - Reducció del gap a gap-1.5 per a sm:grid-cols-3 */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+            <NeoCard className="p-3"> 
               <div className="flex items-center justify-between mb-1 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <Percent className="w-4 h-4 text-blue-600 flex-shrink-0" />
@@ -635,7 +633,7 @@ const Stats = () => {
               <p className="text-xl sm:text-2xl font-bold">{stats.retentionRate}%</p>
             </NeoCard>
 
-            <NeoCard className="p-2 sm:p-3">
+            <NeoCard className="p-3">
               <div className="flex items-center justify-between mb-1 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <TrendingUp className="w-4 h-4 text-green-600 flex-shrink-0" />
@@ -649,7 +647,7 @@ const Stats = () => {
               <p className="text-xl sm:text-2xl font-bold">{stats.monthlyGrowth}%</p>
             </NeoCard>
 
-            <NeoCard className="p-2 sm:p-3">
+            <NeoCard className="p-3">
               <div className="flex items-center justify-between mb-1 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <Clock className="w-4 h-4 text-orange-600 flex-shrink-0" />
