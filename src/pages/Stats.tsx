@@ -336,7 +336,7 @@ const Stats = () => {
 
     const centerCount: { [center: string]: number } = {};
     allRealClasses.forEach(classItem => {
-      centerCount[classItem.center] = (classItem.center || 0) + 1;
+      centerCount[classItem.center] = (centerCount[classItem.center] || 0) + 1;
     });
 
     const dayCount: { [day: string]: number } = {};
@@ -451,10 +451,9 @@ const Stats = () => {
     );
   }
   
-  // S'ha eliminat 'overflow-x-hidden' per mantenir l'efecte neomòrfic correcte
+  // Hem canviat pb-20 a pb-8, no necessitem tant espai extra si els contenidors no desborden
   return (
-    // Hem afegit 'pb-20' (padding bottom) per donar espai a la part inferior i evitar que es talli el contingut i ombra
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 max-w-7xl mx-auto pb-20"> 
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 max-w-7xl mx-auto pb-8"> 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -482,12 +481,11 @@ const Stats = () => {
 
       {/* Estadístiques principals - 2 columnes en mòbil, 4 en pantalla gran */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-        {/* TARGETA 1: Usuaris únics */}
-        {/* Hem canviat de p-3 a p-2 en mòbil i a p-4 en tablet/escriptori (sm:p-4) */}
-        <NeoCard className="p-2 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100">
-          <div className="flex flex-col gap-1"> {/* Reduïm l'espai entre icona i text (gap-1) */}
+        {/* TARGETA 1: Usuaris únics - p-2 en mòbil per ajustar l'ample */}
+        <NeoCard className="p-2 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100"> 
+          <div className="flex flex-col gap-1"> 
             <div className="flex items-center justify-between gap-1">
-              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" /> {/* Icona una mica més petita */}
+              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" /> 
               <InfoButton 
                 title="Usuaris únics" 
                 description="Total de persones diferents que han vingut a les teves classes des del començament."
@@ -500,9 +498,9 @@ const Stats = () => {
           </div>
         </NeoCard>
 
-        {/* TARGETA 2: Classes fetes */}
+        {/* TARGETA 2: Classes fetes - p-2 en mòbil per ajustar l'ample */}
         <NeoCard className="p-2 sm:p-4 bg-gradient-to-br from-green-50 to-green-100">
-          <div className="flex flex-col gap-1"> {/* Reduïm l'espai entre icona i text (gap-1) */}
+          <div className="flex flex-col gap-1"> 
             <div className="flex items-center justify-between gap-1">
               <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 flex-shrink-0" />
               <InfoButton 
@@ -517,9 +515,9 @@ const Stats = () => {
           </div>
         </NeoCard>
 
-        {/* TARGETA 3: Assistents per classe - LA CLAU AQUÍ ÉS AJUSTAR ESPAIAT I TEXT */}
+        {/* TARGETA 3: Assistents per classe - p-2 en mòbil per ajustar l'ample */}
         <NeoCard className="p-2 sm:p-4 bg-gradient-to-br from-purple-50 to-purple-100">
-          <div className="flex flex-col gap-1"> {/* Reduïm l'espai entre icona i text (gap-1) */}
+          <div className="flex flex-col gap-1"> 
             <div className="flex items-center justify-between gap-1">
               <Target className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 flex-shrink-0" />
               <InfoButton 
@@ -535,9 +533,9 @@ const Stats = () => {
           </div>
         </NeoCard>
 
-        {/* TARGETA 4: Usuaris actius */}
+        {/* TARGETA 4: Usuaris actius - p-2 en mòbil per ajustar l'ample */}
         <NeoCard className="p-2 sm:p-4 bg-gradient-to-br from-orange-50 to-orange-100">
-          <div className="flex flex-col gap-1"> {/* Reduïm l'espai entre icona i text (gap-1) */}
+          <div className="flex flex-col gap-1"> 
             <div className="flex items-center justify-between gap-1">
               <UserCheck className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600 flex-shrink-0" />
               <InfoButton 
@@ -570,7 +568,7 @@ const Stats = () => {
 
         {/* Nova pestanya: Resum General */}
         <TabsContent value="overview" className="space-y-4">
-          {/* Estadístiques secundàries */}
+          {/* Estadístiques secundàries. Mantenim el p-4 perquè són 1 columna en mòbil. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-pink-50 to-pink-100">
               <div className="flex items-start justify-between gap-2">
@@ -621,8 +619,7 @@ const Stats = () => {
             </NeoCard>
           </div>
 
-          {/* Indicadors petits - AQUÍ AJUSTEM EL PADDING PER EVITAR QUE ES TALLIN LES OMBRES/CONTENIDORS */}
-          {/* Canviem p-3 a p-2 en mòbil i p-4 a p-3 en tablet (sm:p-3) */}
+          {/* Indicadors petits - p-2 en mòbil per ajustar l'ample */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <NeoCard className="p-2 sm:p-3">
               <div className="flex items-center justify-between mb-1 gap-2">
