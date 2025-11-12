@@ -336,7 +336,7 @@ const Stats = () => {
 
     const centerCount: { [center: string]: number } = {};
     allRealClasses.forEach(classItem => {
-      centerCount[classItem.center] = (centerCount[classItem.center] || 0) + 1;
+      centerCount[classItem.center] = (classItem.center || 0) + 1;
     });
 
     const dayCount: { [day: string]: number } = {};
@@ -450,9 +450,10 @@ const Stats = () => {
       </div>
     );
   }
-
+  
+  // AFEGIM: overflow-x-hidden al contenidor principal per eliminar el scroll horitzontal
   return (
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 max-w-7xl mx-auto">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 max-w-7xl mx-auto overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -479,8 +480,6 @@ const Stats = () => {
       </div>
 
       {/* Estadístiques principals - 2 columnes en mòbil, 4 en pantalla gran */}
-      {/* Aquesta secció ja té un bon disseny responsiu amb grid-cols-2 i lg:grid-cols-4. */}
-      {/* Els canvis es fan dins de cada NeoCard per l'amplada i el text. */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         {/* TARGETA 1: Usuaris únics */}
         <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-blue-50 to-blue-100">
@@ -516,7 +515,7 @@ const Stats = () => {
           </div>
         </NeoCard>
 
-        {/* TARGETA 3: Assistents per classe - AQUÍ ESTÀ EL CANVI PRINCIPAL DE TEXT LARG */}
+        {/* TARGETA 3: Assistents per classe - CANVIS DE TEXT I MIDA AQUÍ */}
         <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-purple-50 to-purple-100">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-1">
@@ -527,9 +526,10 @@ const Stats = () => {
               />
             </div>
             <div>
+              {/* Ajustem la mida del text a xl en lloc de 3xl per a mòbils */}
               <p className="text-xl sm:text-3xl font-bold text-purple-700">{stats.avgAttendees}</p>
-              {/* CANVI AQUÍ: Hem eliminat el <wbr/> i afegit la classe break-words per al trencament de línia en cas de ser necessari, i ajustat el leading a 'normal' per donar espai. */}
-              <p className="text-xs sm:text-sm text-purple-600 leading-normal break-words">Assistents/classe</p>
+              {/* Apliquem 'break-words' i 'text-xs' per forçar l'ajustament en pantalles petites */}
+              <p className="text-[10px] sm:text-sm text-purple-600 leading-tight break-words">Assistents/classe</p>
             </div>
           </div>
         </NeoCard>
@@ -553,6 +553,7 @@ const Stats = () => {
       </div>
 
       {/* Pestanyes amb tota la resta d'informació */}
+      {/* L'ScrollArea és correcta per a les pestanyes i evita que la llista desbordi la pantalla. */}
       <Tabs defaultValue="overview" className="space-y-4">
         <ScrollArea className="w-full whitespace-nowrap pb-2">
           <TabsList className="inline-flex w-auto sm:grid sm:w-full sm:grid-cols-6">
