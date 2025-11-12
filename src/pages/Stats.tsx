@@ -451,9 +451,10 @@ const Stats = () => {
     );
   }
   
-  // AFEGIM: overflow-x-hidden al contenidor principal per eliminar el scroll horitzontal
+  // S'ha eliminat 'overflow-x-hidden' per mantenir l'efecte neomòrfic correcte
   return (
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 max-w-7xl mx-auto overflow-x-hidden">
+    // Hem afegit 'pb-20' (padding bottom) per donar espai a la part inferior i evitar que es talli el contingut i ombra
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 max-w-7xl mx-auto pb-20"> 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -482,10 +483,11 @@ const Stats = () => {
       {/* Estadístiques principals - 2 columnes en mòbil, 4 en pantalla gran */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         {/* TARGETA 1: Usuaris únics */}
-        <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-blue-50 to-blue-100">
-          <div className="flex flex-col gap-2">
+        {/* Hem canviat de p-3 a p-2 en mòbil i a p-4 en tablet/escriptori (sm:p-4) */}
+        <NeoCard className="p-2 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100">
+          <div className="flex flex-col gap-1"> {/* Reduïm l'espai entre icona i text (gap-1) */}
             <div className="flex items-center justify-between gap-1">
-              <Users className="w-6 h-6 sm:w-10 sm:h-10 text-blue-600 flex-shrink-0" />
+              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" /> {/* Icona una mica més petita */}
               <InfoButton 
                 title="Usuaris únics" 
                 description="Total de persones diferents que han vingut a les teves classes des del començament."
@@ -499,10 +501,10 @@ const Stats = () => {
         </NeoCard>
 
         {/* TARGETA 2: Classes fetes */}
-        <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-green-50 to-green-100">
-          <div className="flex flex-col gap-2">
+        <NeoCard className="p-2 sm:p-4 bg-gradient-to-br from-green-50 to-green-100">
+          <div className="flex flex-col gap-1"> {/* Reduïm l'espai entre icona i text (gap-1) */}
             <div className="flex items-center justify-between gap-1">
-              <Calendar className="w-6 h-6 sm:w-10 sm:h-10 text-green-600 flex-shrink-0" />
+              <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 flex-shrink-0" />
               <InfoButton 
                 title="Classes fetes" 
                 description="Total de classes que has impartit segons el teu calendari. No inclou dies festius, vacances, tancaments dels gimnasos ni sessions eliminades."
@@ -515,30 +517,29 @@ const Stats = () => {
           </div>
         </NeoCard>
 
-        {/* TARGETA 3: Assistents per classe - CANVIS DE TEXT I MIDA AQUÍ */}
-        <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-purple-50 to-purple-100">
-          <div className="flex flex-col gap-2">
+        {/* TARGETA 3: Assistents per classe - LA CLAU AQUÍ ÉS AJUSTAR ESPAIAT I TEXT */}
+        <NeoCard className="p-2 sm:p-4 bg-gradient-to-br from-purple-50 to-purple-100">
+          <div className="flex flex-col gap-1"> {/* Reduïm l'espai entre icona i text (gap-1) */}
             <div className="flex items-center justify-between gap-1">
-              <Target className="w-6 h-6 sm:w-10 sm:h-10 text-purple-600 flex-shrink-0" />
+              <Target className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 flex-shrink-0" />
               <InfoButton 
                 title="Assistents per classe" 
                 description="Mitjana de persones que assisteixen a cada una de les teves classes. Es calcula dividint el total d'assistències entre el total de classes."
               />
             </div>
             <div>
-              {/* Ajustem la mida del text a xl en lloc de 3xl per a mòbils */}
               <p className="text-xl sm:text-3xl font-bold text-purple-700">{stats.avgAttendees}</p>
-              {/* Apliquem 'break-words' i 'text-xs' per forçar l'ajustament en pantalles petites */}
-              <p className="text-[10px] sm:text-sm text-purple-600 leading-tight break-words">Assistents/classe</p>
+              {/* text-xs, leading-tight i break-words forçaran l'ajust sense veure's massa petit */}
+              <p className="text-xs sm:text-sm text-purple-600 leading-tight break-words">Assistents/classe</p>
             </div>
           </div>
         </NeoCard>
 
         {/* TARGETA 4: Usuaris actius */}
-        <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-orange-50 to-orange-100">
-          <div className="flex flex-col gap-2">
+        <NeoCard className="p-2 sm:p-4 bg-gradient-to-br from-orange-50 to-orange-100">
+          <div className="flex flex-col gap-1"> {/* Reduïm l'espai entre icona i text (gap-1) */}
             <div className="flex items-center justify-between gap-1">
-              <UserCheck className="w-6 h-6 sm:w-10 sm:h-10 text-orange-600 flex-shrink-0" />
+              <UserCheck className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600 flex-shrink-0" />
               <InfoButton 
                 title="Usuaris actius" 
                 description="Nombre d'usuaris que han assistit almenys una vegada a les teves classes en els últims 30 dies."
@@ -553,8 +554,9 @@ const Stats = () => {
       </div>
 
       {/* Pestanyes amb tota la resta d'informació */}
-      {/* L'ScrollArea és correcta per a les pestanyes i evita que la llista desbordi la pantalla. */}
       <Tabs defaultValue="overview" className="space-y-4">
+        {/* Aquesta ScrollArea és la causa d'algun desbordament, però és necessària per a les pestanyes. */}
+        {/* L'scroll horitzontal dins d'aquí és correcte. */}
         <ScrollArea className="w-full whitespace-nowrap pb-2">
           <TabsList className="inline-flex w-auto sm:grid sm:w-full sm:grid-cols-6">
             <TabsTrigger value="overview" className="text-xs sm:text-sm px-3">Resum</TabsTrigger>
@@ -619,9 +621,10 @@ const Stats = () => {
             </NeoCard>
           </div>
 
-          {/* Indicadors petits */}
+          {/* Indicadors petits - AQUÍ AJUSTEM EL PADDING PER EVITAR QUE ES TALLIN LES OMBRES/CONTENIDORS */}
+          {/* Canviem p-3 a p-2 en mòbil i p-4 a p-3 en tablet (sm:p-3) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <NeoCard className="p-3 sm:p-4">
+            <NeoCard className="p-2 sm:p-3">
               <div className="flex items-center justify-between mb-1 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <Percent className="w-4 h-4 text-blue-600 flex-shrink-0" />
@@ -635,7 +638,7 @@ const Stats = () => {
               <p className="text-xl sm:text-2xl font-bold">{stats.retentionRate}%</p>
             </NeoCard>
 
-            <NeoCard className="p-3 sm:p-4">
+            <NeoCard className="p-2 sm:p-3">
               <div className="flex items-center justify-between mb-1 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <TrendingUp className="w-4 h-4 text-green-600 flex-shrink-0" />
@@ -649,7 +652,7 @@ const Stats = () => {
               <p className="text-xl sm:text-2xl font-bold">{stats.monthlyGrowth}%</p>
             </NeoCard>
 
-            <NeoCard className="p-3 sm:p-4">
+            <NeoCard className="p-2 sm:p-3">
               <div className="flex items-center justify-between mb-1 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <Clock className="w-4 h-4 text-orange-600 flex-shrink-0" />
