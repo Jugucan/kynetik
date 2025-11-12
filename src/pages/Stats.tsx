@@ -479,7 +479,10 @@ const Stats = () => {
       </div>
 
       {/* Estadístiques principals - 2 columnes en mòbil, 4 en pantalla gran */}
+      {/* Aquesta secció ja té un bon disseny responsiu amb grid-cols-2 i lg:grid-cols-4. */}
+      {/* Els canvis es fan dins de cada NeoCard per l'amplada i el text. */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+        {/* TARGETA 1: Usuaris únics */}
         <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-blue-50 to-blue-100">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-1">
@@ -496,6 +499,7 @@ const Stats = () => {
           </div>
         </NeoCard>
 
+        {/* TARGETA 2: Classes fetes */}
         <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-green-50 to-green-100">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-1">
@@ -512,6 +516,7 @@ const Stats = () => {
           </div>
         </NeoCard>
 
+        {/* TARGETA 3: Assistents per classe - AQUÍ ESTÀ EL CANVI PRINCIPAL DE TEXT LARG */}
         <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-purple-50 to-purple-100">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-1">
@@ -523,11 +528,13 @@ const Stats = () => {
             </div>
             <div>
               <p className="text-xl sm:text-3xl font-bold text-purple-700">{stats.avgAttendees}</p>
-              <p className="text-xs sm:text-sm text-purple-600 leading-tight">Assistents/<wbr />classe</p>
+              {/* CANVI AQUÍ: Hem eliminat el <wbr/> i afegit la classe break-words per al trencament de línia en cas de ser necessari, i ajustat el leading a 'normal' per donar espai. */}
+              <p className="text-xs sm:text-sm text-purple-600 leading-normal break-words">Assistents/classe</p>
             </div>
           </div>
         </NeoCard>
 
+        {/* TARGETA 4: Usuaris actius */}
         <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-orange-50 to-orange-100">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-1">
