@@ -3,13 +3,24 @@ import { User, UserSession } from '@/hooks/useUsers';
 export interface AdvancedStats {
   monthlyFrequency: Array<{ month: string; count: number }>;
   daysBetweenSessions: number;
-  autodiscipline: number; // ✅ CANVIAT: consistency → autodiscipline
+  autodiscipline: number;
+  autodisciplineLevel: AutodisciplineLevel; // 🆕 Nou camp amb nivells descriptius
   improvementRecent: {
     lastMonth: number;
-    previousQuarterAverage: number; // ✅ CANVIAT: lastQuarter → previousQuarterAverage
+    previousQuarterAverage: number;
     trend: 'up' | 'down' | 'stable';
     percentageChange: number;
   };
+}
+
+// 🆕 NOVA INTERFÍCIE per l'autodisciplina amb nivells descriptius
+export interface AutodisciplineLevel {
+  label: string; // "cal millorar", "ho pots fer millor", "bona", "notable", "excel·lent"
+  emoji: string; // 😞, 😐, 🙂, 😊, 🤩
+  color: string; // Classe de Tailwind per al color
+  bgColor: string; // Color de fons
+  percentage: number; // 0-100 per a la barra
+  barColor: string; // Color de la barra (vermell → taronja → groc → verd)
 }
 
 export interface UserRanking {
@@ -58,7 +69,7 @@ export const calculateDaysBetweenSessions = (sessions: UserSession[]): number =>
   return Math.round(totalDays / (sortedDates.length - 1));
 };
 
-// ✅ NOVA FUNCIÓ: Càlcul millorat de l'autodisciplina
+// Càlcul millorat de l'autodisciplina
 export const calculateAutodiscipline = (sessions: UserSession[]): number => {
   if (!sessions || sessions.length < 2) return 0;
 
@@ -92,7 +103,58 @@ export const calculateAutodiscipline = (sessions: UserSession[]): number => {
   return Math.round(autodisciplineScore);
 };
 
-// ✅ CORRECCIÓ: Càlcul correcte de "Millorada recent"
+// 🆕 NOVA FUNCIÓ: Obtenir nivell descriptiu d'autodisciplina
+export const getAutodisciplineLevel = (score: number): AutodisciplineLevel => {
+  // score és un número entre 0 i 100
+  
+  if (score < 20) {
+    return {
+      label: 'Cal millorar',
+      emoji: '😞',
+      color: 'text-red-700',
+      bgColor: 'bg-red-50',
+      percentage: score,
+      barColor: 'bg-red-500'
+    };
+  } else if (score < 40) {
+    return {
+      label: 'Ho pots fer millor',
+      emoji: '😐',
+      color: 'text-orange-700',
+      bgColor: 'bg-orange-50',
+      percentage: score,
+      barColor: 'bg-orange-500'
+    };
+  } else if (score < 60) {
+    return {
+      label: 'Bona',
+      emoji: '🙂',
+      color: 'text-yellow-700',
+      bgColor: 'bg-yellow-50',
+      percentage: score,
+      barColor: 'bg-yellow-500'
+    };
+  } else if (score < 80) {
+    return {
+      label: 'Notable',
+      emoji: '😊',
+      color: 'text-lime-700',
+      bgColor: 'bg-lime-50',
+      percentage: score,
+      barColor: 'bg-lime-500'
+    };
+  } else {
+    return {
+      label: 'Excel·lent',
+      emoji: '🤩',
+      color: 'text-green-700',
+      bgColor: 'bg-green-50',
+      percentage: score,
+      barColor: 'bg-green-500'
+    };
+  }
+};
+
 export const calculateImprovementRecent = (sessions: UserSession[]): AdvancedStats['improvementRecent'] => {
   if (!sessions || sessions.length === 0) {
     return {
@@ -113,13 +175,13 @@ export const calculateImprovementRecent = (sessions: UserSession[]): AdvancedSta
   const fourMonthsAgo = new Date(now);
   fourMonthsAgo.setDate(now.getDate() - 120);
 
-  // ✅ CORRECCIÓ: Comptem sessions de l'últim mes (últims 30 dies)
+  // Comptem sessions de l'últim mes (últims 30 dies)
   const lastMonthSessions = sessions.filter(s => {
     const sessionDate = new Date(s.date);
     return sessionDate >= oneMonthAgo && sessionDate <= now;
   }).length;
 
-  // ✅ CORRECCIÓ: Comptem sessions dels 3 mesos ANTERIORS (de fa 120 dies fins fa 30 dies)
+  // Comptem sessions dels 3 mesos ANTERIORS (de fa 120 dies fins fa 30 dies)
   const previousQuarterSessions = sessions.filter(s => {
     const sessionDate = new Date(s.date);
     return sessionDate >= fourMonthsAgo && sessionDate < oneMonthAgo;
@@ -140,7 +202,7 @@ export const calculateImprovementRecent = (sessions: UserSession[]): AdvancedSta
 
   return {
     lastMonth: lastMonthSessions,
-    previousQuarterAverage: Math.round(previousQuarterAverage * 10) / 10, // Arrodonit a 1 decimal
+    previousQuarterAverage: Math.round(previousQuarterAverage * 10) / 10,
     trend,
     percentageChange
   };
@@ -148,11 +210,13 @@ export const calculateImprovementRecent = (sessions: UserSession[]): AdvancedSta
 
 export const calculateAdvancedStats = (user: User): AdvancedStats => {
   const sessions = user.sessions || [];
+  const autodisciplineScore = calculateAutodiscipline(sessions);
 
   return {
     monthlyFrequency: calculateMonthlyFrequency(sessions),
     daysBetweenSessions: calculateDaysBetweenSessions(sessions),
-    autodiscipline: calculateAutodiscipline(sessions), // ✅ CANVIAT
+    autodiscipline: autodisciplineScore,
+    autodisciplineLevel: getAutodisciplineLevel(autodisciplineScore), // 🆕 Afegim el nivell descriptiu
     improvementRecent: calculateImprovementRecent(sessions)
   };
 };
@@ -162,11 +226,12 @@ export const calculateUserRanking = (allUsers: User[], currentUser: User, metric
   let usersWithMetric: Array<{ user: User; value: number }> = [];
 
   if (metric === 'totalSessions') {
+    // 🆕 CORRECCIÓ: Calculem totalSessions a partir de sessions.length si no existeix
     usersWithMetric = allUsers.map(u => ({
       user: u,
-      value: u.totalSessions || 0
+      value: u.totalSessions || (u.sessions ? u.sessions.length : 0)
     }));
-  } else if (metric === 'autodiscipline') { // ✅ CANVIAT: consistency → autodiscipline
+  } else if (metric === 'autodiscipline') {
     usersWithMetric = allUsers.map(u => ({
       user: u,
       value: calculateAutodiscipline(u.sessions || [])
@@ -192,7 +257,7 @@ export const calculateUserRanking = (allUsers: User[], currentUser: User, metric
     return b.value - a.value;
   });
 
-  // ✅ Trobem la posició de l'usuari actual
+  // Trobem la posició de l'usuari actual
   const currentUserIndex = usersWithMetric.findIndex(u => u.user.id === currentUser.id);
   const rank = currentUserIndex !== -1 ? currentUserIndex + 1 : 0;
   const total = usersWithMetric.length;
@@ -203,11 +268,14 @@ export const calculateUserRanking = (allUsers: User[], currentUser: User, metric
   return { rank, total, percentile };
 };
 
+// 🆕 CORRECCIÓ: Ara també filtrem per centre a més del programa
 export const calculateProgramRanking = (allUsers: User[], currentUser: User, program: string): UserRanking => {
-  // Filtra usuaris que han fet aquest programa
+  // 🆕 Filtra usuaris que han fet aquest programa I són del mateix centre
   const programUsers = allUsers.filter(u => {
     const sessions = u.sessions || [];
-    return sessions.some(s => s.activity === program);
+    const hasProgram = sessions.some(s => s.activity === program);
+    const sameCenter = !currentUser.center || !u.center || u.center === currentUser.center;
+    return hasProgram && sameCenter;
   });
 
   const usersWithCount = programUsers.map(u => ({
