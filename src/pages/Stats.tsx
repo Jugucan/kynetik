@@ -478,69 +478,69 @@ const Stats = () => {
         </Select>
       </div>
 
-      {/* Estadístiques principals - 4 targetes */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-blue-100">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-3 min-w-0">
-              <Users className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-2xl sm:text-3xl font-bold text-blue-700 truncate">{stats.totalUsers}</p>
-                <p className="text-xs sm:text-sm text-blue-600">Usuaris únics</p>
-              </div>
+      {/* Estadístiques principals - 2 columnes en mòbil, 4 en pantalla gran */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+        <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-blue-50 to-blue-100">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-1">
+              <Users className="w-6 h-6 sm:w-10 sm:h-10 text-blue-600 flex-shrink-0" />
+              <InfoButton 
+                title="Usuaris únics" 
+                description="Total de persones diferents que han vingut a les teves classes des del començament."
+              />
             </div>
-            <InfoButton 
-              title="Usuaris únics" 
-              description="Total de persones diferents que han vingut a les teves classes des del començament."
-            />
+            <div>
+              <p className="text-xl sm:text-3xl font-bold text-blue-700">{stats.totalUsers}</p>
+              <p className="text-xs sm:text-sm text-blue-600">Usuaris únics</p>
+            </div>
           </div>
         </NeoCard>
 
-        <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-green-50 to-green-100">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-3 min-w-0">
-              <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-green-600 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-2xl sm:text-3xl font-bold text-green-700 truncate">{stats.totalSessions}</p>
-                <p className="text-xs sm:text-sm text-green-600">Classes fetes</p>
-              </div>
+        <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-green-50 to-green-100">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-1">
+              <Calendar className="w-6 h-6 sm:w-10 sm:h-10 text-green-600 flex-shrink-0" />
+              <InfoButton 
+                title="Classes fetes" 
+                description="Total de classes que has impartit segons el teu calendari. No inclou dies festius, vacances, tancaments dels gimnasos ni sessions eliminades."
+              />
             </div>
-            <InfoButton 
-              title="Classes fetes" 
-              description="Total de classes que has impartit segons el teu calendari. No inclou dies festius, vacances, tancaments dels gimnasos ni sessions eliminades."
-            />
+            <div>
+              <p className="text-xl sm:text-3xl font-bold text-green-700">{stats.totalSessions}</p>
+              <p className="text-xs sm:text-sm text-green-600">Classes fetes</p>
+            </div>
           </div>
         </NeoCard>
 
-        <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-purple-50 to-purple-100">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-3 min-w-0">
-              <Target className="w-8 h-8 sm:w-10 sm:h-10 text-purple-600 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-2xl sm:text-3xl font-bold text-purple-700 truncate">{stats.avgAttendees}</p>
-                <p className="text-xs sm:text-sm text-purple-600">Assistents/classe</p>
-              </div>
+        <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-purple-50 to-purple-100">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-1">
+              <Target className="w-6 h-6 sm:w-10 sm:h-10 text-purple-600 flex-shrink-0" />
+              <InfoButton 
+                title="Assistents per classe" 
+                description="Mitjana de persones que assisteixen a cada una de les teves classes. Es calcula dividint el total d'assistències entre el total de classes."
+              />
             </div>
-            <InfoButton 
-              title="Assistents per classe" 
-              description="Mitjana de persones que assisteixen a cada una de les teves classes. Es calcula dividint el total d'assistències entre el total de classes."
-            />
+            <div>
+              <p className="text-xl sm:text-3xl font-bold text-purple-700">{stats.avgAttendees}</p>
+              <p className="text-xs sm:text-sm text-purple-600 leading-tight">Assistents/<wbr />classe</p>
+            </div>
           </div>
         </NeoCard>
 
-        <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-orange-50 to-orange-100">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-3 min-w-0">
-              <UserCheck className="w-8 h-8 sm:w-10 sm:h-10 text-orange-600 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-2xl sm:text-3xl font-bold text-orange-700 truncate">{stats.activeUsers}</p>
-                <p className="text-xs sm:text-sm text-orange-600">Actius (30d)</p>
-              </div>
+        <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-orange-50 to-orange-100">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-1">
+              <UserCheck className="w-6 h-6 sm:w-10 sm:h-10 text-orange-600 flex-shrink-0" />
+              <InfoButton 
+                title="Usuaris actius" 
+                description="Nombre d'usuaris que han assistit almenys una vegada a les teves classes en els últims 30 dies."
+              />
             </div>
-            <InfoButton 
-              title="Usuaris actius" 
-              description="Nombre d'usuaris que han assistit almenys una vegada a les teves classes en els últims 30 dies."
-            />
+            <div>
+              <p className="text-xl sm:text-3xl font-bold text-orange-700">{stats.activeUsers}</p>
+              <p className="text-xs sm:text-sm text-orange-600">Actius (30d)</p>
+            </div>
           </div>
         </NeoCard>
       </div>
