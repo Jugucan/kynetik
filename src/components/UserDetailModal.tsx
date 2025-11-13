@@ -631,7 +631,6 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
                                                     <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 bg-background rounded text-sm">
                                                         <div className="flex items-center gap-2">
                                                             <Badge className="text-xs">{session.activity}</Badge>
-                                                            <span className="text-xs text-muted-foreground">{session.sala}</span>
                                                         </div>
                                                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                                             <Clock className="w-3 h-3" />
