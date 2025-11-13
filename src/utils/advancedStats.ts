@@ -16,7 +16,7 @@ export interface AdvancedStats {
 // 🆕 NOVA INTERFÍCIE per l'autodisciplina amb nivells descriptius
 export interface AutodisciplineLevel {
   label: string; // "cal millorar", "ho pots fer millor", "bona", "notable", "excel·lent"
-  emoji: string; // 🙄, 😐, 🙂, 😊, 🤩
+  emoji: string; // 😞, 😐, 🙂, 😊, 🤩
   color: string; // Classe de Tailwind per al color
   bgColor: string; // Color de fons
   percentage: number; // 0-100 per a la barra
@@ -155,6 +155,7 @@ export const getAutodisciplineLevel = (score: number): AutodisciplineLevel => {
   }
 };
 
+// ✅ CORRECCIÓ: Càlcul correcte de "Millorada recent"
 export const calculateImprovementRecent = (sessions: UserSession[]): AdvancedStats['improvementRecent'] => {
   if (!sessions || sessions.length === 0) {
     return {
@@ -175,13 +176,13 @@ export const calculateImprovementRecent = (sessions: UserSession[]): AdvancedSta
   const fourMonthsAgo = new Date(now);
   fourMonthsAgo.setDate(now.getDate() - 120);
 
-  // Comptem sessions de l'últim mes (últims 30 dies)
+  // ✅ CORRECCIÓ: Comptem sessions de l'últim mes (últims 30 dies)
   const lastMonthSessions = sessions.filter(s => {
     const sessionDate = new Date(s.date);
     return sessionDate >= oneMonthAgo && sessionDate <= now;
   }).length;
 
-  // Comptem sessions dels 3 mesos ANTERIORS (de fa 120 dies fins fa 30 dies)
+  // ✅ CORRECCIÓ: Comptem sessions dels 3 mesos ANTERIORS (de fa 120 dies fins fa 30 dies)
   const previousQuarterSessions = sessions.filter(s => {
     const sessionDate = new Date(s.date);
     return sessionDate >= fourMonthsAgo && sessionDate < oneMonthAgo;
@@ -202,7 +203,7 @@ export const calculateImprovementRecent = (sessions: UserSession[]): AdvancedSta
 
   return {
     lastMonth: lastMonthSessions,
-    previousQuarterAverage: Math.round(previousQuarterAverage * 10) / 10,
+    previousQuarterAverage: Math.round(previousQuarterAverage * 10) / 10, // Arrodonit a 1 decimal
     trend,
     percentageChange
   };
