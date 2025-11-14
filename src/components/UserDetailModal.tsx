@@ -1,655 +1,528 @@
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Mail, Phone, Cake, MapPin, Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, Zap, ChevronDown, ChevronUp } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { calculateAdvancedStats, calculateUserRanking, calculateProgramRanking } from '@/utils/advancedStats';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { 
+  User, Phone, Mail, MapPin, Calendar, Award, TrendingUp, 
+  Activity, Clock, ChevronDown, Edit, Trophy, Target, Zap
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { 
+  calculateAdvancedStats, 
+  calculateUserRanking, 
+  calculateProgramRanking,
+  type UserRanking
+} from "@/utils/advancedStats";
 
-// Local types (avoid external deps)
-export type UserSession = { date: string; activity: string; center?: string; time?: string };
-export type User = {
-  id: string;
-  name?: string; email?: string; phone?: string; birthday?: string;
-  age?: number; center?: string; preferredPrograms?: string[];
-  profileImageUrl?: string; avatar?: string; notes?: string;
-  sessions?: UserSession[]; firstSession?: string; daysSinceLastSession?: number;
-};
-interface UserDetailModalProps {
-    user: User | null;
-    isOpen: boolean;
-    onClose: () => void;
-    onEdit: (user: User) => void;
-    allUsers?: User[];
+export interface UserSession {
+  date: string;
+  activity: string;
+  time: string;
+  center: string;
 }
 
-export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }: UserDetailModalProps) => {
+export interface User {
+  id: string;
+  name: string;
+  age: number;
+  phone: string;
+  email: string;
+  address: string;
+  center: string;
+  preferredPrograms: string[];
+  notes: string;
+  sessions: UserSession[];
+}
+
+interface UserDetailModalProps {
+  user: User | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onEdit: (user: User) => void;
+  allUsers: User[];
+}
+
+export function UserDetailModal({ user, isOpen, onClose, onEdit, allUsers }: UserDetailModalProps) {
+  const [isMonthlyFrequencyOpen, setIsMonthlyFrequencyOpen] = useState(false);
+
+  const stats = useMemo(() => {
     if (!user) return null;
+
+    const sessions = user.sessions || [];
+    const programCounts: { [key: string]: number } = {};
+    const centerCounts: { [key: string]: number } = {};
+    const yearCounts: { [key: string]: number } = {};
+
+    sessions.forEach((session) => {
+      programCounts[session.activity] = (programCounts[session.activity] || 0) + 1;
+      centerCounts[session.center] = (centerCounts[session.center] || 0) + 1;
+      const year = new Date(session.date).getFullYear().toString();
+      yearCounts[year] = (yearCounts[year] || 0) + 1;
+    });
+
+    const sortedYears = Object.entries(yearCounts)
+      .sort(([a], [b]) => parseInt(b) - parseInt(a))
+      .map(([year, count]) => ({ year, count }));
+
+    const bestYear = sortedYears.length > 0 
+      ? sortedYears.reduce((max, current) => current.count > max.count ? current : max)
+      : null;
+
+    const worstYear = sortedYears.length > 0
+      ? sortedYears.reduce((min, current) => current.count < min.count ? current : min)
+      : null;
+
+    const lastSession = sessions.length > 0
+      ? sessions.reduce((latest, current) =>
+          new Date(current.date) > new Date(latest.date) ? current : latest
+        )
+      : null;
+
+    const daysSinceLastSession = lastSession
+      ? Math.floor((new Date().getTime() - new Date(lastSession.date).getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+
+    // Calculate rankings
+    const generalRanking = calculateUserRanking(allUsers, user, 'totalSessions');
+    const autodisciplineRanking = calculateUserRanking(allUsers, user, 'autodiscipline');
     
-    // ✅ Estat per al desplegable de freqüència mensual
-    const [isMonthlyFrequencyOpen, setIsMonthlyFrequencyOpen] = useState(false);
+    // Calculate program rankings for all programs the user participates in
+    const programRankings: { [program: string]: UserRanking } = {};
+    Object.keys(programCounts).forEach(program => {
+      programRankings[program] = calculateProgramRanking(allUsers, user, program);
+    });
 
-    // 🆕 CÀLCUL D'ESTADÍSTIQUES
-    const stats = useMemo(() => {
-        const sessions = user.sessions || [];
-        
-        // Comptador per programa
-        const programCount: { [key: string]: number } = {};
-        sessions.forEach(session => {
-            programCount[session.activity] = (programCount[session.activity] || 0) + 1;
-        });
-        
-        const programStats = Object.entries(programCount)
-            .sort((a, b) => b[1] - a[1])
-            .map(([name, count]) => ({ name, count }));
-        
-        // Comptador per centre
-        const centerCount: { [key: string]: number } = {};
-        sessions.forEach(session => {
-            centerCount[session.center] = (centerCount[session.center] || 0) + 1;
-        });
-        
-        // 🆕 SESSIONS PER ANY
-        const yearlyCount: { [key: string]: number } = {};
-        sessions.forEach(session => {
-            const year = new Date(session.date).getFullYear().toString();
-            yearlyCount[year] = (yearlyCount[year] || 0) + 1;
-        });
-        
-        const yearlyStats = Object.entries(yearlyCount)
-            .sort((a, b) => a[0].localeCompare(b[0])) // Ordenem per any
-            .map(([year, count]) => ({ year, count }));
-        
-        // 🆕 CÀLCUL DE TENDÈNCIA
-        let trend: 'up' | 'down' | 'stable' = 'stable';
-        if (yearlyStats.length >= 2) {
-            const lastYear = yearlyStats[yearlyStats.length - 1].count;
-            const previousYear = yearlyStats[yearlyStats.length - 2].count;
-            const difference = lastYear - previousYear;
-            
-            if (difference > 0) trend = 'up';
-            else if (difference < 0) trend = 'down';
-        }
-        
-        // Millor i pitjor any
-        const bestYear = yearlyStats.length > 0 
-            ? yearlyStats.reduce((max, curr) => curr.count > max.count ? curr : max)
-            : null;
-        const worstYear = yearlyStats.length > 0
-            ? yearlyStats.reduce((min, curr) => curr.count < min.count ? curr : min)
-            : null;
-        
-        const advancedStats = calculateAdvancedStats(user);
+    // Calculate advanced stats
+    const advancedStats = calculateAdvancedStats(user);
 
-        const generalRanking = allUsers.length > 0 ? calculateUserRanking(allUsers, user, 'totalSessions') : { rank: 0, total: 0, percentile: 0 };
-        const autodisciplineRanking = allUsers.length > 0 ? calculateUserRanking(allUsers, user, 'autodiscipline') : { rank: 0, total: 0, percentile: 0 }; // ✅ CANVIAT
-
-        const programRankings: { [key: string]: any } = {};
-        programStats.forEach(prog => {
-            if (allUsers.length > 0) {
-                programRankings[prog.name] = calculateProgramRanking(allUsers, user, prog.name);
-            }
-        });
-
-        return {
-            programStats,
-            centerCount,
-            yearlyStats,
-            trend,
-            bestYear,
-            worstYear,
-            totalSessions: sessions.length,
-            advancedStats,
-            generalRanking,
-            autodisciplineRanking, // ✅ CANVIAT
-            programRankings
-        };
-    }, [user.sessions, allUsers]);
-    
-    const formatDate = (dateStr: string) => {
-        if (!dateStr) return 'N/A';
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('ca-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+    return {
+      totalSessions: sessions.length,
+      programCounts,
+      centerCounts,
+      yearlyTrend: sortedYears,
+      bestYear,
+      worstYear,
+      daysSinceLastSession,
+      generalRanking,
+      autodisciplineRanking,
+      programRankings,
+      advancedStats
     };
-    
-    // AGRUPEM SESSIONS PER DATA
-    const sessionsByDate = useMemo(() => {
-        const sessions = user.sessions || [];
-        const grouped: { [key: string]: UserSession[] } = {};
-        
-        sessions.forEach(session => {
-            if (!grouped[session.date]) {
-                grouped[session.date] = [];
-            }
-            grouped[session.date].push(session);
-        });
-        
-        return Object.entries(grouped).sort((a, b) => b[0].localeCompare(a[0]));
-    }, [user.sessions]);
+  }, [user, allUsers]);
 
-    return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[90vw] md:max-w-3xl lg:max-w-4xl max-h-[90vh] p-0">
-                {/* CAPÇALERA FIXA */}
-                <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b bg-gradient-to-r from-primary/5 to-primary/10">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 sm:gap-4">
-                            <img 
-                                src={user.profileImageUrl || user.avatar} 
-                                alt={user.name}
-                                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-neo object-cover flex-shrink-0"
-                            />
-                            <div>
-                                <DialogTitle className="text-xl sm:text-2xl font-bold">{user.name}</DialogTitle>
-                                <div className="flex flex-wrap items-center gap-2 mt-1">
-                                    <Badge variant="outline" className={user.center === "Arbúcies" ? "bg-blue-100" : "bg-green-100"}>
-                                        <MapPin className="w-3 h-3 mr-1" />
-                                        {user.center}
-                                    </Badge>
-                                    <Badge variant="outline">
-                                        <Cake className="w-3 h-3 mr-1" />
-                                        {user.age} anys
-                                    </Badge>
-                                </div>
-                            </div>
-                        </div>
-                        <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="shadow-neo hover:shadow-neo-sm self-start"
-                            onClick={() => onEdit(user)}
-                        >
-                            <Pencil className="w-4 h-4 mr-2" /> Editar
-                        </Button>
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ca-ES', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    });
+  };
+
+  const sessionsByDate = useMemo(() => {
+    if (!user) return {};
+    const grouped: { [date: string]: UserSession[] } = {};
+    user.sessions.forEach((session) => {
+      if (!grouped[session.date]) {
+        grouped[session.date] = [];
+      }
+      grouped[session.date].push(session);
+    });
+    return grouped;
+  }, [user]);
+
+  if (!user) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Fixed Header */}
+        <div className="flex-shrink-0 border-b pb-4">
+          <DialogHeader>
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} />
+                  <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <DialogTitle className="text-2xl">{user.name}</DialogTitle>
+                  <div className="flex items-center gap-2 text-muted-foreground mt-1">
+                    <span>{user.age} anys</span>
+                    <span>•</span>
+                    <span>{user.center}</span>
+                  </div>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => onEdit(user)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+            </div>
+          </DialogHeader>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
+          <Tabs defaultValue="info" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 sticky top-0 bg-background z-10">
+              <TabsTrigger value="info">Info</TabsTrigger>
+              <TabsTrigger value="stats">Estadístiques</TabsTrigger>
+              <TabsTrigger value="history">Historial</TabsTrigger>
+            </TabsList>
+
+            <div className="p-6">
+              <TabsContent value="info" className="space-y-6 mt-0">
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Informació de Contacte
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{user.phone}</span>
                     </div>
-                </DialogHeader>
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span>{user.email}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span>{user.address}</span>
+                    </div>
+                  </div>
+                </Card>
 
-                {/* PESTANYES */}
-                <Tabs defaultValue="info" className="px-4 sm:px-6">
-                    <TabsList className="grid w-full grid-cols-3 mb-4">
-                        <TabsTrigger value="info" className="text-xs sm:text-sm">
-                            <Info className="w-4 h-4 mr-1 sm:mr-2" />
-                            <span className="hidden sm:inline">Informació</span>
-                            <span className="sm:hidden">Info</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="stats" className="text-xs sm:text-sm">
-                            <TrendingUp className="w-4 h-4 mr-1 sm:mr-2" />
-                            <span className="hidden sm:inline">Estadístiques</span>
-                            <span className="sm:hidden">Stats</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="history" className="text-xs sm:text-sm">
-                            <Calendar className="w-4 h-4 mr-1 sm:mr-2" />
-                            <span className="hidden sm:inline">Historial</span>
-                            <span className="sm:hidden">Hist.</span>
-                        </TabsTrigger>
-                    </TabsList>
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Programes Preferits
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {user.preferredPrograms.map((program) => (
+                      <Badge key={program} variant="secondary">
+                        {program}
+                      </Badge>
+                    ))}
+                  </div>
+                </Card>
 
-                    {/* PESTANYA 1: INFORMACIÓ GENERAL */}
-                    <TabsContent value="info" className="space-y-4 pb-6">
-                        <ScrollArea className="h-[50vh] sm:h-[60vh] pr-4">
-                            <div className="space-y-4">
-                                {/* Contacte */}
-                                <div>
-                                    <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
-                                        <Mail className="w-5 h-5 mr-2 text-primary" />
-                                        Contacte
-                                    </h3>
-                                    <div className="grid grid-cols-1 gap-3 text-sm">
-                                        <div className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
-                                            <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                            <span className="truncate">{user.email || 'No disponible'}</span>
-                                        </div>
-                                        <div className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
-                                            <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                            <span>{user.phone || 'No disponible'}</span>
-                                        </div>
-                                        <div className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
-                                            <Cake className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                            <span>{user.birthday}</span>
-                                        </div>
-                                    </div>
-                                </div>
+                {user.notes && (
+                  <Card className="p-6">
+                    <h3 className="text-lg font-semibold mb-4">Notes</h3>
+                    <p className="text-muted-foreground whitespace-pre-wrap">{user.notes}</p>
+                  </Card>
+                )}
+              </TabsContent>
 
-                                <Separator />
+              <TabsContent value="stats" className="space-y-6 mt-0">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Activity className="h-5 w-5 text-primary" />
+                      <span className="text-sm text-muted-foreground">Sessions Totals</span>
+                    </div>
+                    <p className="text-3xl font-bold">{stats?.totalSessions || 0}</p>
+                  </Card>
 
-                                {/* Sessions Habituals */}
-                                {user.preferredPrograms && user.preferredPrograms.length > 0 && (
-                                    <div>
-                                        <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
-                                            <Award className="w-5 h-5 mr-2 text-primary" />
-                                            Sessions Habituals
-                                        </h3>
-                                        <div className="flex flex-wrap gap-2">
-                                            {user.preferredPrograms.map((program, index) => (
-                                                <Badge key={index} variant="secondary" className="px-3 py-1">
-                                                    {program}
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                  <Card className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Award className="h-5 w-5 text-primary" />
+                      <span className="text-sm text-muted-foreground">Programes</span>
+                    </div>
+                    <p className="text-3xl font-bold">{Object.keys(stats?.programCounts || {}).length}</p>
+                  </Card>
 
-                                {/* Notes */}
-                                {user.notes && (
-                                    <>
-                                        <Separator />
-                                        <div>
-                                            <h3 className="font-semibold text-base sm:text-lg mb-3">Notes</h3>
-                                            <p className="text-sm text-muted-foreground p-3 bg-muted/30 rounded whitespace-pre-wrap">
-                                                {user.notes}
-                                            </p>
-                                        </div>
-                                    </>
-                                )}
+                  <Card className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="h-5 w-5 text-primary" />
+                      <span className="text-sm text-muted-foreground">Dies des de l'última</span>
+                    </div>
+                    <p className="text-3xl font-bold">
+                      {stats?.daysSinceLastSession !== null ? stats?.daysSinceLastSession : 'N/A'}
+                    </p>
+                  </Card>
+                </div>
+
+                {/* Rankings Section */}
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-yellow-500" />
+                    Rànquings
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">Rànquing General</span>
+                        <Badge variant="secondary">
+                          #{stats?.generalRanking.rank} de {stats?.generalRanking.total}
+                        </Badge>
+                      </div>
+                      <Progress value={stats?.generalRanking.percentile} className="h-2" />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Top {100 - (stats?.generalRanking.percentile || 0)}%
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Advanced Stats Section */}
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Target className="h-5 w-5 text-blue-500" />
+                    Estadístiques Avançades
+                  </h3>
+                  
+                  <div className="space-y-6">
+                    {/* Monthly Frequency */}
+                    <Collapsible open={isMonthlyFrequencyOpen} onOpenChange={setIsMonthlyFrequencyOpen}>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-5 w-5" />
+                          <span className="font-medium">Freqüència Mensual</span>
+                        </div>
+                        <ChevronDown className={`h-5 w-5 transition-transform ${isMonthlyFrequencyOpen ? 'rotate-180' : ''}`} />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-3 space-y-2">
+                        {stats?.advancedStats.monthlyFrequency.map(({ month, count }) => (
+                          <div key={month} className="flex items-center justify-between p-2 bg-background rounded">
+                            <span className="text-sm">{month}</span>
+                            <Badge variant="outline">{count} sessions</Badge>
+                          </div>
+                        ))}
+                      </CollapsibleContent>
+                    </Collapsible>
+
+                    {/* Days Between Sessions */}
+                    <div className="p-4 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="h-5 w-5" />
+                        <span className="font-medium">Dies entre Sessions</span>
+                      </div>
+                      <p className="text-2xl font-bold">
+                        {stats?.advancedStats.daysBetweenSessions || 'N/A'} dies
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Mitjana de temps entre assistències
+                      </p>
+                    </div>
+
+                    {/* Autodiscipline Score */}
+                    <div className="p-4 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Zap className="h-5 w-5" />
+                        <span className="font-medium">Autodisciplina</span>
+                      </div>
+                      
+                      {stats?.advancedStats.autodiscipline !== undefined && stats.advancedStats.autodiscipline > 0 ? (
+                        <>
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="text-3xl">{stats.advancedStats.autodisciplineLevel.emoji}</span>
+                            <div>
+                              <p className={`text-xl font-bold ${stats.advancedStats.autodisciplineLevel.color}`}>
+                                {stats.advancedStats.autodisciplineLevel.label}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {stats.advancedStats.autodisciplineLevel.percentage}% de puntuació
+                              </p>
                             </div>
-                        </ScrollArea>
-                    </TabsContent>
+                          </div>
+                          <Progress 
+                            value={stats.advancedStats.autodisciplineLevel.percentage} 
+                            className="h-3"
+                          />
+                        </>
+                      ) : (
+                        <p className="text-muted-foreground">N/A</p>
+                      )}
+                    </div>
 
-                    {/* PESTANYA 2: ESTADÍSTIQUES */}
-                    <TabsContent value="stats" className="space-y-4 pb-6">
-                        <ScrollArea className="h-[50vh] sm:h-[60vh] pr-4">
-                            <div className="space-y-6">
-                                {/* Resum General */}
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                    <div className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-neo text-center">
-                                        <div className="text-2xl sm:text-3xl font-bold text-blue-700">{stats.totalSessions}</div>
-                                        <div className="text-xs sm:text-sm text-blue-600 mt-1">Sessions Totals</div>
-                                    </div>
-                                    <div className="p-3 sm:p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-neo text-center">
-                                        <div className="text-2xl sm:text-3xl font-bold text-green-700">{stats.programStats.length}</div>
-                                        <div className="text-xs sm:text-sm text-green-600 mt-1">Programes</div>
-                                    </div>
-                                    <div className="p-3 sm:p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-neo text-center">
-                                        <div className="text-2xl sm:text-3xl font-bold text-purple-700">{user.daysSinceLastSession || 0}</div>
-                                        <div className="text-xs sm:text-sm text-purple-600 mt-1">Dies sense venir</div>
-                                    </div>
-                                    <div className="p-3 sm:p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg shadow-neo text-center">
-                                        <div className="text-xl sm:text-2xl font-bold text-orange-700">
-                                            {user.firstSession ? new Date(user.firstSession).getFullYear() : 'N/A'}
-                                        </div>
-                                        <div className="text-xs sm:text-sm text-orange-600 mt-1">Des de</div>
-                                    </div>
-                                </div>
+                    {/* Improvement Recent */}
+                    {stats?.advancedStats.improvementRecent && (
+                      <div className="p-4 bg-muted rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <TrendingUp className={`h-5 w-5 ${
+                            stats.advancedStats.improvementRecent.trend === 'improving' ? 'text-green-500' :
+                            stats.advancedStats.improvementRecent.trend === 'declining' ? 'text-red-500' :
+                            'text-blue-500'
+                          }`} />
+                          <span className="font-medium">Tendència Recent</span>
+                        </div>
+                        <p className="text-lg font-semibold">
+                          {stats.advancedStats.improvementRecent.message}
+                        </p>
+                      </div>
+                    )}
 
-                                <Separator />
-
-                                {/* 🆕 RANKINGS GENERALS */}
-                                <div>
-                                    <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
-                                        <Zap className="w-5 h-5 mr-2 text-primary" />
-                                        La teva Posició
-                                    </h3>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="p-3 sm:p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg shadow-neo text-center">
-                                            <div className="text-xl sm:text-2xl font-bold text-indigo-700">
-                                                #{stats.generalRanking.rank}
-                                            </div>
-                                            <div className="text-xs sm:text-sm text-indigo-600 mt-1">Ranking General</div>
-                                            {stats.generalRanking.total > 0 && (
-                                                <div className="text-xs sm:text-sm text-indigo-600 mt-1 font-medium">
-                                                    Top {stats.generalRanking.percentile}%
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="p-3 sm:p-4 bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg shadow-neo text-center">
-                                            <div className="text-xl sm:text-2xl font-bold text-rose-700">
-                                                {stats.autodisciplineRanking.rank > 0 ? `#${stats.autodisciplineRanking.rank}` : 'N/A'}
-                                            </div>
-                                            <div className="text-xs sm:text-sm text-rose-600 mt-1">Autodisciplina</div>
-                                            {stats.autodisciplineRanking.total > 0 && (
-                                                <div className="text-xs sm:text-sm text-rose-600 mt-1 font-medium">
-                                                    Top {stats.autodisciplineRanking.percentile}%
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <Separator />
-
-                                {/* 🆕 ESTADÍSTIQUES AVANÇADES */}
-                                <div>
-                                    <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
-                                        <BarChart3 className="w-5 h-5 mr-2 text-primary" />
-                                        Anàlisi Detallada
-                                    </h3>
-
-                                    {/* ✅ Freqüència Mensual (DESPLEGABLE) */}
-                                    <Collapsible 
-                                        open={isMonthlyFrequencyOpen} 
-                                        onOpenChange={setIsMonthlyFrequencyOpen}
-                                        className="mb-4 p-3 sm:p-4 bg-muted/30 rounded-lg"
-                                    >
-                                        <CollapsibleTrigger className="flex items-center justify-between w-full">
-                                            <h4 className="font-medium text-sm sm:text-base">Freqüència Mensual</h4>
-                                            <div className="flex items-center gap-2">
-                                                <Badge variant="outline" className="text-xs">
-                                                    {stats.advancedStats.monthlyFrequency.length} mesos
-                                                </Badge>
-                                                {isMonthlyFrequencyOpen ? (
-                                                    <ChevronUp className="w-4 h-4" />
-                                                ) : (
-                                                    <ChevronDown className="w-4 h-4" />
-                                                )}
-                                            </div>
-                                        </CollapsibleTrigger>
-                                        
-                                        <CollapsibleContent className="mt-3">
-                                            {stats.advancedStats.monthlyFrequency.length > 0 ? (
-                                                <div className="space-y-2">
-                                                    {stats.advancedStats.monthlyFrequency.map((month, idx) => (
-                                                        <div key={idx} className="flex items-center justify-between">
-                                                            <span className="text-xs sm:text-sm text-muted-foreground">{month.month}</span>
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="h-2 w-16 sm:w-24 bg-muted rounded-full overflow-hidden">
-                                                                    <div
-                                                                        className="h-full bg-blue-500 transition-all"
-                                                                        style={{ width: `${Math.min(month.count * 20, 100)}%` }}
-                                                                    />
-                                                                </div>
-                                                                <Badge variant="outline" className="text-xs">{month.count}</Badge>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-xs text-muted-foreground">No hi ha dades mensuals disponibles</p>
-                                            )}
-                                        </CollapsibleContent>
-                                    </Collapsible>
-
-                                    {/* Dies Entre Sessions */}
-                                    <div className="mb-4 p-3 sm:p-4 bg-muted/30 rounded-lg">
-                                        <h4 className="font-medium text-sm sm:text-base mb-2">Dies entre Sessions</h4>
-                                        <div className="flex items-baseline gap-2">
-                                            <div className="text-2xl sm:text-3xl font-bold text-green-600">
-                                                {stats.advancedStats.daysBetweenSessions}
-                                            </div>
-                                            <span className="text-xs sm:text-sm text-muted-foreground">dies de mitja</span>
-                                        </div>
-                                    </div>
-
-                                    {/* ✅ CANVIAT: Autodisciplina */}
-                                    <div className="mb-4 p-3 sm:p-4 bg-muted/30 rounded-lg">
-                                        <h4 className="font-medium text-sm sm:text-base mb-3">Autodisciplina</h4>
-                                        <p className="text-xs text-muted-foreground mb-2">
-                                            Mesura la regularitat amb què assisteixes al gimnàs
-                                        </p>
-                                        <div className="flex items-end gap-3">
-                                            <div className="flex-1">
-                                                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                                                    <div
-                                                        className={`h-full transition-all ${
-                                                            stats.advancedStats.autodiscipline >= 75 ? 'bg-green-500' :
-                                                            stats.advancedStats.autodiscipline >= 50 ? 'bg-yellow-500' :
-                                                            'bg-red-500'
-                                                        }`}
-                                                        style={{ width: `${stats.advancedStats.autodiscipline}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="text-xl sm:text-2xl font-bold">
-                                                {stats.advancedStats.autodiscipline}%
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* ✅ CORREGIT: Millorada Recent */}
-                                    <div className="p-3 sm:p-4 bg-muted/30 rounded-lg">
-                                        <h4 className="font-medium text-sm sm:text-base mb-3">Evolució Recent</h4>
-                                        <p className="text-xs text-muted-foreground mb-3">
-                                            Comparació del darrer mes amb la mitjana dels 3 mesos anteriors
-                                        </p>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="text-center p-2 bg-blue-50 rounded">
-                                                <div className="text-lg sm:text-xl font-bold text-blue-700">{stats.advancedStats.improvementRecent.lastMonth}</div>
-                                                <div className="text-xs sm:text-sm text-blue-600">Darrer mes</div>
-                                            </div>
-                                            <div className="text-center p-2 bg-purple-50 rounded">
-                                                <div className="text-lg sm:text-xl font-bold text-purple-700">{stats.advancedStats.improvementRecent.previousQuarterAverage}</div>
-                                                <div className="text-xs sm:text-sm text-purple-600">Mitjana 3 mesos ant.</div>
-                                            </div>
-                                        </div>
-                                        <div className="mt-3 pt-3 border-t">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs sm:text-sm text-muted-foreground">Tendència:</span>
-                                                <div className="flex items-center gap-2">
-                                                    {stats.advancedStats.improvementRecent.trend === 'up' && (
-                                                        <Badge className="bg-green-500 text-xs">
-                                                            <TrendingUp className="w-3 h-3 mr-1" />
-                                                            +{stats.advancedStats.improvementRecent.percentageChange}%
-                                                        </Badge>
-                                                    )}
-                                                    {stats.advancedStats.improvementRecent.trend === 'down' && (
-                                                        <Badge className="bg-red-500 text-xs">
-                                                            <TrendingDown className="w-3 h-3 mr-1" />
-                                                            {stats.advancedStats.improvementRecent.percentageChange}%
-                                                        </Badge>
-                                                    )}
-                                                    {stats.advancedStats.improvementRecent.trend === 'stable' && (
-                                                        <Badge variant="outline" className="text-xs">
-                                                            <Minus className="w-3 h-3 mr-1" />
-                                                            Estable
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <Separator />
-
-                                {/* 🆕 RANKING PER PROGRAMA */}
-                                {stats.programStats.length > 0 && (
-                                    <>
-                                        <div>
-                                            <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
-                                                <Award className="w-5 h-5 mr-2 text-primary" />
-                                                La teva Posició per Programa
-                                            </h3>
-                                            <div className="space-y-2">
-                                                {stats.programStats.map((prog, idx) => {
-                                                    const ranking = stats.programRankings[prog.name];
-                                                    return (
-                                                        <div key={idx} className="p-2 sm:p-3 bg-muted/30 rounded flex items-center justify-between">
-                                                            <span className="text-sm sm:text-base font-medium">{prog.name}</span>
-                                                            {ranking && ranking.total > 0 ? (
-                                                                <Badge className="text-xs">
-                                                                    #{ranking.rank} de {ranking.total} (Top {ranking.percentile}%)
-                                                                </Badge>
-                                                            ) : (
-                                                                <Badge variant="outline" className="text-xs">N/A</Badge>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                        <Separator />
-                                    </>
-                                )}
-
-                                {/* 🆕 SESSIONS PER ANY */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-3">
-                                        <h3 className="font-semibold text-base sm:text-lg flex items-center">
-                                            <Calendar className="w-5 h-5 mr-2 text-primary" />
-                                            Evolució per Any
-                                        </h3>
-                                        {stats.trend === 'up' && (
-                                            <Badge className="bg-green-500">
-                                                <TrendingUp className="w-3 h-3 mr-1" />
-                                                A l'alça
-                                            </Badge>
-                                        )}
-                                        {stats.trend === 'down' && (
-                                            <Badge className="bg-red-500">
-                                                <TrendingDown className="w-3 h-3 mr-1" />
-                                                A la baixa
-                                            </Badge>
-                                        )}
-                                        {stats.trend === 'stable' && (
-                                            <Badge variant="outline">
-                                                <Minus className="w-3 h-3 mr-1" />
-                                                Estable
-                                            </Badge>
-                                        )}
-                                    </div>
-                                    
-                                    {stats.yearlyStats.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {/* Millor i pitjor any */}
-                                            <div className="grid grid-cols-2 gap-2 mb-3">
-                                                {stats.bestYear && (
-                                                    <div className="p-2 bg-green-50 border border-green-200 rounded text-center">
-                                                        <div className="text-xs text-green-600 mb-1">🏆 Millor any</div>
-                                                        <div className="text-lg font-bold text-green-700">{stats.bestYear.year}</div>
-                                                        <div className="text-xs text-green-600">{stats.bestYear.count} sessions</div>
-                                                    </div>
-                                                )}
-                                                {stats.worstYear && stats.yearlyStats.length > 1 && (
-                                                    <div className="p-2 bg-orange-50 border border-orange-200 rounded text-center">
-                                                        <div className="text-xs text-orange-600 mb-1">📉 Mínim</div>
-                                                        <div className="text-lg font-bold text-orange-700">{stats.worstYear.year}</div>
-                                                        <div className="text-xs text-orange-600">{stats.worstYear.count} sessions</div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            
-                                            {/* Gràfic per any */}
-                                            {stats.yearlyStats.map((yearData) => {
-                                                const maxCount = Math.max(...stats.yearlyStats.map(y => y.count));
-                                                const percentage = (yearData.count / maxCount) * 100;
-                                                const isBest = stats.bestYear?.year === yearData.year;
-                                                const isWorst = stats.worstYear?.year === yearData.year;
-                                                
-                                                return (
-                                                    <div key={yearData.year} className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded">
-                                                        <span className={`font-medium text-sm sm:text-base min-w-[60px] ${isBest ? 'text-green-700' : isWorst ? 'text-orange-700' : ''}`}>
-                                                            {yearData.year}
-                                                        </span>
-                                                        <div className="flex items-center gap-3 flex-1 ml-3">
-                                                            <div className="h-6 sm:h-8 flex-1 bg-muted rounded-full overflow-hidden">
-                                                                <div 
-                                                                    className={`h-full transition-all ${isBest ? 'bg-green-500' : isWorst ? 'bg-orange-400' : 'bg-primary'}`}
-                                                                    style={{ width: `${percentage}%` }}
-                                                                />
-                                                            </div>
-                                                            <Badge variant="outline" className="min-w-[50px] justify-center">
-                                                                {yearData.count}
-                                                            </Badge>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground text-center py-4">
-                                            No hi ha dades d'assistència per any
-                                        </p>
-                                    )}
-                                </div>
-
-                                <Separator />
-
-                                {/* Sessions per Programa */}
-                                <div>
-                                    <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
-                                        <Award className="w-5 h-5 mr-2 text-primary" />
-                                        Sessions per Programa
-                                    </h3>
-                                    <div className="space-y-2">
-                                        {stats.programStats.map((prog, idx) => (
-                                            <div key={idx} className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded">
-                                                <span className="font-medium text-sm sm:text-base">{prog.name}</span>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-2 w-20 sm:w-32 bg-muted rounded-full overflow-hidden">
-                                                        <div 
-                                                            className="h-full bg-primary transition-all"
-                                                            style={{ width: `${(prog.count / stats.totalSessions) * 100}%` }}
-                                                        />
-                                                    </div>
-                                                    <Badge variant="outline">{prog.count}</Badge>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <Separator />
-
-                                {/* Sessions per Centre */}
-                                <div>
-                                    <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
-                                        <MapPin className="w-5 h-5 mr-2 text-primary" />
-                                        Sessions per Centre
-                                    </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {Object.entries(stats.centerCount).map(([center, count]) => (
-                                            <div key={center} className="p-3 sm:p-4 bg-muted/30 rounded text-center">
-                                                <div className="text-xl sm:text-2xl font-bold">{count}</div>
-                                                <div className="text-xs sm:text-sm text-muted-foreground">{center}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                    {/* Program Rankings */}
+                    {stats?.programRankings && Object.keys(stats.programRankings).length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Trophy className="h-4 w-4" />
+                          Posició per Programa
+                        </h4>
+                        {Object.entries(stats.programRankings).map(([program, ranking]) => (
+                          <div key={program} className="p-3 bg-background rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium">{program}</span>
+                              <Badge variant="secondary">
+                                {ranking.rank > 0 ? `#${ranking.rank} de ${ranking.total}` : 'N/A'}
+                              </Badge>
                             </div>
-                        </ScrollArea>
-                    </TabsContent>
-
-                    {/* PESTANYA 3: HISTORIAL */}
-                    <TabsContent value="history" className="pb-6">
-                        <ScrollArea className="h-[50vh] sm:h-[60vh] pr-4">
-                            {sessionsByDate.length === 0 ? (
-                                <div className="text-center py-8 text-muted-foreground">
-                                    No hi ha historial de sessions disponible
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {sessionsByDate.map(([date, sessions]) => (
-                                        <div key={date} className="border rounded-lg p-3 sm:p-4 bg-muted/20">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <Calendar className="w-4 h-4 text-primary" />
-                                                <h4 className="font-semibold text-sm sm:text-base">{formatDate(date)}</h4>
-                                                <Badge variant="outline" className="ml-auto">{sessions.length} sessions</Badge>
-                                            </div>
-                                            <div className="space-y-2">
-                                                {sessions.map((session, idx) => (
-                                                    <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 bg-background rounded text-sm">
-                                                        <div className="flex items-center gap-2">
-                                                            <Badge className="text-xs">{session.activity}</Badge>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                            <Clock className="w-3 h-3" />
-                                                            <span>{session.time}</span>
-                                                            <Badge variant="outline" className={`text-xs ${session.center === 'Arbúcies' ? 'bg-blue-50' : 'bg-green-50'}`}>
-                                                                {session.center}
-                                                            </Badge>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                            {ranking.rank > 0 && (
+                              <>
+                                <Progress value={ranking.percentile} className="h-2" />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Top {100 - ranking.percentile}% al teu centre
+                                </p>
+                              </>
                             )}
-                        </ScrollArea>
-                    </TabsContent>
-                </Tabs>
-            </DialogContent>
-        </Dialog>
-    );
-};
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+
+                {/* Yearly Evolution */}
+                {stats?.yearlyTrend && stats.yearlyTrend.length > 0 && (
+                  <Card className="p-6">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      Evolució Anual
+                    </h3>
+                    <div className="space-y-3">
+                      {stats.yearlyTrend.map(({ year, count }) => (
+                        <div key={year} className="flex items-center justify-between">
+                          <span className="font-medium">{year}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-32 bg-muted rounded-full h-2">
+                              <div
+                                className="bg-primary h-2 rounded-full transition-all"
+                                style={{
+                                  width: `${(count / Math.max(...stats.yearlyTrend.map(y => y.count))) * 100}%`
+                                }}
+                              />
+                            </div>
+                            <span className="text-sm font-semibold w-12 text-right">{count}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {stats.bestYear && stats.worstYear && (
+                      <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Millor any</p>
+                          <p className="text-lg font-bold text-green-600">
+                            {stats.bestYear.year} ({stats.bestYear.count})
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Pitjor any</p>
+                          <p className="text-lg font-bold text-red-600">
+                            {stats.worstYear.year} ({stats.worstYear.count})
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                )}
+
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Sessions per Programa</h3>
+                  <div className="space-y-3">
+                    {Object.entries(stats?.programCounts || {})
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([program, count]) => (
+                        <div key={program} className="flex items-center justify-between">
+                          <span className="font-medium">{program}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-32 bg-muted rounded-full h-2">
+                              <div
+                                className="bg-primary h-2 rounded-full transition-all"
+                                style={{
+                                  width: `${(count / Math.max(...Object.values(stats?.programCounts || {}))) * 100}%`
+                                }}
+                              />
+                            </div>
+                            <span className="text-sm font-semibold w-12 text-right">{count}</span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </Card>
+
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Sessions per Centre</h3>
+                  <div className="space-y-3">
+                    {Object.entries(stats?.centerCounts || {})
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([center, count]) => (
+                        <div key={center} className="flex items-center justify-between">
+                          <span className="font-medium">{center}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-32 bg-muted rounded-full h-2">
+                              <div
+                                className="bg-primary h-2 rounded-full transition-all"
+                                style={{
+                                  width: `${(count / Math.max(...Object.values(stats?.centerCounts || {}))) * 100}%`
+                                }}
+                              />
+                            </div>
+                            <span className="text-sm font-semibold w-12 text-right">{count}</span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="history" className="mt-0">
+                <div className="space-y-4">
+                  {Object.entries(sessionsByDate)
+                    .sort(([dateA], [dateB]) => new Date(dateB).getTime() - new Date(dateA).getTime())
+                    .map(([date, sessions]) => (
+                      <Card key={date} className="p-4">
+                        <h4 className="font-semibold mb-3 flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          {formatDate(date)}
+                        </h4>
+                        <div className="space-y-2">
+                          {sessions.map((session, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                            >
+                              <div className="flex items-center gap-3">
+                                <Activity className="h-4 w-4 text-primary" />
+                                <span className="font-medium">{session.activity}</span>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {session.time}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {session.center}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    ))}
+                </div>
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
