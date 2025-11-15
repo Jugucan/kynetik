@@ -224,6 +224,17 @@ export const calculateAdvancedStats = (user: User): AdvancedStats => {
 
 // ✅ CORRECCIÓ DEFINITIVA: Càlcul del rànquing general
 export const calculateUserRanking = (allUsers: User[], currentUser: User, metric: 'totalSessions' | 'autodiscipline' | 'daysBetweenSessions'): UserRanking => {
+  // 🔍 DEBUG TEMPORAL - ESBORRA DESPRÉS
+  console.log("=== DEBUG calculateUserRanking ===");
+  console.log("metric:", metric);
+  console.log("currentUser:", currentUser?.name, currentUser?.id);
+  console.log("currentUser.sessions:", currentUser?.sessions?.length);
+  console.log("allUsers.length:", allUsers?.length);
+  console.log("allUsers[0]:", allUsers?.[0]?.name, allUsers?.[0]?.sessions?.length);
+  console.log("====================================");
+  
+  // Si no hi ha usuaris, retornem 0
+  if (!allUsers || allUsers.length === 0) {
   // Si no hi ha usuaris, retornem 0
   if (!allUsers || allUsers.length === 0) {
     return { rank: 0, total: 0, percentile: 0 };
