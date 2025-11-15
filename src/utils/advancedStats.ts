@@ -235,8 +235,6 @@ export const calculateUserRanking = (allUsers: User[], currentUser: User, metric
   
   // Si no hi ha usuaris, retornem 0
   if (!allUsers || allUsers.length === 0) {
-  // Si no hi ha usuaris, retornem 0
-  if (!allUsers || allUsers.length === 0) {
     return { rank: 0, total: 0, percentile: 0 };
   }
 
