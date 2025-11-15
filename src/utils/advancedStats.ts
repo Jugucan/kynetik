@@ -222,12 +222,17 @@ export const calculateAdvancedStats = (user: User): AdvancedStats => {
   };
 };
 
-// ✅ CÀLCUL DEL RÀNQUING GENERAL
+// ✅ CORRECCIÓ DEFINITIVA: Càlcul del rànquing general
 export const calculateUserRanking = (allUsers: User[], currentUser: User, metric: 'totalSessions' | 'autodiscipline' | 'daysBetweenSessions'): UserRanking => {
+  // Si no hi ha usuaris, retornem 0
+  if (!allUsers || allUsers.length === 0) {
+    return { rank: 0, total: 0, percentile: 0 };
+  }
+
   let usersWithMetric: Array<{ user: User; value: number }> = [];
 
   if (metric === 'totalSessions') {
-    // ✅ Calculem totalSessions a partir de sessions.length
+    // ✅ Calculem totalSessions a partir de sessions.length SEMPRE
     usersWithMetric = allUsers.map(u => ({
       user: u,
       value: u.sessions ? u.sessions.length : 0
@@ -244,9 +249,9 @@ export const calculateUserRanking = (allUsers: User[], currentUser: User, metric
     }));
   }
 
-  // Filtrem usuaris amb valor 0 per tenir un rànquing més real
+  // ✅ CORRECCIÓ CRÍTICA: Filtrem usuaris amb valor 0 però SEMPRE mantenim l'usuari actual
   if (metric === 'totalSessions' || metric === 'autodiscipline') {
-    usersWithMetric = usersWithMetric.filter(u => u.value > 0);
+    usersWithMetric = usersWithMetric.filter(u => u.value > 0 || u.user.id === currentUser.id);
   }
 
   // Ordenem: per daysBetweenSessions ascendent (menys dies = millor)
@@ -258,9 +263,16 @@ export const calculateUserRanking = (allUsers: User[], currentUser: User, metric
     return b.value - a.value;
   });
 
-  // Trobem la posició de l'usuari actual
+  // ✅ Trobem la posició de l'usuari actual
   const currentUserIndex = usersWithMetric.findIndex(u => u.user.id === currentUser.id);
-  const rank = currentUserIndex !== -1 ? currentUserIndex + 1 : 0;
+  
+  // Si no el trobem, retornem 0
+  if (currentUserIndex === -1) {
+    console.warn('User not found in ranking:', currentUser.id, currentUser.name);
+    return { rank: 0, total: 0, percentile: 0 };
+  }
+  
+  const rank = currentUserIndex + 1;
   const total = usersWithMetric.length;
   
   // Calculem el percentil correctament
