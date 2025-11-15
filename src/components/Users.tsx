@@ -164,19 +164,29 @@ const Users = () => {
             const notesToMerge = [existingNotes, importedNotes].filter(n => n && n.trim().length > 0);
             mergedData.notes = notesToMerge.join('\n\n---\n\n');
             
-            // 🆕 FUSIONEM LES SESSIONS!
+            // ✅ FUSIONEM LES SESSIONS amb normalització de dates
             const existingSessions = Array.isArray(existingUser.sessions) ? existingUser.sessions : [];
             const importedSessions = Array.isArray(importedUser.sessions) ? importedUser.sessions : [];
             
-            // Combinem sessions eliminant duplicats per data+activitat
+            // Normalitzem les sessions importades per assegurar format correcte
+            const normalizedImportedSessions = importedSessions.map(session => ({
+              date: session.date || '',
+              activity: session.activity || '',
+              time: session.time || '',
+              sala: session.sala || '',
+              center: session.center || importedUser.center || 'Sant Hilari'
+            }));
+            
+            // Combinem sessions eliminant duplicats per data+activitat+time
             const sessionMap = new Map();
-            [...existingSessions, ...importedSessions].forEach(session => {
-              const key = `${session.date}-${session.activity}-${session.time}`;
+            [...existingSessions, ...normalizedImportedSessions].forEach(session => {
+              const key = `${session.date}-${session.activity}-${session.time || 'no-time'}`;
               sessionMap.set(key, session);
             });
             mergedData.sessions = Array.from(sessionMap.values());
             
-            // 🆕 ACTUALITZEM ESTADÍSTIQUES
+            // ✅ Les estadístiques es recalcularan automàticament a useUsers.ts
+            // Però les posem aquí també per assegurar
             mergedData.totalSessions = mergedData.sessions.length;
             
             if (mergedData.sessions.length > 0) {
@@ -192,7 +202,18 @@ const Users = () => {
             await updateUser(existingUser.id, mergedData);
             updatedCount++;
           } else {
-            // 🆕 USUARI NOU AMB TOTES LES SESSIONS
+            // ✅ USUARI NOU AMB TOTES LES SESSIONS
+            const importedSessions = Array.isArray(importedUser.sessions) ? importedUser.sessions : [];
+            
+            // Normalitzem les sessions
+            const normalizedSessions = importedSessions.map(session => ({
+              date: session.date || '',
+              activity: session.activity || '',
+              time: session.time || '',
+              sala: session.sala || '',
+              center: session.center || importedUser.center || 'Sant Hilari'
+            }));
+            
             const userData: Omit<User, 'id'> = {
               name: importedUser.name || '',
               email: importedUser.email || '',
@@ -207,13 +228,25 @@ const Users = () => {
               avatar: importedUser.profileImageUrl || importedUser.avatar || '',
               notes: importedUser.notes || '',
               
-              // 🆕 AFEGIM LES SESSIONS!
-              sessions: Array.isArray(importedUser.sessions) ? importedUser.sessions : [],
-              totalSessions: importedUser.totalSessions || 0,
-              firstSession: importedUser.firstSession || '',
-              lastSession: importedUser.lastSession || '',
-              daysSinceLastSession: importedUser.daysSinceLastSession || 0
+              // ✅ Sessions normalitzades
+              sessions: normalizedSessions,
+              // ✅ CORRECCIÓ: Calculem totalSessions a partir de sessions.length
+              totalSessions: normalizedSessions.length,
+              firstSession: normalizedSessions.length > 0 
+                ? normalizedSessions.map(s => s.date).sort()[0]
+                : '',
+              lastSession: normalizedSessions.length > 0
+                ? normalizedSessions.map(s => s.date).sort()[normalizedSessions.length - 1]
+                : '',
+              daysSinceLastSession: 0
             };
+            
+            // Calculem daysSinceLastSession si hi ha sessions
+            if (userData.lastSession) {
+              const lastDate = new Date(userData.lastSession);
+              const today = new Date();
+              userData.daysSinceLastSession = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+            }
             
             await addUser(userData);
             newCount++;
