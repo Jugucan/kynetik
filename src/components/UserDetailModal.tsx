@@ -43,6 +43,14 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
     const [isMonthlyFrequencyOpen, setIsMonthlyFrequencyOpen] = useState(false);
 
     // 🆕 CÀLCUL D'ESTADÍSTIQUES
+    // 🔍 DEBUG TEMPORAL - ESBORRA DESPRÉS
+    console.log("=== DEBUG UserDetailModal ===");
+    console.log("user:", user?.name, user?.id);
+    console.log("user.sessions:", user?.sessions?.length);
+    console.log("allUsers.length:", allUsers?.length);
+    console.log("allUsers IDs:", allUsers?.map(u => u.id).slice(0, 5));
+    console.log("=============================");
+    
     const stats = useMemo(() => {
         const sessions = user.sessions || [];
         
