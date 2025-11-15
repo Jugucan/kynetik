@@ -122,22 +122,32 @@ export const useUsers = () => {
                                 ? data.notes 
                                 : '';
             
-            // 🆕 RECUPEREM LES SESSIONS
+            // 🆕 RECUPEREM LES SESSIONS I RECALCULEM ESTADÍSTIQUES
             const sessions: UserSession[] = Array.isArray(data.sessions)
                                             ? data.sessions
                                             : [];
-            const totalSessions: number = typeof data.totalSessions === 'number'
-                                          ? data.totalSessions
-                                          : sessions.length;
-            const firstSession: string = typeof data.firstSession === 'string'
-                                        ? data.firstSession
-                                        : '';
-            const lastSession: string = typeof data.lastSession === 'string'
-                                       ? data.lastSession
-                                       : '';
-            const daysSinceLastSession: number = typeof data.daysSinceLastSession === 'number'
-                                                ? data.daysSinceLastSession
-                                                : 0;
+            
+            // ✅ SEMPRE calculem totalSessions a partir de sessions.length
+            const totalSessions: number = sessions.length;
+            
+            // ✅ Calculem firstSession, lastSession i daysSinceLastSession
+            let firstSession: string = '';
+            let lastSession: string = '';
+            let daysSinceLastSession: number = 0;
+            
+            if (sessions.length > 0) {
+              const sortedDates = sessions
+                .map(s => s.date)
+                .sort((a, b) => a.localeCompare(b));
+              
+              firstSession = sortedDates[0];
+              lastSession = sortedDates[sortedDates.length - 1];
+              
+              // Calculem dies des de l'última sessió
+              const lastDate = new Date(lastSession);
+              const today = new Date();
+              daysSinceLastSession = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+            }
 
             return {
               id: doc.id,
@@ -148,7 +158,7 @@ export const useUsers = () => {
               profileImageUrl,
               notes,
               sessions,
-              totalSessions,
+              totalSessions, // ✅ Recalculat automàticament
               firstSession,
               lastSession,
               daysSinceLastSession
@@ -196,6 +206,30 @@ export const useUsers = () => {
       // 🆕 ASSEGUREM QUE LES SESSIONS ES GUARDEN COM A ARRAY
       if (dataToSave.sessions && !Array.isArray(dataToSave.sessions)) {
           dataToSave.sessions = [];
+      }
+      
+      // ✅ RECALCULEM totalSessions automàticament abans de guardar
+      if (Array.isArray(dataToSave.sessions)) {
+        dataToSave.totalSessions = dataToSave.sessions.length;
+        
+        // ✅ Recalculem firstSession, lastSession i daysSinceLastSession
+        if (dataToSave.sessions.length > 0) {
+          const sortedDates = dataToSave.sessions
+            .map((s: UserSession) => s.date)
+            .sort((a: string, b: string) => a.localeCompare(b));
+          
+          dataToSave.firstSession = sortedDates[0];
+          dataToSave.lastSession = sortedDates[sortedDates.length - 1];
+          
+          const lastDate = new Date(dataToSave.lastSession);
+          const today = new Date();
+          dataToSave.daysSinceLastSession = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        } else {
+          dataToSave.totalSessions = 0;
+          dataToSave.firstSession = '';
+          dataToSave.lastSession = '';
+          dataToSave.daysSinceLastSession = 0;
+        }
       }
       
       return dataToSave;
