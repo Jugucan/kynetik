@@ -307,9 +307,18 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
                                                 <div>
                                                     <div className="text-xs sm:text-sm text-indigo-600 mb-1">Ranking General</div>
                                                     <div className="text-2xl sm:text-3xl font-bold text-indigo-700">
-                                                        #{stats.generalRanking.rank}
-                                                    </div>
-                                                </div>
+                                                         #{stats.generalRanking.rank}
+                                                         </div>
+                                                         {/* 🔍 DEBUG TEMPORAL */}
+                                                         <div className="text-[10px] text-gray-500 mt-1">
+                                                             ID: {user.id?.substring(0, 8)}...<br/>
+                                                             Sessions: {user.sessions?.length || 0}<br/>
+                                                             Total users: {allUsers.length}<br/>
+                                                             Total: {stats.generalRanking.total}
+                                                         </div>
+                                                      </div>
+
+                                                
                                                 {stats.generalRanking.total > 0 && (
                                                     <div className="text-right">
                                                         <div className="text-lg sm:text-xl font-bold text-indigo-700">
