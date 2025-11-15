@@ -26,6 +26,7 @@ export type User = {
   age?: number; center?: string; preferredPrograms?: string[];
   profileImageUrl?: string; avatar?: string; notes?: string;
   sessions?: UserSession[]; firstSession?: string; daysSinceLastSession?: number;
+  totalSessions?: number;
 };
 interface UserDetailModalProps {
     user: User | null;
@@ -58,7 +59,9 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
         // Comptador per centre
         const centerCount: { [key: string]: number } = {};
         sessions.forEach(session => {
-            centerCount[session.center] = (centerCount[session.center] || 0) + 1;
+            if (session.center) {
+                centerCount[session.center] = (centerCount[session.center] || 0) + 1;
+            }
         });
         
         // 🆕 SESSIONS PER ANY
@@ -93,8 +96,8 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
         
         const advancedStats = calculateAdvancedStats(user);
 
+        // ✅ Càlcul del rànquing general
         const generalRanking = allUsers.length > 0 ? calculateUserRanking(allUsers, user, 'totalSessions') : { rank: 0, total: 0, percentile: 0 };
-        const autodisciplineRanking = allUsers.length > 0 ? calculateUserRanking(allUsers, user, 'autodiscipline') : { rank: 0, total: 0, percentile: 0 }; // ✅ CANVIAT
 
         const programRankings: { [key: string]: any } = {};
         programStats.forEach(prog => {
@@ -113,10 +116,9 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
             totalSessions: sessions.length,
             advancedStats,
             generalRanking,
-            autodisciplineRanking, // ✅ CANVIAT
             programRankings
         };
-    }, [user.sessions, allUsers]);
+    }, [user.sessions, user.id, allUsers]);
     
     const formatDate = (dateStr: string) => {
         if (!dateStr) return 'N/A';
@@ -291,28 +293,26 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
                                         <Zap className="w-5 h-5 mr-2 text-primary" />
                                         La teva Posició
                                     </h3>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="p-3 sm:p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg shadow-neo text-center">
-                                            <div className="text-xl sm:text-2xl font-bold text-indigo-700">
-                                                #{stats.generalRanking.rank}
-                                            </div>
-                                            <div className="text-xs sm:text-sm text-indigo-600 mt-1">Ranking General</div>
-                                            {stats.generalRanking.total > 0 && (
-                                                <div className="text-xs sm:text-sm text-indigo-600 mt-1 font-medium">
-                                                    Top {stats.generalRanking.percentile}%
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <div className="p-3 sm:p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg shadow-neo">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <div className="text-xs sm:text-sm text-indigo-600 mb-1">Ranking General</div>
+                                                    <div className="text-2xl sm:text-3xl font-bold text-indigo-700">
+                                                        #{stats.generalRanking.rank}
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                        <div className="p-3 sm:p-4 bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg shadow-neo text-center">
-                                            <div className="text-xl sm:text-2xl font-bold text-rose-700">
-                                                {stats.autodisciplineRanking.rank > 0 ? `#${stats.autodisciplineRanking.rank}` : 'N/A'}
+                                                {stats.generalRanking.total > 0 && (
+                                                    <div className="text-right">
+                                                        <div className="text-lg sm:text-xl font-bold text-indigo-700">
+                                                            Top {stats.generalRanking.percentile}%
+                                                        </div>
+                                                        <div className="text-xs text-indigo-600">
+                                                            de {stats.generalRanking.total} usuaris
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className="text-xs sm:text-sm text-rose-600 mt-1">Autodisciplina</div>
-                                            {stats.autodisciplineRanking.total > 0 && (
-                                                <div className="text-xs sm:text-sm text-rose-600 mt-1 font-medium">
-                                                    Top {stats.autodisciplineRanking.percentile}%
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -381,32 +381,36 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
                                         </div>
                                     </div>
 
-                                    {/* ✅ CANVIAT: Autodisciplina */}
-                                    <div className="mb-4 p-3 sm:p-4 bg-muted/30 rounded-lg">
-                                        <h4 className="font-medium text-sm sm:text-base mb-3">Autodisciplina</h4>
-                                        <p className="text-xs text-muted-foreground mb-2">
+                                    {/* ✅ NOVA VISUALITZACIÓ: Autodisciplina amb cara + barra de colors */}
+                                    <div className="mb-4 p-4 sm:p-5 rounded-lg shadow-neo" style={{ backgroundColor: stats.advancedStats.autodisciplineLevel.bgColor.replace('bg-', '#').replace('-50', 'f0f0f0') }}>
+                                        <h4 className="font-medium text-sm sm:text-base mb-3 flex items-center gap-2">
+                                            Autodisciplina
+                                            <span className="text-2xl">{stats.advancedStats.autodisciplineLevel.emoji}</span>
+                                        </h4>
+                                        <p className="text-xs text-muted-foreground mb-3">
                                             Mesura la regularitat amb què assisteixes al gimnàs
                                         </p>
-                                        <div className="flex items-end gap-3">
-                                            <div className="flex-1">
-                                                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                                                    <div
-                                                        className={`h-full transition-all ${
-                                                            stats.advancedStats.autodiscipline >= 75 ? 'bg-green-500' :
-                                                            stats.advancedStats.autodiscipline >= 50 ? 'bg-yellow-500' :
-                                                            'bg-red-500'
-                                                        }`}
-                                                        style={{ width: `${stats.advancedStats.autodiscipline}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="text-xl sm:text-2xl font-bold">
+                                        
+                                        {/* Etiqueta + Percentatge */}
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className={`font-bold text-lg ${stats.advancedStats.autodisciplineLevel.color}`}>
+                                                {stats.advancedStats.autodisciplineLevel.label}
+                                            </span>
+                                            <span className="text-2xl font-bold">
                                                 {stats.advancedStats.autodiscipline}%
-                                            </div>
+                                            </span>
+                                        </div>
+                                        
+                                        {/* Barra de progrés amb colors */}
+                                        <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full transition-all ${stats.advancedStats.autodisciplineLevel.barColor}`}
+                                                style={{ width: `${stats.advancedStats.autodisciplineLevel.percentage}%` }}
+                                            />
                                         </div>
                                     </div>
 
-                                    {/* ✅ CORREGIT: Millorada Recent */}
+                                    {/* ✅ Millorada Recent */}
                                     <div className="p-3 sm:p-4 bg-muted/30 rounded-lg">
                                         <h4 className="font-medium text-sm sm:text-base mb-3">Evolució Recent</h4>
                                         <p className="text-xs text-muted-foreground mb-3">
@@ -592,20 +596,22 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
                                 <Separator />
 
                                 {/* Sessions per Centre */}
-                                <div>
-                                    <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
-                                        <MapPin className="w-5 h-5 mr-2 text-primary" />
-                                        Sessions per Centre
-                                    </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {Object.entries(stats.centerCount).map(([center, count]) => (
-                                            <div key={center} className="p-3 sm:p-4 bg-muted/30 rounded text-center">
-                                                <div className="text-xl sm:text-2xl font-bold">{count}</div>
-                                                <div className="text-xs sm:text-sm text-muted-foreground">{center}</div>
-                                            </div>
-                                        ))}
+                                {Object.keys(stats.centerCount).length > 0 && (
+                                    <div>
+                                        <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
+                                            <MapPin className="w-5 h-5 mr-2 text-primary" />
+                                            Sessions per Centre
+                                        </h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {Object.entries(stats.centerCount).map(([center, count]) => (
+                                                <div key={center} className="p-3 sm:p-4 bg-muted/30 rounded text-center">
+                                                    <div className="text-xl sm:text-2xl font-bold">{count}</div>
+                                                    <div className="text-xs sm:text-sm text-muted-foreground">{center}</div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         </ScrollArea>
                     </TabsContent>
@@ -633,11 +639,17 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
                                                             <Badge className="text-xs">{session.activity}</Badge>
                                                         </div>
                                                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                            <Clock className="w-3 h-3" />
-                                                            <span>{session.time}</span>
-                                                            <Badge variant="outline" className={`text-xs ${session.center === 'Arbúcies' ? 'bg-blue-50' : 'bg-green-50'}`}>
-                                                                {session.center}
-                                                            </Badge>
+                                                            {session.time && (
+                                                                <>
+                                                                    <Clock className="w-3 h-3" />
+                                                                    <span>{session.time}</span>
+                                                                </>
+                                                            )}
+                                                            {session.center && (
+                                                                <Badge variant="outline" className={`text-xs ${session.center === 'Arbúcies' ? 'bg-blue-50' : 'bg-green-50'}`}>
+                                                                    {session.center}
+                                                                </Badge>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ))}
