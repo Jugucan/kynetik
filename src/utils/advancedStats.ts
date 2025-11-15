@@ -4,7 +4,7 @@ export interface AdvancedStats {
   monthlyFrequency: Array<{ month: string; count: number }>;
   daysBetweenSessions: number;
   autodiscipline: number;
-  autodisciplineLevel: AutodisciplineLevel; // 🆕 Nou camp amb nivells descriptius
+  autodisciplineLevel: AutodisciplineLevel;
   improvementRecent: {
     lastMonth: number;
     previousQuarterAverage: number;
@@ -13,11 +13,11 @@ export interface AdvancedStats {
   };
 }
 
-// 🆕 NOVA INTERFÍCIE per l'autodisciplina amb nivells descriptius
+// 🆕 INTERFÍCIE per l'autodisciplina amb nivells descriptius
 export interface AutodisciplineLevel {
-  label: string; // "cal millorar", "ho pots fer millor", "bona", "notable", "excel·lent"
+  label: string; // "Cal millorar", "Ho pots fer millor", "Bona", "Notable", "Excel·lent"
   emoji: string; // 😞, 😐, 🙂, 😊, 🤩
-  color: string; // Classe de Tailwind per al color
+  color: string; // Classe de Tailwind per al color del text
   bgColor: string; // Color de fons
   percentage: number; // 0-100 per a la barra
   barColor: string; // Color de la barra (vermell → taronja → groc → verd)
@@ -69,7 +69,7 @@ export const calculateDaysBetweenSessions = (sessions: UserSession[]): number =>
   return Math.round(totalDays / (sortedDates.length - 1));
 };
 
-// Càlcul millorat de l'autodisciplina
+// ✅ Càlcul millorat de l'autodisciplina
 export const calculateAutodiscipline = (sessions: UserSession[]): number => {
   if (!sessions || sessions.length < 2) return 0;
 
@@ -103,7 +103,7 @@ export const calculateAutodiscipline = (sessions: UserSession[]): number => {
   return Math.round(autodisciplineScore);
 };
 
-// 🆕 NOVA FUNCIÓ: Obtenir nivell descriptiu d'autodisciplina
+// 🆕 FUNCIÓ: Obtenir nivell descriptiu d'autodisciplina amb emojis i colors
 export const getAutodisciplineLevel = (score: number): AutodisciplineLevel => {
   // score és un número entre 0 i 100
   
@@ -155,7 +155,7 @@ export const getAutodisciplineLevel = (score: number): AutodisciplineLevel => {
   }
 };
 
-// ✅ CORRECCIÓ: Càlcul correcte de "Millorada recent"
+// ✅ Càlcul de "Millorada recent"
 export const calculateImprovementRecent = (sessions: UserSession[]): AdvancedStats['improvementRecent'] => {
   if (!sessions || sessions.length === 0) {
     return {
@@ -176,13 +176,13 @@ export const calculateImprovementRecent = (sessions: UserSession[]): AdvancedSta
   const fourMonthsAgo = new Date(now);
   fourMonthsAgo.setDate(now.getDate() - 120);
 
-  // ✅ CORRECCIÓ: Comptem sessions de l'últim mes (últims 30 dies)
+  // Comptem sessions de l'últim mes (últims 30 dies)
   const lastMonthSessions = sessions.filter(s => {
     const sessionDate = new Date(s.date);
     return sessionDate >= oneMonthAgo && sessionDate <= now;
   }).length;
 
-  // ✅ CORRECCIÓ: Comptem sessions dels 3 mesos ANTERIORS (de fa 120 dies fins fa 30 dies)
+  // Comptem sessions dels 3 mesos ANTERIORS (de fa 120 dies fins fa 30 dies)
   const previousQuarterSessions = sessions.filter(s => {
     const sessionDate = new Date(s.date);
     return sessionDate >= fourMonthsAgo && sessionDate < oneMonthAgo;
@@ -203,7 +203,7 @@ export const calculateImprovementRecent = (sessions: UserSession[]): AdvancedSta
 
   return {
     lastMonth: lastMonthSessions,
-    previousQuarterAverage: Math.round(previousQuarterAverage * 10) / 10, // Arrodonit a 1 decimal
+    previousQuarterAverage: Math.round(previousQuarterAverage * 10) / 10,
     trend,
     percentageChange
   };
@@ -217,20 +217,20 @@ export const calculateAdvancedStats = (user: User): AdvancedStats => {
     monthlyFrequency: calculateMonthlyFrequency(sessions),
     daysBetweenSessions: calculateDaysBetweenSessions(sessions),
     autodiscipline: autodisciplineScore,
-    autodisciplineLevel: getAutodisciplineLevel(autodisciplineScore), // 🆕 Afegim el nivell descriptiu
+    autodisciplineLevel: getAutodisciplineLevel(autodisciplineScore),
     improvementRecent: calculateImprovementRecent(sessions)
   };
 };
 
-// ✅ CORRECCIÓ: Càlcul correcte del rànquing general
+// ✅ CÀLCUL DEL RÀNQUING GENERAL
 export const calculateUserRanking = (allUsers: User[], currentUser: User, metric: 'totalSessions' | 'autodiscipline' | 'daysBetweenSessions'): UserRanking => {
   let usersWithMetric: Array<{ user: User; value: number }> = [];
 
   if (metric === 'totalSessions') {
-    // 🆕 CORRECCIÓ: Calculem totalSessions a partir de sessions.length si no existeix
+    // ✅ Calculem totalSessions a partir de sessions.length
     usersWithMetric = allUsers.map(u => ({
       user: u,
-      value: u.totalSessions || (u.sessions ? u.sessions.length : 0)
+      value: u.sessions ? u.sessions.length : 0
     }));
   } else if (metric === 'autodiscipline') {
     usersWithMetric = allUsers.map(u => ({
@@ -269,9 +269,9 @@ export const calculateUserRanking = (allUsers: User[], currentUser: User, metric
   return { rank, total, percentile };
 };
 
-// 🆕 CORRECCIÓ: Ara també filtrem per centre a més del programa
+// ✅ CÀLCUL DEL RÀNQUING PER PROGRAMA (filtra per centre també)
 export const calculateProgramRanking = (allUsers: User[], currentUser: User, program: string): UserRanking => {
-  // 🆕 Filtra usuaris que han fet aquest programa I són del mateix centre
+  // Filtra usuaris que han fet aquest programa I són del mateix centre
   const programUsers = allUsers.filter(u => {
     const sessions = u.sessions || [];
     const hasProgram = sessions.some(s => s.activity === program);
