@@ -624,7 +624,7 @@ return (
         isOpen={!!viewingUser}
         onClose={handleCloseViewModal}
         onEdit={handleEditUser}
-        allUsers={users}
+        allUsers={users && users.length > 0 ? users : []}
       />
       <UserFormModal
         open={isModalOpen}
