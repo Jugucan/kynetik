@@ -340,11 +340,15 @@ const Users = () => {
     }
   };
 
-// 🔍 DEBUG TEMPORAL - Afegeix això just abans del return
-  console.log("=== DEBUG Users.tsx ===");
-  console.log("Total users:", users.length);
-  console.log("viewingUser:", viewingUser?.name);
-  console.log("========================");
+// 🔍 DEBUG TEMPORAL - Abans del return
+React.useEffect(() => {
+  if (viewingUser) {
+    alert(`DEBUG:\nTotal users: ${users.length}\nViewing: ${viewingUser.name}\nSessions: ${viewingUser.sessions?.length}`);
+  }
+}, [viewingUser]);
+
+return (
+  <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
   
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
