@@ -340,6 +340,12 @@ const Users = () => {
     }
   };
 
+// 🔍 DEBUG TEMPORAL - Afegeix això just abans del return
+  console.log("=== DEBUG Users.tsx ===");
+  console.log("Total users:", users.length);
+  console.log("viewingUser:", viewingUser?.name);
+  console.log("========================");
+  
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
