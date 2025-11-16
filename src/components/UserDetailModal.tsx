@@ -297,10 +297,20 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
 
                                 {/* 🆕 RANKINGS GENERALS */}
                                 <div>
-                                    <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
-                                        <Zap className="w-5 h-5 mr-2 text-primary" />
-                                        La teva Posició
-                                    </h3>
+                                  <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
+                                    <Zap className="w-5 h-5 mr-2 text-primary" />
+                                    La teva Posició
+                                  </h3>
+                                  
+                                  {/* 🔍 DEBUG VISIBLE */}
+                                  <div className="mb-4 p-3 bg-yellow-100 border-2 border-yellow-500 rounded text-xs">
+                                    <strong>DEBUG INFO:</strong><br/>
+                                    allUsers recibido: {allUsers?.length || 'undefined'}<br/>
+                                    user.id: {user.id}<br/>
+                                    user.sessions: {user.sessions?.length || 0}<br/>
+                                    Stats calculat? {stats ? 'SÍ' : 'NO'}<br/>
+                                    generalRanking.total: {stats.generalRanking?.total || 'undefined'}
+                                  </div>
                                     <div className="grid grid-cols-1 gap-3">
                                         <div className="p-3 sm:p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg shadow-neo">
                                             <div className="flex items-center justify-between">
