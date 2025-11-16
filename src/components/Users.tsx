@@ -58,8 +58,15 @@ const Users = () => {
   };
   
   const handleViewUser = (user: User) => {
-    setViewingUser(user);
-  };
+  // 🔍 DEBUG TEMPORAL
+  alert(`DEBUG INFO:
+Total users: ${users.length}
+User: ${user.name}
+User sessions: ${user.sessions?.length || 0}
+User ID: ${user.id}`);
+  
+  setViewingUser(user);
+};
   
   const handleCloseViewModal = () => {
     setViewingUser(null);
