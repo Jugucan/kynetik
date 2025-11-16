@@ -578,6 +578,7 @@ const Users = () => {
         isOpen={!!viewingUser}
         onClose={handleCloseViewModal}
         onEdit={handleEditUser}
+        allUsers={users}
       />
       <UserFormModal
         open={isModalOpen}
