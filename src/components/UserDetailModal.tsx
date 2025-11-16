@@ -36,7 +36,11 @@ interface UserDetailModalProps {
     allUsers?: User[];
 }
 
-export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }: UserDetailModalProps) => {
+export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: UserDetailModalProps) => {
+    if (!user) return null;
+    
+    // ✅ CORRECCIÓ: Assegurem que allUsers sempre és un array vàlid
+    const validAllUsers = Array.isArray(allUsers) ? allUsers : [];
     if (!user) return null;
     
     // ✅ Estat per al desplegable de freqüència mensual
@@ -105,7 +109,7 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers = [] }
         const advancedStats = calculateAdvancedStats(user);
 
         // ✅ Càlcul del rànquing general
-        const generalRanking = allUsers.length > 0 ? calculateUserRanking(allUsers, user, 'totalSessions') : { rank: 0, total: 0, percentile: 0 };
+        const generalRanking = validAllUsers.length > 0 ? calculateUserRanking(validAllUsers, user, 'totalSessions') : { rank: 0, total: 0, percentile: 0 };
 
         const programRankings: { [key: string]: any } = {};
         programStats.forEach(prog => {
