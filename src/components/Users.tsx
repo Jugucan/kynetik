@@ -58,13 +58,9 @@ const Users = () => {
   };
   
   const handleViewUser = (user: User) => {
-  // 🔍 DEBUG TEMPORAL
-  alert(`DEBUG INFO:
-Total users: ${users.length}
-User: ${user.name}
-User sessions: ${user.sessions?.length || 0}
-User ID: ${user.id}`);
-  
+  console.log("🔍 CLICKING USER:", user.name);
+  console.log("🔍 users.length:", users.length);
+  console.log("🔍 users:", users);
   setViewingUser(user);
 };
   
