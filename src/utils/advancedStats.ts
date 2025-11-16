@@ -69,38 +69,72 @@ export const calculateDaysBetweenSessions = (sessions: UserSession[]): number =>
   return Math.round(totalDays / (sortedDates.length - 1));
 };
 
-// ✅ Càlcul millorat de l'autodisciplina
+// ✅ CÀLCUL MILLORAT DE L'AUTODISCIPLINA
 export const calculateAutodiscipline = (sessions: UserSession[]): number => {
-  if (!sessions || sessions.length < 2) return 0;
+  if (!sessions || sessions.length === 0) return 0;
+  if (sessions.length === 1) return 20; // Una sessió = mínim
 
   const sortedDates = sessions
     .map(s => new Date(s.date).getTime())
     .sort((a, b) => a - b);
 
-  // Calculem les diferències entre sessions consecutives
+  const now = new Date().getTime();
+  const lastSessionDate = sortedDates[sortedDates.length - 1];
+  const firstSessionDate = sortedDates[0];
+  
+  // Calculem dies des de la primera sessió
+  const totalDays = (now - firstSessionDate) / (1000 * 60 * 60 * 24);
+  
+  // Calculem dies des de l'última sessió
+  const daysSinceLastSession = (now - lastSessionDate) / (1000 * 60 * 60 * 24);
+  
+  // 1️⃣ FACTOR DE FREQÜÈNCIA (40 punts màxim)
+  // Més sessions = millor
+  const sessionsPerMonth = (sessions.length / (totalDays / 30));
+  let frequencyScore = 0;
+  
+  if (sessionsPerMonth >= 12) frequencyScore = 40; // 3+ vegades/setmana
+  else if (sessionsPerMonth >= 8) frequencyScore = 35; // 2 vegades/setmana
+  else if (sessionsPerMonth >= 4) frequencyScore = 30; // 1 vegada/setmana
+  else if (sessionsPerMonth >= 2) frequencyScore = 20; // 2 vegades/mes
+  else frequencyScore = 10;
+  
+  // 2️⃣ FACTOR D'ACTIVITAT RECENT (40 punts màxim)
+  // Penalitza si fa molt que no ve
+  let recentActivityScore = 0;
+  
+  if (daysSinceLastSession <= 7) recentActivityScore = 40; // Ha vingut aquesta setmana
+  else if (daysSinceLastSession <= 14) recentActivityScore = 35; // Últimes 2 setmanes
+  else if (daysSinceLastSession <= 30) recentActivityScore = 30; // Últim mes
+  else if (daysSinceLastSession <= 60) recentActivityScore = 20; // Últims 2 mesos
+  else if (daysSinceLastSession <= 90) recentActivityScore = 10; // Últims 3 mesos
+  else recentActivityScore = 0; // Més de 3 mesos = 0
+  
+  // 3️⃣ FACTOR DE REGULARITAT (20 punts màxim)
+  // Mesura la consistència entre sessions
   const differences: number[] = [];
   for (let i = 1; i < sortedDates.length; i++) {
     const daysDiff = (sortedDates[i] - sortedDates[i - 1]) / (1000 * 60 * 60 * 24);
     differences.push(daysDiff);
   }
-
-  // Calculem la mitjana de dies entre sessions
+  
   const meanDays = differences.reduce((a, b) => a + b, 0) / differences.length;
-
-  // Calculem la desviació estàndard (mesura de regularitat)
   const variance = differences.reduce((sum, diff) => sum + Math.pow(diff - meanDays, 2), 0) / differences.length;
   const standardDeviation = Math.sqrt(variance);
-
-  // Calculem el coeficient de variació (desviació / mitjana)
-  // Un coeficient baix = més regular = més autodisciplina
-  const coefficientOfVariation = meanDays > 0 ? (standardDeviation / meanDays) : 0;
-
-  // Convertim a puntuació de 0-100
-  // Si CV = 0 (perfecte) → 100%
-  // Si CV >= 1 (molt irregular) → 0%
-  const autodisciplineScore = Math.max(0, Math.min(100, 100 * (1 - coefficientOfVariation)));
-
-  return Math.round(autodisciplineScore);
+  const coefficientOfVariation = meanDays > 0 ? (standardDeviation / meanDays) : 1;
+  
+  // Millor regularitat = menys variació
+  let regularityScore = 0;
+  if (coefficientOfVariation < 0.3) regularityScore = 20; // Molt regular
+  else if (coefficientOfVariation < 0.5) regularityScore = 15;
+  else if (coefficientOfVariation < 0.7) regularityScore = 10;
+  else if (coefficientOfVariation < 1.0) regularityScore = 5;
+  else regularityScore = 0;
+  
+  // PUNTUACIÓ TOTAL (màxim 100)
+  const totalScore = frequencyScore + recentActivityScore + regularityScore;
+  
+  return Math.round(Math.min(100, Math.max(0, totalScore)));
 };
 
 // 🆕 FUNCIÓ: Obtenir nivell descriptiu d'autodisciplina amb emojis i colors
@@ -222,17 +256,8 @@ export const calculateAdvancedStats = (user: User): AdvancedStats => {
   };
 };
 
-// ✅ CORRECCIÓ DEFINITIVA: Càlcul del rànquing general
+// ✅ CÀLCUL DEL RÀNQUING GENERAL
 export const calculateUserRanking = (allUsers: User[], currentUser: User, metric: 'totalSessions' | 'autodiscipline' | 'daysBetweenSessions'): UserRanking => {
-  // 🔍 DEBUG TEMPORAL - ESBORRA DESPRÉS
-  console.log("=== DEBUG calculateUserRanking ===");
-  console.log("metric:", metric);
-  console.log("currentUser:", currentUser?.name, currentUser?.id);
-  console.log("currentUser.sessions:", currentUser?.sessions?.length);
-  console.log("allUsers.length:", allUsers?.length);
-  console.log("allUsers[0]:", allUsers?.[0]?.name, allUsers?.[0]?.sessions?.length);
-  console.log("====================================");
-  
   // Si no hi ha usuaris, retornem 0
   if (!allUsers || allUsers.length === 0) {
     return { rank: 0, total: 0, percentile: 0 };
@@ -258,7 +283,7 @@ export const calculateUserRanking = (allUsers: User[], currentUser: User, metric
     }));
   }
 
-  // ✅ CORRECCIÓ CRÍTICA: Filtrem usuaris amb valor 0 però SEMPRE mantenim l'usuari actual
+  // ✅ Filtrem usuaris amb valor 0 però SEMPRE mantenim l'usuari actual
   if (metric === 'totalSessions' || metric === 'autodiscipline') {
     usersWithMetric = usersWithMetric.filter(u => u.value > 0 || u.user.id === currentUser.id);
   }
@@ -277,7 +302,6 @@ export const calculateUserRanking = (allUsers: User[], currentUser: User, metric
   
   // Si no el trobem, retornem 0
   if (currentUserIndex === -1) {
-    console.warn('User not found in ranking:', currentUser.id, currentUser.name);
     return { rank: 0, total: 0, percentile: 0 };
   }
   
