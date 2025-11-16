@@ -41,8 +41,7 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
     
     // ✅ CORRECCIÓ: Assegurem que allUsers sempre és un array vàlid
     const validAllUsers = Array.isArray(allUsers) ? allUsers : [];
-    if (!user) return null;
-    
+        
     // ✅ Estat per al desplegable de freqüència mensual
     const [isMonthlyFrequencyOpen, setIsMonthlyFrequencyOpen] = useState(false);
 
