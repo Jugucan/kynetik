@@ -363,8 +363,8 @@ return (
         <div className="flex items-center gap-3">
           <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Usuaris</h1>
-            <p className="text-sm text-muted-foreground">Gestió dels teus alumnes</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Usuaris ({users.length})</h1>
+            <p className="text-sm text-muted-foreground">Gestió dels teus alumnes - DEBUG: {viewingUser ? 'Modal obert' : 'Modal tancat'}</p>
           </div>
         </div>
         
