@@ -39,21 +39,13 @@ interface UserDetailModalProps {
 export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: UserDetailModalProps) => {
     if (!user) return null;
     
-    // ✅ CORRECCIÓ: Assegurem que allUsers sempre és un array vàlid
-    const validAllUsers = Array.isArray(allUsers) ? allUsers : [];
-        
+    // ✅ CORRECCIÓ CRÍTICA: Assegurem que allUsers sempre és un array vàlid
+    const validAllUsers = Array.isArray(allUsers) && allUsers.length > 0 ? allUsers : [];
+    
     // ✅ Estat per al desplegable de freqüència mensual
     const [isMonthlyFrequencyOpen, setIsMonthlyFrequencyOpen] = useState(false);
 
     // 🆕 CÀLCUL D'ESTADÍSTIQUES
-    // 🔍 DEBUG TEMPORAL - ESBORRA DESPRÉS
-    console.log("=== DEBUG UserDetailModal ===");
-    console.log("user:", user?.name, user?.id);
-    console.log("user.sessions:", user?.sessions?.length);
-    console.log("allUsers.length:", allUsers?.length);
-    console.log("allUsers IDs:", allUsers?.map(u => u.id).slice(0, 5));
-    console.log("=============================");
-    
     const stats = useMemo(() => {
         const sessions = user.sessions || [];
         
@@ -107,13 +99,15 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
         
         const advancedStats = calculateAdvancedStats(user);
 
-        // ✅ Càlcul del rànquing general
-        const generalRanking = validAllUsers.length > 0 ? calculateUserRanking(validAllUsers, user, 'totalSessions') : { rank: 0, total: 0, percentile: 0 };
+        // ✅ Càlcul del rànquing general amb validAllUsers
+        const generalRanking = validAllUsers.length > 0 
+            ? calculateUserRanking(validAllUsers, user, 'totalSessions') 
+            : { rank: 0, total: 0, percentile: 0 };
 
         const programRankings: { [key: string]: any } = {};
         programStats.forEach(prog => {
-            if (allUsers.length > 0) {
-                programRankings[prog.name] = calculateProgramRanking(allUsers, user, prog.name);
+            if (validAllUsers.length > 0) {
+                programRankings[prog.name] = calculateProgramRanking(validAllUsers, user, prog.name);
             }
         });
 
@@ -129,7 +123,7 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
             generalRanking,
             programRankings
         };
-    }, [user.sessions, user.id, allUsers]);
+    }, [user.sessions, user.id, validAllUsers]);
     
     const formatDate = (dateStr: string) => {
         if (!dateStr) return 'N/A';
@@ -300,38 +294,19 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
 
                                 {/* 🆕 RANKINGS GENERALS */}
                                 <div>
-                                  <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
-                                    <Zap className="w-5 h-5 mr-2 text-primary" />
-                                    La teva Posició
-                                  </h3>
-                                  
-                                  {/* 🔍 DEBUG VISIBLE */}
-                                  <div className="mb-4 p-3 bg-yellow-100 border-2 border-yellow-500 rounded text-xs">
-                                    <strong>DEBUG INFO:</strong><br/>
-                                    allUsers recibido: {allUsers?.length || 'undefined'}<br/>
-                                    user.id: {user.id}<br/>
-                                    user.sessions: {user.sessions?.length || 0}<br/>
-                                    Stats calculat? {stats ? 'SÍ' : 'NO'}<br/>
-                                    generalRanking.total: {stats.generalRanking?.total || 'undefined'}
-                                  </div>
+                                    <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
+                                        <Zap className="w-5 h-5 mr-2 text-primary" />
+                                        La teva Posició
+                                    </h3>
                                     <div className="grid grid-cols-1 gap-3">
                                         <div className="p-3 sm:p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg shadow-neo">
                                             <div className="flex items-center justify-between">
                                                 <div>
                                                     <div className="text-xs sm:text-sm text-indigo-600 mb-1">Ranking General</div>
                                                     <div className="text-2xl sm:text-3xl font-bold text-indigo-700">
-                                                         #{stats.generalRanking.rank}
-                                                         </div>
-                                                         {/* 🔍 DEBUG TEMPORAL */}
-                                                         <div className="text-[10px] text-gray-500 mt-1">
-                                                             ID: {user.id?.substring(0, 8)}...<br/>
-                                                             Sessions: {user.sessions?.length || 0}<br/>
-                                                             Total users: {allUsers.length}<br/>
-                                                             Total: {stats.generalRanking.total}
-                                                         </div>
-                                                      </div>
-
-                                                
+                                                        #{stats.generalRanking.rank}
+                                                    </div>
+                                                </div>
                                                 {stats.generalRanking.total > 0 && (
                                                     <div className="text-right">
                                                         <div className="text-lg sm:text-xl font-bold text-indigo-700">
@@ -412,7 +387,7 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
                                     </div>
 
                                     {/* ✅ NOVA VISUALITZACIÓ: Autodisciplina amb cara + barra de colors */}
-                                    <div className="mb-4 p-4 sm:p-5 rounded-lg shadow-neo" style={{ backgroundColor: stats.advancedStats.autodisciplineLevel.bgColor.replace('bg-', '#').replace('-50', 'f0f0f0') }}>
+                                    <div className={`mb-4 p-4 sm:p-5 rounded-lg shadow-neo ${stats.advancedStats.autodisciplineLevel.bgColor}`}>
                                         <h4 className="font-medium text-sm sm:text-base mb-3 flex items-center gap-2">
                                             Autodisciplina
                                             <span className="text-2xl">{stats.advancedStats.autodisciplineLevel.emoji}</span>
