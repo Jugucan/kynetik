@@ -69,72 +69,72 @@ export const calculateDaysBetweenSessions = (sessions: UserSession[]): number =>
   return Math.round(totalDays / (sortedDates.length - 1));
 };
 
-// ✅ CÀLCUL MILLORAT DE L'AUTODISCIPLINA
+// ✅ CÀLCUL D'AUTODISCIPLINA PERSONALITZADA
+// Compara l'usuari amb el seu propi ritme habitual
 export const calculateAutodiscipline = (sessions: UserSession[]): number => {
   if (!sessions || sessions.length === 0) return 0;
-  if (sessions.length === 1) return 20; // Una sessió = mínim
+  if (sessions.length < 2) return 20; // Usuari molt nou
 
-  const sortedDates = sessions
-    .map(s => new Date(s.date).getTime())
-    .sort((a, b) => a - b);
-
-  const now = new Date().getTime();
-  const lastSessionDate = sortedDates[sortedDates.length - 1];
-  const firstSessionDate = sortedDates[0];
+  const now = new Date();
   
-  // Calculem dies des de la primera sessió
-  const totalDays = (now - firstSessionDate) / (1000 * 60 * 60 * 24);
+  // 1️⃣ Calculem sessions de l'ÚLTIM MES (últims 30 dies)
+  const oneMonthAgo = new Date(now);
+  oneMonthAgo.setDate(now.getDate() - 30);
   
-  // Calculem dies des de l'última sessió
-  const daysSinceLastSession = (now - lastSessionDate) / (1000 * 60 * 60 * 24);
+  const lastMonthSessions = sessions.filter(s => {
+    const sessionDate = new Date(s.date);
+    return sessionDate >= oneMonthAgo && sessionDate <= now;
+  }).length;
   
-  // 1️⃣ FACTOR DE FREQÜÈNCIA (40 punts màxim)
-  // Més sessions = millor
-  const sessionsPerMonth = (sessions.length / (totalDays / 30));
-  let frequencyScore = 0;
+  // 2️⃣ Calculem la MITJANA MENSUAL dels últims 6 mesos (excloent l'últim mes)
+  const sixMonthsAgo = new Date(now);
+  sixMonthsAgo.setDate(now.getDate() - 180);
   
-  if (sessionsPerMonth >= 12) frequencyScore = 40; // 3+ vegades/setmana
-  else if (sessionsPerMonth >= 8) frequencyScore = 35; // 2 vegades/setmana
-  else if (sessionsPerMonth >= 4) frequencyScore = 30; // 1 vegada/setmana
-  else if (sessionsPerMonth >= 2) frequencyScore = 20; // 2 vegades/mes
-  else frequencyScore = 10;
+  const historicalSessions = sessions.filter(s => {
+    const sessionDate = new Date(s.date);
+    return sessionDate >= sixMonthsAgo && sessionDate < oneMonthAgo;
+  });
   
-  // 2️⃣ FACTOR D'ACTIVITAT RECENT (40 punts màxim)
-  // Penalitza si fa molt que no ve
-  let recentActivityScore = 0;
+  // Si no té prou històric, calculem amb tot el que tenim
+  let monthlyAverage = 0;
   
-  if (daysSinceLastSession <= 7) recentActivityScore = 40; // Ha vingut aquesta setmana
-  else if (daysSinceLastSession <= 14) recentActivityScore = 35; // Últimes 2 setmanes
-  else if (daysSinceLastSession <= 30) recentActivityScore = 30; // Últim mes
-  else if (daysSinceLastSession <= 60) recentActivityScore = 20; // Últims 2 mesos
-  else if (daysSinceLastSession <= 90) recentActivityScore = 10; // Últims 3 mesos
-  else recentActivityScore = 0; // Més de 3 mesos = 0
-  
-  // 3️⃣ FACTOR DE REGULARITAT (20 punts màxim)
-  // Mesura la consistència entre sessions
-  const differences: number[] = [];
-  for (let i = 1; i < sortedDates.length; i++) {
-    const daysDiff = (sortedDates[i] - sortedDates[i - 1]) / (1000 * 60 * 60 * 24);
-    differences.push(daysDiff);
+  if (historicalSessions.length >= 3) {
+    // Té prou històric (últims 5 mesos)
+    monthlyAverage = historicalSessions.length / 5; // 5 mesos d'històric
+  } else {
+    // Usuari nou o amb poc històric: usem tot el seu històric
+    const sortedDates = sessions.map(s => new Date(s.date).getTime()).sort((a, b) => a - b);
+    const firstSessionDate = new Date(sortedDates[0]);
+    const monthsSinceFirst = Math.max(1, (now.getTime() - firstSessionDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
+    monthlyAverage = sessions.length / monthsSinceFirst;
   }
   
-  const meanDays = differences.reduce((a, b) => a + b, 0) / differences.length;
-  const variance = differences.reduce((sum, diff) => sum + Math.pow(diff - meanDays, 2), 0) / differences.length;
-  const standardDeviation = Math.sqrt(variance);
-  const coefficientOfVariation = meanDays > 0 ? (standardDeviation / meanDays) : 1;
+  // 3️⃣ Calculem el FSA (Índex d'Autodisciplina)
+  // FSA = (Sessions últim mes / Mitjana mensual personal) x 100
+  let fsa = 0;
   
-  // Millor regularitat = menys variació
-  let regularityScore = 0;
-  if (coefficientOfVariation < 0.3) regularityScore = 20; // Molt regular
-  else if (coefficientOfVariation < 0.5) regularityScore = 15;
-  else if (coefficientOfVariation < 0.7) regularityScore = 10;
-  else if (coefficientOfVariation < 1.0) regularityScore = 5;
-  else regularityScore = 0;
+  if (monthlyAverage > 0) {
+    fsa = (lastMonthSessions / monthlyAverage) * 100;
+  } else if (lastMonthSessions > 0) {
+    // Usuari completament nou amb sessions aquest mes
+    fsa = 100;
+  }
   
-  // PUNTUACIÓ TOTAL (màxim 100)
-  const totalScore = frequencyScore + recentActivityScore + regularityScore;
+  // 4️⃣ Limitem el FSA entre 0 i 100
+  fsa = Math.max(0, Math.min(100, fsa));
   
-  return Math.round(Math.min(100, Math.max(0, totalScore)));
+  // 5️⃣ PENALITZACIÓ per inactivitat prolongada
+  const sortedDates = sessions.map(s => new Date(s.date).getTime()).sort((a, b) => a - b);
+  const lastSessionDate = new Date(sortedDates[sortedDates.length - 1]);
+  const daysSinceLastSession = (now.getTime() - lastSessionDate.getTime()) / (1000 * 60 * 60 * 24);
+  
+  // Si fa més de 60 dies que no ve, penalització progressiva
+  if (daysSinceLastSession > 60) {
+    const penaltyFactor = Math.max(0, 1 - ((daysSinceLastSession - 60) / 120)); // Redueix progressivament
+    fsa = fsa * penaltyFactor;
+  }
+  
+  return Math.round(fsa);
 };
 
 // 🆕 FUNCIÓ: Obtenir nivell descriptiu d'autodisciplina amb emojis i colors
