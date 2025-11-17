@@ -148,7 +148,7 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[90vw] md:max-w-3xl lg:max-w-4xl max-h-[90vh] p-0">
+            <DialogContent className="w-[95vw] sm:max-w-[90vw] md:max-w-3xl lg:max-w-4xl max-h-[85vh] sm:max-h-[90vh] p-0 overflow-hidden">
                 {/* CAPÇALERA FIXA */}
                 <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b bg-gradient-to-r from-primary/5 to-primary/10">
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
@@ -388,10 +388,30 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
 
                                     {/* ✅ NOVA VISUALITZACIÓ: Autodisciplina amb cara + barra de colors */}
                                     <div className={`mb-4 p-4 sm:p-5 rounded-lg shadow-neo ${stats.advancedStats.autodisciplineLevel.bgColor}`}>
-                                        <h4 className="font-medium text-sm sm:text-base mb-3 flex items-center gap-2">
-                                            Autodisciplina
-                                            <span className="text-2xl">{stats.advancedStats.autodisciplineLevel.emoji}</span>
-                                        </h4>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h4 className="font-medium text-sm sm:text-base flex items-center gap-2">
+                                                Autodisciplina
+                                                <span className="text-2xl">{stats.advancedStats.autodisciplineLevel.emoji}</span>
+                                            </h4>
+                                            <button
+                                                onClick={() => alert(`COM ES CALCULA L'AUTODISCIPLINA?\n\n` +
+                                                    `Es calcula combinant dos factors:\n\n` +
+                                                    `🔹 Consistència Recent (70%): Compara les sessions de l'últim mes amb la teva mitjana dels últims 5 mesos.\n\n` +
+                                                    `🔹 Context Històric (30%): Compara el teu ritme actual amb el teu millor any.\n\n` +
+                                                    `Detalls del càlcul:\n` +
+                                                    `• Últim mes: ${stats.advancedStats.autodisciplineDetails.lastMonthSessions} sessions\n` +
+                                                    `• Mitjana mensual: ${stats.advancedStats.autodisciplineDetails.monthlyAverage} sessions\n` +
+                                                    `• Millor any: ${stats.advancedStats.autodisciplineDetails.bestYearSessions} sessions\n` +
+                                                    `• Projecció any actual: ${stats.advancedStats.autodisciplineDetails.currentYearProjection} sessions\n\n` +
+                                                    `Puntuació Recent: ${stats.advancedStats.autodisciplineDetails.recentScore}%\n` +
+                                                    `Puntuació Històrica: ${stats.advancedStats.autodisciplineDetails.historicScore}%\n` +
+                                                    `TOTAL: ${stats.advancedStats.autodiscipline}%`
+                                                )}
+                                                className="p-1.5 rounded-full hover:bg-white/50 transition-colors"
+                                            >
+                                                <Info className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                         <p className="text-xs text-muted-foreground mb-3">
                                             Mesura la regularitat amb què assisteixes al gimnàs
                                         </p>
