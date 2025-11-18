@@ -75,7 +75,7 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
         });
         
         const yearlyStats = Object.entries(yearlyCount)
-            .sort((a, b) => a[0].localeCompare(b[0])) // Ordenem per any
+            .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([year, count]) => ({ year, count }));
         
         // 🆕 CÀLCUL DE TENDÈNCIA
@@ -309,9 +309,6 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
                                                 </div>
                                                 {stats.generalRanking.total > 0 && (
                                                     <div className="text-right">
-                                                        <div className="text-lg sm:text-xl font-bold text-indigo-700">
-                                                            Top {stats.generalRanking.percentile}%
-                                                        </div>
                                                         <div className="text-xs text-indigo-600">
                                                             de {stats.generalRanking.total} usuaris
                                                         </div>
@@ -386,7 +383,7 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
                                         </div>
                                     </div>
 
-                                    {/* ✅ NOVA VISUALITZACIÓ: Autodisciplina amb cara + barra de colors */}
+                                    {/* ✅ NOVA VISUALITZACIÓ: Autodisciplina amb cara + barra de colors + INFO */}
                                     <div className={`mb-4 p-4 sm:p-5 rounded-lg shadow-neo ${stats.advancedStats.autodisciplineLevel.bgColor}`}>
                                         <div className="flex items-center justify-between mb-3">
                                             <h4 className="font-medium text-sm sm:text-base flex items-center gap-2">
@@ -481,35 +478,50 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
 
                                 <Separator />
 
-                                {/* 🆕 RANKING PER PROGRAMA */}
+                                {/* ✅ UNIFICAT: Sessions + Rànquing per Programa */}
                                 {stats.programStats.length > 0 && (
-                                    <>
-                                        <div>
-                                            <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
-                                                <Award className="w-5 h-5 mr-2 text-primary" />
-                                                La teva Posició per Programa
-                                            </h3>
-                                            <div className="space-y-2">
-                                                {stats.programStats.map((prog, idx) => {
-                                                    const ranking = stats.programRankings[prog.name];
-                                                    return (
-                                                        <div key={idx} className="p-2 sm:p-3 bg-muted/30 rounded flex items-center justify-between">
-                                                            <span className="text-sm sm:text-base font-medium">{prog.name}</span>
+                                    <div>
+                                        <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
+                                            <Award className="w-5 h-5 mr-2 text-primary" />
+                                            Sessions i Posició per Programa
+                                        </h3>
+                                        <div className="space-y-3">
+                                            {stats.programStats.map((prog, idx) => {
+                                                const ranking = stats.programRankings[prog.name];
+                                                const percentage = (prog.count / stats.totalSessions) * 100;
+                                                
+                                                return (
+                                                    <div key={idx} className="p-3 sm:p-4 bg-muted/30 rounded-lg">
+                                                        {/* Nom del programa + Rànquing */}
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="font-medium text-sm sm:text-base">{prog.name}</span>
                                                             {ranking && ranking.total > 0 ? (
                                                                 <Badge className="text-xs">
-                                                                    #{ranking.rank} de {ranking.total} (Top {ranking.percentile}%)
+                                                                    #{ranking.rank} de {ranking.total}
                                                                 </Badge>
                                                             ) : (
                                                                 <Badge variant="outline" className="text-xs">N/A</Badge>
                                                             )}
                                                         </div>
-                                                    );
-                                                })}
-                                            </div>
+                                                        
+                                                        {/* Barra de progrés + Nombre de sessions */}
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden">
+                                                                <div 
+                                                                    className="h-full bg-primary transition-all"
+                                                                    style={{ width: `${percentage}%` }}
+                                                                />
+                                                            </div>
+                                                            <Badge variant="outline" className="text-xs">{prog.count} sessions</Badge>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                        <Separator />
-                                    </>
+                                    </div>
                                 )}
+
+                                <Separator />
 
                                 {/* 🆕 SESSIONS PER ANY */}
                                 <div>
@@ -590,32 +602,6 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
                                             No hi ha dades d'assistència per any
                                         </p>
                                     )}
-                                </div>
-
-                                <Separator />
-
-                                {/* Sessions per Programa */}
-                                <div>
-                                    <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center">
-                                        <Award className="w-5 h-5 mr-2 text-primary" />
-                                        Sessions per Programa
-                                    </h3>
-                                    <div className="space-y-2">
-                                        {stats.programStats.map((prog, idx) => (
-                                            <div key={idx} className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded">
-                                                <span className="font-medium text-sm sm:text-base">{prog.name}</span>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-2 w-20 sm:w-32 bg-muted rounded-full overflow-hidden">
-                                                        <div 
-                                                            className="h-full bg-primary transition-all"
-                                                            style={{ width: `${(prog.count / stats.totalSessions) * 100}%` }}
-                                                        />
-                                                    </div>
-                                                    <Badge variant="outline">{prog.count}</Badge>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
                                 </div>
 
                                 <Separator />
