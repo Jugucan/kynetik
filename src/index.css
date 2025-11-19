@@ -108,14 +108,3 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
-/* Evitar scroll horizontal global */
-html, body {
-  overflow-x: hidden;
-  max-width: 100vw;
-}
-
-/* Centrar el modal correctament */
-[role="dialog"] {
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-}
