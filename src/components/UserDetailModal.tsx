@@ -148,10 +148,7 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent 
-                className="w-[95vw] sm:max-w-[90vw] md:max-w-3xl lg:max-w-4xl max-h-[85vh] sm:max-h-[90vh] p-0 overflow-hidden"
-                style={{ position: 'fixed', left: '50%', transform: 'translateX(-50%)' }}
-            >
+            <DialogContent className="w-[95vw] sm:max-w-[90vw] md:max-w-3xl lg:max-w-4xl max-h-[85vh] sm:max-h-[90vh] p-0 overflow-hidden">
                 {/* CAPÇALERA FIXA */}
                 <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b bg-gradient-to-r from-primary/5 to-primary/10">
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
