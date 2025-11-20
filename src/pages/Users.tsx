@@ -308,7 +308,7 @@ const Users = () => {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0 overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
