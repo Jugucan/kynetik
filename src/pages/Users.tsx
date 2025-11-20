@@ -474,8 +474,8 @@ const Users = () => {
         </div>
       </div>
 
-      <NeoCard>
-        <NeoCard className="overflow-hidden">
+      <NeoCard className="overflow-hidden">
+        {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
         ) : filteredUsers.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm">
