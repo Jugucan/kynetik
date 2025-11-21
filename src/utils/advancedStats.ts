@@ -93,15 +93,45 @@ export const calculateAutodiscipline = (sessions: UserSession[]): { score: numbe
     };
   }
   
+  // Calculem dies des de l'última sessió
+  const sortedDatesCheck = sessions.map(s => new Date(s.date).getTime()).sort((a, b) => a - b);
+  const lastSessionDateCheck = new Date(sortedDatesCheck[sortedDatesCheck.length - 1]);
+  const now = new Date();
+  const daysSinceLastSessionCheck = (now.getTime() - lastSessionDateCheck.getTime()) / (1000 * 60 * 60 * 24);
+  
+  // Si l'usuari fa més de 60 dies que no ve, autodisciplina = 0 (independentment de quantes sessions tingui)
+  if (daysSinceLastSessionCheck > 60) {
+    // Calculem les dades reals per mostrar-les
+    const sessionsByYearCheck: { [year: string]: number } = {};
+    sessions.forEach(s => {
+      const year = new Date(s.date).getFullYear().toString();
+      sessionsByYearCheck[year] = (sessionsByYearCheck[year] || 0) + 1;
+    });
+    const bestYearSessionsCheck = Math.max(...Object.values(sessionsByYearCheck), 0);
+    
+    return {
+      score: 0,
+      details: {
+        recentScore: 0,
+        historicScore: 0,
+        lastMonthSessions: 0,
+        monthlyAverage: 0,
+        bestYearSessions: bestYearSessionsCheck,
+        currentYearProjection: 0
+      }
+    };
+  }
+  
+  // Si té poques sessions però ha vingut recentment
   if (sessions.length < 2) {
     return {
       score: 20,
       details: {
         recentScore: 20,
         historicScore: 20,
-        lastMonthSessions: sessions.length,
+        lastMonthSessions: 1,
         monthlyAverage: 0,
-        bestYearSessions: 0,
+        bestYearSessions: 1,
         currentYearProjection: 0
       }
     };
