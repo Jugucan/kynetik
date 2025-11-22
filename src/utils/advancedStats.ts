@@ -93,10 +93,11 @@ export const calculateAutodiscipline = (sessions: UserSession[]): { score: numbe
     };
   }
   
+  const now = new Date();
+  
   // Calculem dies des de l'última sessió
   const sortedDatesCheck = sessions.map(s => new Date(s.date).getTime()).sort((a, b) => a - b);
   const lastSessionDateCheck = new Date(sortedDatesCheck[sortedDatesCheck.length - 1]);
-  const now = new Date();
   const daysSinceLastSessionCheck = (now.getTime() - lastSessionDateCheck.getTime()) / (1000 * 60 * 60 * 24);
   
   // Si l'usuari fa més de 60 dies que no ve, autodisciplina = 0 (independentment de quantes sessions tingui)
@@ -137,8 +138,6 @@ export const calculateAutodiscipline = (sessions: UserSession[]): { score: numbe
     };
   }
 
-  const now = new Date();
-  
   // ========================================
   // 1️⃣ FSA RECENT (70% del total)
   // ========================================
@@ -197,7 +196,7 @@ export const calculateAutodiscipline = (sessions: UserSession[]): { score: numbe
   // Calculem la projecció de l'any actual
   const currentYear = now.getFullYear().toString();
   const currentYearSessions = sessionsByYear[currentYear] || 0;
-  const daysPassed = Math.floor((now.getTime() - new Date(currentYear, 0, 1).getTime()) / (1000 * 60 * 60 * 24));
+  const daysPassed = Math.floor((now.getTime() - new Date(parseInt(currentYear), 0, 1).getTime()) / (1000 * 60 * 60 * 24));
   const daysInYear = 365;
   const currentYearProjection = Math.round((currentYearSessions / daysPassed) * daysInYear);
   
