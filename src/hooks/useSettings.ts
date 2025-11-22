@@ -1,4 +1,4 @@
-// src/hooks/useSettings.ts (Codi Corregit + Festius Oficials)
+// src/hooks/useSettings.ts (Actualitzat per suportar centres dinàmics)
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase'; 
@@ -8,22 +8,28 @@ import { doc, onSnapshot } from 'firebase/firestore';
 export interface SettingsData {
   // Les dades són Objectes (Map de data -> motiu)
   vacations: Record<string, string>;
+  // 🆕 Tancaments per centre: { centerId: { 'YYYY-MM-DD': 'motiu' } }
+  closuresByCenter: Record<string, Record<string, string>>;
+  officialHolidays: Record<string, string>;
+  
+  // 🔙 COMPATIBILITAT: Mantenim els camps antics per no trencar res
   closuresArbucies: Record<string, string>;
   closuresSantHilari: Record<string, string>;
-  officialHolidays: Record<string, string>; // 🎉 NOU: Festius oficials
-  // Altres dades
   workDaysArbucies: number[];
   workDaysSantHilari: number[];
   availableDaysArbucies: number;
   availableDaysSantHilari: number;
+  
   loading: boolean;
 }
 
 const defaultSettings: SettingsData = {
     vacations: {},
+    closuresByCenter: {},
+    officialHolidays: {},
+    // Compatibilitat
     closuresArbucies: {},
     closuresSantHilari: {},
-    officialHolidays: {}, // 🎉 NOU
     workDaysArbucies: [1, 2, 4], 
     workDaysSantHilari: [3, 5],
     availableDaysArbucies: 30,
@@ -55,14 +61,35 @@ export const useSettings = (): SettingsData => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         
+        // Processar closuresByCenter si existeix
+        let closuresByCenter: Record<string, Record<string, string>> = {};
+        if (data.closuresByCenter && typeof data.closuresByCenter === 'object') {
+          closuresByCenter = data.closuresByCenter;
+        }
+        
+        // Si no hi ha closuresByCenter però sí els antics, migrar-los
+        if (Object.keys(closuresByCenter).length === 0) {
+          if (data.closuresArbucies && Object.keys(data.closuresArbucies).length > 0) {
+            closuresByCenter['arbucies'] = data.closuresArbucies;
+          }
+          if (data.closuresSantHilari && Object.keys(data.closuresSantHilari).length > 0) {
+            closuresByCenter['sant-hilari'] = data.closuresSantHilari;
+          }
+        }
+        
         // Assegura que els camps de data són objectes
         setSettings({
             vacations: (data.vacations && typeof data.vacations === 'object' && !Array.isArray(data.vacations)) ? data.vacations : {},
-            closuresArbucies: (data.closuresArbucies && typeof data.closuresArbucies === 'object' && !Array.isArray(data.closuresArbucies)) ? data.closuresArbucies : {},
-            closuresSantHilari: (data.closuresSantHilari && typeof data.closuresSantHilari === 'object' && !Array.isArray(data.closuresSantHilari)) ? data.closuresSantHilari : {},
-            officialHolidays: (data.officialHolidays && typeof data.officialHolidays === 'object' && !Array.isArray(data.officialHolidays)) ? data.officialHolidays : {}, // 🎉 NOU
+            closuresByCenter,
+            officialHolidays: (data.officialHolidays && typeof data.officialHolidays === 'object' && !Array.isArray(data.officialHolidays)) ? data.officialHolidays : {},
             
-            // Càrrega d'altres dades
+            // 🔙 COMPATIBILITAT: Mantenir els camps antics
+            closuresArbucies: closuresByCenter['arbucies'] || 
+              ((data.closuresArbucies && typeof data.closuresArbucies === 'object' && !Array.isArray(data.closuresArbucies)) ? data.closuresArbucies : {}),
+            closuresSantHilari: closuresByCenter['sant-hilari'] || 
+              ((data.closuresSantHilari && typeof data.closuresSantHilari === 'object' && !Array.isArray(data.closuresSantHilari)) ? data.closuresSantHilari : {}),
+            
+            // Càrrega d'altres dades (també per compatibilitat)
             workDaysArbucies: (data.workDaysArbucies && Array.isArray(data.workDaysArbucies)) ? data.workDaysArbucies : defaultSettings.workDaysArbucies,
             workDaysSantHilari: (data.workDaysSantHilari && Array.isArray(data.workDaysSantHilari)) ? data.workDaysSantHilari : defaultSettings.workDaysSantHilari,
             availableDaysArbucies: typeof data.availableDaysArbucies === 'number' ? data.availableDaysArbucies : defaultSettings.availableDaysArbucies,
