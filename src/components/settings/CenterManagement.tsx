@@ -107,14 +107,17 @@ export const CenterManagement = ({
             <h2 className="text-xl font-semibold">Centres</h2>
           </div>
           <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAddCenter(!showAddCenter)}
-            className="shadow-neo hover:shadow-neo-sm"
+              variant="outline"
+              size="sm"
+              onClick={async (e) => {
+                  e.stopPropagation();
+                  console.log("🔘 Botó Reactivar clicat per:", center.id);
+                  await onReactivateCenter(center.id);
+              }}
+              className="text-green-600 hover:text-green-700"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Afegir centre
+              <Power className="h-4 w-4 mr-1" />
+              Reactivar
           </Button>
         </div>
 
