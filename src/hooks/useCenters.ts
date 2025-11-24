@@ -164,15 +164,17 @@ export const useCenters = (): CentersData & {
 
   // Reactivar un centre
   const reactivateCenter = async (centerId: string) => {
-    const updatedCenters = centers.map(c => 
-      c.id === centerId 
-        ? { 
-            ...c, 
-            isActive: true, 
-            deactivatedAt: undefined 
-          } 
-        : c
-    );
+    const updatedCenters = centers.map(c => {
+      if (c.id === centerId) {
+        // Creem una còpia del centre sense el camp deactivatedAt
+        const { deactivatedAt, ...centerWithoutDeactivatedAt } = c;
+        return {
+          ...centerWithoutDeactivatedAt,
+          isActive: true,
+        };
+      }
+      return c;
+    });
     await saveCenters(updatedCenters);
     console.log("▶️ Centre reactivat:", centerId);
   };
