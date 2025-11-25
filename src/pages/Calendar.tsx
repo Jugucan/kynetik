@@ -1,10 +1,11 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { DaySessionsModal } from "@/components/DaySessionsModal";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2, Building2 } from "lucide-react";
 import { programColors } from "@/lib/programColors";
 import { useSettings } from "@/hooks/useSettings";
 import { useSchedules } from "@/hooks/useSchedules";
+import { useCenters } from "@/hooks/useCenters";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 
@@ -66,14 +67,18 @@ const getBillingPeriod = (referenceDate: Date): { start: Date; end: Date } => {
 const Calendar = () => {
   const { vacations, closuresArbucies, closuresSantHilari, officialHolidays, loading: settingsLoading } = useSettings();
   const { schedules, loading: schedulesLoading } = useSchedules();
+  const { activeCenters, loading: centersLoading, getCenterByLegacyId } = useCenters();
   
   const [currentViewDate, setCurrentViewDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
   const [deletedSessions, setDeletedSessions] = useState<Record<string, Array<{sessionIndex: number, reason: string}>>>({});
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // 🆕 Estat per al filtre de centres
+  const [selectedCenterFilter, setSelectedCenterFilter] = useState<string>("all");
 
-  const loading = settingsLoading || schedulesLoading;
+  const loading = settingsLoading || schedulesLoading || centersLoading;
 
   // Carregar sessions personalitzades de Firebase amb listener en temps real
   useEffect(() => {
@@ -195,6 +200,23 @@ const Calendar = () => {
     return [];
   }, [customSessions, getScheduleForDate, isHoliday, isVacation, isClosure]);
 
+  // 🆕 Funció per filtrar sessions segons el centre seleccionat
+  const filterSessionsByCenter = useCallback((sessions: Session[]): Session[] => {
+    if (selectedCenterFilter === "all") {
+      return sessions;
+    }
+    
+    // Mapear l'ID del centre al format antic (per compatibilitat)
+    const centerMapping: Record<string, string> = {
+      'arbucies': 'Arbucies',
+      'sant-hilari': 'SantHilari',
+    };
+    
+    const legacyId = centerMapping[selectedCenterFilter];
+    
+    return sessions.filter(session => session.center === legacyId);
+  }, [selectedCenterFilter]);
+
   const handleUpdateSessions = (date: Date, sessions: Session[]) => {
     const dateKey = dateToKey(date);
     console.log("📝 Actualitzant sessions locals per:", dateKey, sessions.length, "sessions");
@@ -238,11 +260,14 @@ const Calendar = () => {
     return "";
   };
 
+  // 🆕 Estadístiques filtrades per centre
   const sessionStats = useMemo(() => {
-    let arbuciesSessions = 0;
-    let santHilariSessions = 0;
-    let arbuciesDays = 0;
-    let santHilariDays = 0;
+    const stats: Record<string, { sessions: number; days: number }> = {};
+    
+    // Inicialitzar estadístiques per cada centre actiu
+    activeCenters.forEach(center => {
+      stats[center.id] = { sessions: 0, days: 0 };
+    });
 
     const currentDate = new Date(viewBillingPeriod.start);
     
@@ -251,31 +276,34 @@ const Calendar = () => {
       const activeSessions = sessions.filter(s => !s.isDeleted);
       
       if (activeSessions.length > 0) {
-        let hasArbucies = false;
-        let hasSantHilari = false;
+        const centerDaysCount: Record<string, boolean> = {};
         
         activeSessions.forEach(session => {
-          if (session.center === 'Arbucies') {
-            arbuciesSessions++;
-            hasArbucies = true;
-          } else if (session.center === 'SantHilari') {
-            santHilariSessions++;
-            hasSantHilari = true;
+          // Mapear center antic al nou ID
+          const centerMapping: Record<string, string> = {
+            'Arbucies': 'arbucies',
+            'SantHilari': 'sant-hilari',
+          };
+          
+          const centerId = session.center ? centerMapping[session.center] : null;
+          
+          if (centerId && stats[centerId]) {
+            stats[centerId].sessions++;
+            centerDaysCount[centerId] = true;
           }
         });
         
-        if (hasArbucies) arbuciesDays++;
-        if (hasSantHilari) santHilariDays++;
+        // Incrementar dies treballats
+        Object.keys(centerDaysCount).forEach(centerId => {
+          stats[centerId].days++;
+        });
       }
       
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    return {
-      arbucies: { sessions: arbuciesSessions, days: arbuciesDays },
-      santHilari: { sessions: santHilariSessions, days: santHilariDays },
-    };
-  }, [viewBillingPeriod, getSessionsForDate]);
+    return stats;
+  }, [viewBillingPeriod, getSessionsForDate, activeCenters]);
 
   const upcomingEvents = useMemo(() => {
     const today = new Date();
@@ -348,7 +376,8 @@ const Calendar = () => {
   
   for (let day = 1; day <= daysInCurrentMonth; day++) {
     const date = new Date(year, month, day);
-    const sessions = getSessionsForDate(date);
+    const allSessions = getSessionsForDate(date);
+    const sessions = filterSessionsByCenter(allSessions);
     const holiday = isHoliday(date);
     const vacation = isVacation(date);
     const closure = isClosure(date);
@@ -376,6 +405,39 @@ const Calendar = () => {
           <p className="text-2xl font-semibold text-primary capitalize mt-1">{currentMonthText}</p>
         </div>
       </div>
+
+      {/* 🆕 SELECTOR DE CENTRES */}
+      <NeoCard>
+        <div className="flex items-center gap-3">
+          <Building2 className="w-5 h-5 text-primary" />
+          <h3 className="font-semibold">Filtrar per centre</h3>
+        </div>
+        <div className="flex gap-2 mt-3 flex-wrap">
+          <button
+            onClick={() => setSelectedCenterFilter("all")}
+            className={`px-4 py-2 rounded-lg shadow-neo hover:shadow-neo-sm transition-all font-medium ${
+              selectedCenterFilter === "all" 
+                ? "bg-primary text-white" 
+                : "bg-white text-foreground"
+            }`}
+          >
+            Tots els centres
+          </button>
+          {activeCenters.map(center => (
+            <button
+              key={center.id}
+              onClick={() => setSelectedCenterFilter(center.id)}
+              className={`px-4 py-2 rounded-lg shadow-neo hover:shadow-neo-sm transition-all font-medium ${
+                selectedCenterFilter === center.id 
+                  ? "bg-primary text-white" 
+                  : "bg-white text-foreground"
+              }`}
+            >
+              {center.name}
+            </button>
+          ))}
+        </div>
+      </NeoCard>
 
       <div className="grid gap-6">
         <NeoCard>
@@ -482,28 +544,20 @@ const Calendar = () => {
           </div>
         </NeoCard>
 
+        {/* 🆕 ESTADÍSTIQUES DINÀMIQUES PER CENTRE */}
         <div className="grid md:grid-cols-2 gap-6">
-          <NeoCard>
-            <h3 className="font-semibold mb-3">Arbúcies</h3>
-            <p className="text-xs text-muted-foreground mb-3">
-              Període: {viewBillingPeriod.start.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })} - {viewBillingPeriod.end.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
-            </p>
-            <div className="space-y-2">
-              <div className="flex justify-between"><span className="text-muted-foreground">Sessions realitzades:</span><span className="font-bold text-primary">{sessionStats.arbucies.sessions}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Dies treballats:</span><span className="font-bold">{sessionStats.arbucies.days}</span></div>
-            </div>
-          </NeoCard>
-
-          <NeoCard>
-            <h3 className="font-semibold mb-3">Sant Hilari</h3>
-            <p className="text-xs text-muted-foreground mb-3">
-              Període: {viewBillingPeriod.start.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })} - {viewBillingPeriod.end.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
-            </p>
-            <div className="space-y-2">
-              <div className="flex justify-between"><span className="text-muted-foreground">Sessions realitzades:</span><span className="font-bold text-primary">{sessionStats.santHilari.sessions}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Dies treballats:</span><span className="font-bold">{sessionStats.santHilari.days}</span></div>
-            </div>
-          </NeoCard>
+          {(selectedCenterFilter === "all" ? activeCenters : activeCenters.filter(c => c.id === selectedCenterFilter)).map(center => (
+            <NeoCard key={center.id}>
+              <h3 className="font-semibold mb-3">{center.name}</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Període: {viewBillingPeriod.start.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })} - {viewBillingPeriod.end.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
+              </p>
+              <div className="space-y-2">
+                <div className="flex justify-between"><span className="text-muted-foreground">Sessions realitzades:</span><span className="font-bold text-primary">{sessionStats[center.id]?.sessions || 0}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Dies treballats:</span><span className="font-bold">{sessionStats[center.id]?.days || 0}</span></div>
+              </div>
+            </NeoCard>
+          ))}
         </div>
 
         <NeoCard>
