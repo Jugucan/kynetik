@@ -301,8 +301,8 @@ const Users = () => {
   };
 
   return (
-    // CANVI FETS AQUÍ: `px-4 sm:px-6` ha canviat a `px-2 sm:px-6`
-    <div className="space-y-6 max-w-full overflow-x-hidden px-2 sm:px-6"> 
+    // FIX 1: Canvi de `px-2` a `px-3` per evitar que es tallin les ombres neomòrfiques
+    <div className="space-y-6 max-w-full overflow-x-hidden px-3 sm:px-6"> 
       {/* 🎯 Capçalera neta */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -424,10 +424,10 @@ const Users = () => {
           <NeoCard className="p-3"> 
             <div className="relative">
               <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              {/* Afegim classes per donar l'efecte "premsat" a l'Input */}
+              {/* FIX 2: Canvi de `pl-6` a `pl-8` per fer espai a la lupa */}
               <Input 
                 placeholder="Cercar per nom o email..." 
-                className="pl-6 border-0 h-auto p-0 focus-visible:ring-0 text-sm shadow-inner-neumorphic-input" 
+                className="pl-8 border-0 h-auto p-0 focus-visible:ring-0 text-sm shadow-inner-neumorphic-input" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
