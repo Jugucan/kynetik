@@ -301,8 +301,7 @@ const Users = () => {
   };
 
   return (
-    // Reduïm lleugerament padding en mòbil (px-2) perquè no quedi tan comprimit
-    <div className="space-y-6 max-w-full overflow-x-hidden px-2 sm:px-6">
+    <div className="space-y-6 w-full">
       {/* 🎯 Capçalera neta */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -313,178 +312,169 @@ const Users = () => {
           </div>
         </div>
         
-        {/* 🆕 Botó d'informació discret */}
+        {/* 🆕 Botó d'informació discret amb neomòrfic */}
         <button
           onClick={() => setShowInstructions(!showInstructions)}
-          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+          className="p-2 rounded-full shadow-neo hover:shadow-neo-sm transition-all"
           title="Com importar usuaris"
         >
           <Info className="w-5 h-5 text-muted-foreground" />
         </button>
       </div>
 
-      {/* 🆕 UN SOL desplegable per tota la info d'importació (dins NeoCard per estil neomorfic) */}
+      {/* 🆕 UN SOL desplegable per tota la info d'importació amb neomòrfic */}
       <Collapsible open={showInstructions} onOpenChange={setShowInstructions}>
         <CollapsibleContent>
-          <NeoCard className="rounded-xl p-4">
-            <div className="bg-blue-50/30 border border-blue-200/50 rounded-xl p-4 space-y-4">
-              {/* Deporsite */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Download className="w-4 h-4 text-red-600" />
-                  <h3 className="font-semibold text-sm">Importar des de Deporsite</h3>
-                </div>
-                <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside ml-6">
-                  <li>Obre l'extensió de Chrome "Deporsite User Sync"</li>
-                  <li>Inicia sessió a candelfi.deporsite.net</li>
-                  <li>Tria les dates i descarrega el fitxer JSON</li>
-                  <li>Clica el botó de sota i selecciona el fitxer</li>
-                </ol>
-                <label htmlFor="deporsite-upload">
-                  <Button 
-                    className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white" 
-                    size="sm"
-                    disabled={isImporting}
-                    asChild
-                  >
-                    <span className="cursor-pointer">
-                      <Download className="w-4 h-4 mr-2" />
-                      {isImporting ? "Important..." : "Importar Deporsite"}
-                    </span>
-                  </Button>
-                </label>
-                <input
-                  id="deporsite-upload"
-                  type="file"
-                  accept=".json"
-                  onChange={handleImportDeporsite}
-                  className="hidden"
-                />
+          <NeoCard className="bg-blue-50/30">
+            {/* Deporsite */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Download className="w-4 h-4 text-red-600" />
+                <h3 className="font-semibold text-sm">Importar des de Deporsite</h3>
               </div>
+              <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside ml-6">
+                <li>Obre l'extensió de Chrome "Deporsite User Sync"</li>
+                <li>Inicia sessió a candelfi.deporsite.net</li>
+                <li>Tria les dates i descarrega el fitxer JSON</li>
+                <li>Clica el botó de sota i selecciona el fitxer</li>
+              </ol>
+              <label htmlFor="deporsite-upload">
+                <Button 
+                  className="w-full sm:w-auto shadow-neo hover:shadow-neo-sm bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white" 
+                  size="sm"
+                  disabled={isImporting}
+                  asChild
+                >
+                  <span className="cursor-pointer">
+                    <Download className="w-4 h-4 mr-2" />
+                    {isImporting ? "Important..." : "Importar Deporsite"}
+                  </span>
+                </Button>
+              </label>
+              <input
+                id="deporsite-upload"
+                type="file"
+                accept=".json"
+                onChange={handleImportDeporsite}
+                className="hidden"
+              />
+            </div>
 
-              <div className="border-t border-blue-200/50"></div>
+            <div className="border-t border-blue-200/50 my-4"></div>
 
-              {/* Excel */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Upload className="w-4 h-4 text-green-600" />
-                  <h3 className="font-semibold text-sm">Importar des d'Excel</h3>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Columnes necessàries: Nom Complet, Gimnàs, Data Aniversari, Sessions Habituals, Telèfon, Email
-                </p>
-                <label htmlFor="excel-upload">
-                  <Button 
-                    size="sm"
-                    variant="outline"
-                    disabled={isImporting}
-                    asChild
-                  >
-                    <span className="cursor-pointer">
-                      <Upload className="w-4 h-4 mr-2" />
-                      {isImporting ? "Important..." : "Importar Excel"}
-                    </span>
-                  </Button>
-                </label>
-                <input
-                  id="excel-upload"
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={handleImportExcel}
-                  className="hidden"
-                />
+            {/* Excel */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Upload className="w-4 h-4 text-green-600" />
+                <h3 className="font-semibold text-sm">Importar des d'Excel</h3>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Columnes necessàries: Nom Complet, Gimnàs, Data Aniversari, Sessions Habituals, Telèfon, Email
+              </p>
+              <label htmlFor="excel-upload">
+                <Button 
+                  size="sm"
+                  variant="outline"
+                  className="shadow-neo hover:shadow-neo-sm"
+                  disabled={isImporting}
+                  asChild
+                >
+                  <span className="cursor-pointer">
+                    <Upload className="w-4 h-4 mr-2" />
+                    {isImporting ? "Important..." : "Importar Excel"}
+                  </span>
+                </Button>
+              </label>
+              <input
+                id="excel-upload"
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportExcel}
+                className="hidden"
+              />
             </div>
           </NeoCard>
         </CollapsibleContent>
       </Collapsible>
 
-      {/* 🎯 Filtres dins NeoCard per conservar l'estil neomòrfic i que sigui consistent */}
+      {/* 🎯 Filtres amb neomòrfic */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
         <div className="sm:col-span-1 min-w-0">
-          <NeoCard className="rounded-xl p-3">
-            <div className="bg-background border border-border rounded-xl p-0">
-              <Select value={centerFilter} onValueChange={setCenterFilter}>
-                <SelectTrigger className="border-0 h-auto p-0 focus:ring-0">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    <SelectValue placeholder="Filtrar per centre" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tots els Centres</SelectItem>
-                  <SelectItem value="Arbúcies">Arbúcies</SelectItem>
-                  <SelectItem value="Sant Hilari">Sant Hilari</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <NeoCard>
+            <Select value={centerFilter} onValueChange={setCenterFilter}>
+              <SelectTrigger className="shadow-neo-inset border-0 h-auto p-3 focus:ring-0">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <SelectValue placeholder="Filtrar per centre" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tots els Centres</SelectItem>
+                <SelectItem value="Arbúcies">Arbúcies</SelectItem>
+                <SelectItem value="Sant Hilari">Sant Hilari</SelectItem>
+              </SelectContent>
+            </Select>
           </NeoCard>
         </div>
 
         <div className="sm:col-span-2 min-w-0">
-          <NeoCard className="rounded-xl p-3">
-            <div className="bg-background border border-border rounded-xl p-0">
-              <div className="relative">
-                {/* Mouem una mica cap a la dreta el icona (left-3) i augmentem padding-left de l'input (pl-10)
-                    Això evita que el placeholder s'encavalqui amb la lupa */}
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Cercar per nom o email..." 
-                  className="pl-10 border-0 h-auto p-0 focus-visible:ring-0 text-sm"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
+          <NeoCard>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+              <Input 
+                placeholder="Cercar per nom o email..." 
+                className="pl-10 pr-3 shadow-neo-inset border-0 h-12 focus-visible:ring-0"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
           </NeoCard>
         </div>
       </div>
 
-      {/* 🎯 Grid d'usuaris dins NeoCard (per estil neomòrfic) */}
-      <NeoCard className="rounded-xl p-4">
-        <div className="bg-background border border-border rounded-xl p-0">
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              No s'han trobat usuaris amb els filtres aplicats.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 w-full">
-              {filteredUsers.map((user) => (
-                <div
-                  key={user.id}
-                  onClick={() => handleViewUser(user)}
-                  className={`p-3 rounded-xl transition-all border-2 cursor-pointer hover:scale-105 flex flex-col items-center min-w-0 ${
-                    user.center === "Arbúcies" 
-                      ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 hover:border-blue-500/50" 
-                      : "bg-green-500/10 border-green-500/30 hover:bg-green-500/20 hover:border-green-500/50"
-                  }`}
-                >
-                  <div className="mb-2 flex-shrink-0">
-                    <img 
-                      src={user.profileImageUrl || user.avatar} 
-                      alt={user.name}
-                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover ring-2 ring-white"
-                    />
-                  </div>
-                  
-                  <h3 className="font-semibold text-sm sm:text-base text-center line-clamp-2 mb-1 px-1 w-full break-words">
-                    {user.name}
-                  </h3>
-                  
-                  <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${
-                    user.center === "Arbúcies" 
-                      ? "bg-blue-500/30 text-blue-700" 
-                      : "bg-green-500/30 text-green-700"
-                  }`}>
-                    {user.center}
-                  </span>
+      {/* 🎯 Grid d'usuaris amb neomòrfic */}
+      <NeoCard>
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            No s'han trobat usuaris amb els filtres aplicats.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 w-full">
+            {filteredUsers.map((user) => (
+              <div
+                key={user.id}
+                onClick={() => handleViewUser(user)}
+                className={`p-3 rounded-xl shadow-neo hover:shadow-neo-lg transition-all border-2 cursor-pointer hover:scale-105 flex flex-col items-center min-w-0 ${
+                  user.center === "Arbúcies" 
+                    ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 hover:border-blue-500/50" 
+                    : "bg-green-500/10 border-green-500/30 hover:bg-green-500/20 hover:border-green-500/50"
+                }`}
+              >
+                <div className="mb-2 flex-shrink-0">
+                  <img 
+                    src={user.profileImageUrl || user.avatar} 
+                    alt={user.name}
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-neo object-cover ring-2 ring-white"
+                  />
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                
+                <h3 className="font-semibold text-sm sm:text-base text-center line-clamp-2 mb-1 px-1 w-full break-words">
+                  {user.name}
+                </h3>
+                
+                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium shadow-neo-inset ${
+                  user.center === "Arbúcies" 
+                    ? "bg-blue-500/30 text-blue-700" 
+                    : "bg-green-500/30 text-green-700"
+                }`}>
+                  {user.center}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </NeoCard>
 
       {/* 🆕 BOTÓ FLOTANT per afegir usuaris */}
