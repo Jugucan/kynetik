@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { NeoCard } from "@/components/NeoCard";
+// MANTENIM la importació del component NeoCard
+import { NeoCard } from "@/components/NeoCard"; 
 import { Users as UsersIcon, Search, Plus, Upload, Info, ChevronDown, ChevronUp, MapPin, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -325,6 +326,7 @@ const Users = () => {
       {/* 🆕 UN SOL desplegable per tota la info d'importació */}
       <Collapsible open={showInstructions} onOpenChange={setShowInstructions}>
         <CollapsibleContent>
+          {/* Aquesta secció no la fem neomòrfica, ja que és una caixa d'informació */}
           <div className="bg-blue-50/30 border border-blue-200/50 rounded-xl p-4 space-y-4">
             {/* Deporsite */}
             <div className="space-y-2">
@@ -396,12 +398,14 @@ const Users = () => {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* 🎯 Filtres nets sense ombres */}
+      {/* 🎯 Filtres Neomòrfics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
         <div className="sm:col-span-1 min-w-0">
-          <div className="bg-background border border-border rounded-xl p-3">
+          {/* Targeta Neomòrfica per al Select */}
+          <NeoCard className="p-0"> 
             <Select value={centerFilter} onValueChange={setCenterFilter}>
-              <SelectTrigger className="border-0 h-auto p-0 focus:ring-0">
+              {/* Afegim classes per donar l'efecte "premsat" al Select */}
+              <SelectTrigger className="border-0 h-auto p-3 focus:ring-0 shadow-inner-neumorphic"> 
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <SelectValue placeholder="Filtrar per centre" />
@@ -413,26 +417,29 @@ const Users = () => {
                 <SelectItem value="Sant Hilari">Sant Hilari</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </NeoCard>
         </div>
 
         <div className="sm:col-span-2 min-w-0">
-          <div className="bg-background border border-border rounded-xl p-3">
+          {/* Targeta Neomòrfica per a la Cerca */}
+          <NeoCard className="p-3"> 
             <div className="relative">
               <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              {/* Afegim classes per donar l'efecte "premsat" a l'Input */}
               <Input 
                 placeholder="Cercar per nom o email..." 
-                className="pl-6 border-0 h-auto p-0 focus-visible:ring-0 text-sm"
+                className="pl-6 border-0 h-auto p-0 focus-visible:ring-0 text-sm shadow-inner-neumorphic-input" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-          </div>
+          </NeoCard>
         </div>
       </div>
 
-      {/* 🎯 Grid d'usuaris net sense ombres */}
-      <div className="bg-background border border-border rounded-xl p-4">
+      {/* 🎯 Grid d'usuaris Neomòrfic */}
+      {/* Targeta Neomòrfica per al contenidor principal del Grid */}
+      <NeoCard className="p-4"> 
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
         ) : filteredUsers.length === 0 ? (
@@ -445,7 +452,8 @@ const Users = () => {
               <div
                 key={user.id}
                 onClick={() => handleViewUser(user)}
-                className={`p-3 rounded-xl transition-all border-2 cursor-pointer hover:scale-105 flex flex-col items-center min-w-0 ${
+                // Apliquem l'estil neomòrfic als elements individuals del grid
+                className={`p-3 rounded-xl transition-all border-2 cursor-pointer hover:scale-105 flex flex-col items-center min-w-0 shadow-neumorphic-card ${ 
                   user.center === "Arbúcies" 
                     ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 hover:border-blue-500/50" 
                     : "bg-green-500/10 border-green-500/30 hover:bg-green-500/20 hover:border-green-500/50"
@@ -474,7 +482,7 @@ const Users = () => {
             ))}
           </div>
         )}
-      </div>
+      </NeoCard>
 
       {/* 🆕 BOTÓ FLOTANT per afegir usuaris */}
       <button
