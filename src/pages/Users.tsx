@@ -301,7 +301,7 @@ const Users = () => {
   };
 
   return (
-    // FIX 1: Canvi de `px-2` a `px-3` per evitar que es tallin les ombres neomòrfiques
+    // FIX 1: Ús de `px-3` per millorar l'amplitud en mòbil i evitar talls d'ombra
     <div className="space-y-6 max-w-full overflow-x-hidden px-3 sm:px-6"> 
       {/* 🎯 Capçalera neta */}
       <div className="flex items-center justify-between">
@@ -397,7 +397,7 @@ const Users = () => {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* 🎯 Filtres Neomòrfics */}
+      {/* 🎯 Filtres Neomòrfics (Restaurats amb NeoCard) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
         <div className="sm:col-span-1 min-w-0">
           {/* Targeta Neomòrfica per al Select */}
@@ -424,10 +424,10 @@ const Users = () => {
           <NeoCard className="p-3"> 
             <div className="relative">
               <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              {/* FIX 2: Canvi de `pl-6` a `pl-8` per fer espai a la lupa */}
+              {/* FIX 2: Canvi de `pl-6` a `pl-9` per assegurar espai per a la lupa */}
               <Input 
                 placeholder="Cercar per nom o email..." 
-                className="pl-8 border-0 h-auto p-0 focus-visible:ring-0 text-sm shadow-inner-neumorphic-input" 
+                className="pl-9 border-0 h-auto p-0 focus-visible:ring-0 text-sm shadow-inner-neumorphic-input" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -436,8 +436,7 @@ const Users = () => {
         </div>
       </div>
 
-      {/* 🎯 Grid d'usuaris Neomòrfic */}
-      {/* Targeta Neomòrfica per al contenidor principal del Grid */}
+      {/* 🎯 Grid d'usuaris Neomòrfic (Restaurat amb NeoCard) */}
       <NeoCard className="p-4"> 
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
