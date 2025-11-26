@@ -138,7 +138,6 @@ const Users = () => {
           }
 
           if (existingUser) {
-            // 🆕 FUSIÓ INTEL·LIGENT amb sessions
             const mergedData: Partial<User> = {};
             
             mergedData.name = existingUser.name || importedUser.name;
@@ -164,11 +163,9 @@ const Users = () => {
             const notesToMerge = [existingNotes, importedNotes].filter(n => n && n.trim().length > 0);
             mergedData.notes = notesToMerge.join('\n\n---\n\n');
             
-            // 🆕 FUSIONEM LES SESSIONS!
             const existingSessions = Array.isArray(existingUser.sessions) ? existingUser.sessions : [];
             const importedSessions = Array.isArray(importedUser.sessions) ? importedUser.sessions : [];
             
-            // Combinem sessions eliminant duplicats per data+activitat
             const sessionMap = new Map();
             [...existingSessions, ...importedSessions].forEach(session => {
               const key = `${session.date}-${session.activity}-${session.time}`;
@@ -176,7 +173,6 @@ const Users = () => {
             });
             mergedData.sessions = Array.from(sessionMap.values());
             
-            // 🆕 ACTUALITZEM ESTADÍSTIQUES
             mergedData.totalSessions = mergedData.sessions.length;
             
             if (mergedData.sessions.length > 0) {
@@ -192,7 +188,6 @@ const Users = () => {
             await updateUser(existingUser.id, mergedData);
             updatedCount++;
           } else {
-            // 🆕 USUARI NOU AMB TOTES LES SESSIONS
             const userData: Omit<User, 'id'> = {
               name: importedUser.name || '',
               email: importedUser.email || '',
@@ -207,7 +202,6 @@ const Users = () => {
               avatar: importedUser.profileImageUrl || importedUser.avatar || '',
               notes: importedUser.notes || '',
               
-              // 🆕 AFEGIM LES SESSIONS!
               sessions: Array.isArray(importedUser.sessions) ? importedUser.sessions : [],
               totalSessions: importedUser.totalSessions || 0,
               firstSession: importedUser.firstSession || '',
@@ -474,6 +468,7 @@ const Users = () => {
         </div>
       </div>
 
+      {/* 🆕 TARGETES COMPACTES I MINIMALISTES */}
       <NeoCard className="overflow-hidden">
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
@@ -482,91 +477,39 @@ const Users = () => {
             No s'han trobat usuaris amb els filtres aplicats.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 w-full">
             {filteredUsers.map((user) => (
               <div
                 key={user.id}
                 onClick={() => handleViewUser(user)}
-                className={`p-4 rounded-xl shadow-neo transition-all border-2 cursor-pointer hover:shadow-neo-lg hover:scale-[1.02] flex flex-col ${
+                className={`p-3 rounded-xl shadow-neo transition-all border-2 cursor-pointer hover:shadow-neo-lg hover:scale-105 flex flex-col items-center ${
                   user.center === "Arbúcies" 
-                    ? "bg-blue-500/20 border-blue-500/30" 
-                    : "bg-green-500/20 border-green-500/30"
+                    ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20" 
+                    : "bg-green-500/10 border-green-500/30 hover:bg-green-500/20"
                 }`}
               >
-                <div className="flex justify-center mb-3">
+                {/* Foto de perfil */}
+                <div className="mb-2">
                   <img 
                     src={user.profileImageUrl || user.avatar} 
                     alt={user.name}
-                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-full shadow-neo object-cover"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-neo object-cover ring-2 ring-white"
                   />
                 </div>
                 
-                <div className="text-center mb-3">
-                  <h3 className="font-semibold text-lg mb-1 line-clamp-2">{user.name}</h3>
-                  <p className="text-sm font-medium text-primary">{user.age} anys</p>
-                  
-                  <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium shadow-neo-inset ${
-                    user.center === "Arbúcies" 
-                      ? "bg-blue-500/30 text-blue-700" 
-                      : "bg-green-500/30 text-green-700"
-                  }`}>
-                    {user.center}
-                  </span>
-                </div>
+                {/* Nom */}
+                <h3 className="font-semibold text-sm sm:text-base text-center line-clamp-2 mb-1 px-1">
+                  {user.name}
+                </h3>
                 
-                <div className="space-y-2 text-sm mb-3 flex-grow">
-                  {user.email && (
-                    <p className="text-muted-foreground truncate text-center">
-                      ✉️ {user.email}
-                    </p>
-                  )}
-                  {user.phone && (
-                    <p className="text-muted-foreground text-center">
-                      📞 {user.phone}
-                    </p>
-                  )}
-                  {user.birthday && (
-                    <p className="text-muted-foreground text-center">
-                      🎂 {user.birthday}
-                    </p>
-                  )}
-                  
-                  {user.preferredPrograms && user.preferredPrograms.length > 0 && (
-                    <div className="flex flex-wrap gap-1 justify-center mt-2">
-                      {user.preferredPrograms.map((program, idx) => (
-                        <span key={idx} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary-foreground shadow-neo-inset">
-                          {program}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex gap-2 pt-3 border-t">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation(); 
-                      handleEditUser(user);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4 mr-1" />
-                    Editar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    onClick={(e) => {
-                      e.stopPropagation(); 
-                      setDeletingUserId(user.id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                {/* Centre */}
+                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium shadow-neo-inset ${
+                  user.center === "Arbúcies" 
+                    ? "bg-blue-500/30 text-blue-700" 
+                    : "bg-green-500/30 text-green-700"
+                }`}>
+                  {user.center}
+                </span>
               </div>
             ))}
           </div>
