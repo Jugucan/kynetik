@@ -302,27 +302,26 @@ const Users = () => {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 max-w-full overflow-x-hidden">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center gap-3">
-          <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-          <div>
+          <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+          <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Usuaris</h1>
             <p className="text-sm text-muted-foreground">Gestió dels teus alumnes</p>
           </div>
         </div>
         
-        <div className="flex gap-2">
-          <label htmlFor="deporsite-upload" className="flex-1 sm:flex-none">
+        <div className="flex flex-col sm:flex-row gap-2 w-full">
+          <label htmlFor="deporsite-upload" className="flex-1 min-w-0">
             <Button 
-              className="shadow-neo hover:shadow-neo-sm gap-2 w-full sm:w-auto bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white" 
+              className="shadow-neo hover:shadow-neo-sm gap-2 w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white" 
               disabled={isImporting}
               asChild
             >
               <span className="cursor-pointer">
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">{isImporting ? "Important..." : "Importar Deporsite"}</span>
-                <span className="sm:hidden">Deporsite</span>
+                <Download className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{isImporting ? "Important..." : "Deporsite"}</span>
               </span>
             </Button>
           </label>
@@ -334,17 +333,16 @@ const Users = () => {
             className="hidden"
           />
 
-          <label htmlFor="excel-upload" className="flex-1 sm:flex-none">
+          <label htmlFor="excel-upload" className="flex-1 min-w-0">
             <Button 
-              className="shadow-neo hover:shadow-neo-sm gap-2 w-full sm:w-auto" 
+              className="shadow-neo hover:shadow-neo-sm gap-2 w-full" 
               variant="outline"
               disabled={isImporting}
               asChild
             >
               <span className="cursor-pointer">
-                <Upload className="w-4 h-4" />
-                <span className="hidden sm:inline">{isImporting ? "Important..." : "Importar Excel"}</span>
-                <span className="sm:hidden">Excel</span>
+                <Upload className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{isImporting ? "Important..." : "Excel"}</span>
               </span>
             </Button>
           </label>
@@ -356,10 +354,10 @@ const Users = () => {
             className="hidden"
           />
 
-          <Button onClick={handleAddNew} className="shadow-neo hover:shadow-neo-sm gap-2 flex-1 sm:flex-none">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Afegir usuari</span>
-            <span className="sm:hidden">Afegir</span>
+          <Button onClick={handleAddNew} className="shadow-neo hover:shadow-neo-sm gap-2 flex-1 sm:flex-none min-w-0">
+            <Plus className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate hidden sm:inline">Afegir</span>
+            <span className="sm:hidden">+</span>
           </Button>
         </div>
       </div>
@@ -370,9 +368,9 @@ const Users = () => {
             variant="ghost" 
             className="w-full justify-start gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 p-2 h-auto"
           >
-            <Info className="w-4 h-4" />
-            <span className="text-sm">Com sincronitzar amb Deporsite</span>
-            {showDeporsiteInstructions ? <ChevronUp className="w-4 h-4 ml-auto" /> : <ChevronDown className="w-4 h-4 ml-auto" />}
+            <Info className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm truncate">Com sincronitzar amb Deporsite</span>
+            {showDeporsiteInstructions ? <ChevronUp className="w-4 h-4 ml-auto flex-shrink-0" /> : <ChevronDown className="w-4 h-4 ml-auto flex-shrink-0" />}
           </Button>
         </CollapsibleTrigger>
         
@@ -405,9 +403,9 @@ const Users = () => {
             variant="ghost" 
             className="w-full justify-start gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2 h-auto"
           >
-            <Info className="w-4 h-4" />
-            <span className="text-sm">Com importar usuaris des d'Excel</span>
-            {showInstructions ? <ChevronUp className="w-4 h-4 ml-auto" /> : <ChevronDown className="w-4 h-4 ml-auto" />}
+            <Info className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm truncate">Com importar usuaris des d'Excel</span>
+            {showInstructions ? <ChevronUp className="w-4 h-4 ml-auto flex-shrink-0" /> : <ChevronDown className="w-4 h-4 ml-auto flex-shrink-0" />}
           </Button>
         </CollapsibleTrigger>
         
@@ -436,12 +434,12 @@ const Users = () => {
         </CollapsibleContent>
       </Collapsible>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="sm:col-span-1">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+        <div className="sm:col-span-1 min-w-0">
             <NeoCard className="h-full">
                 <Select value={centerFilter} onValueChange={setCenterFilter}>
-                    <SelectTrigger className="shadow-neo-inset border-0 text-sm sm:text-base h-10 sm:h-12">
-                        <MapPin className="w-4 h-4 mr-2 text-muted-foreground" />
+                    <SelectTrigger className="shadow-neo-inset border-0 text-sm sm:text-base h-10 sm:h-12 w-full">
+                        <MapPin className="w-4 h-4 mr-2 text-muted-foreground flex-shrink-0" />
                         <SelectValue placeholder="Filtrar per centre" />
                     </SelectTrigger>
                     <SelectContent>
@@ -453,13 +451,13 @@ const Users = () => {
             </NeoCard>
         </div>
 
-        <div className="sm:col-span-2">
+        <div className="sm:col-span-2 min-w-0">
             <NeoCard className="h-full">
                 <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                 <Input 
                     placeholder="Cercar per nom o email..." 
-                    className="pl-9 sm:pl-10 shadow-neo-inset border-0 text-sm sm:text-base h-10 sm:h-12"
+                    className="pl-9 sm:pl-10 shadow-neo-inset border-0 text-sm sm:text-base h-10 sm:h-12 w-full"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -468,8 +466,7 @@ const Users = () => {
         </div>
       </div>
 
-      {/* 🆕 TARGETES COMPACTES I MINIMALISTES */}
-      <NeoCard className="overflow-hidden">
+      <NeoCard>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
         ) : filteredUsers.length === 0 ? (
@@ -482,14 +479,13 @@ const Users = () => {
               <div
                 key={user.id}
                 onClick={() => handleViewUser(user)}
-                className={`p-3 rounded-xl shadow-neo transition-all border-2 cursor-pointer hover:shadow-neo-lg hover:scale-105 flex flex-col items-center ${
+                className={`p-3 rounded-xl shadow-neo transition-all border-2 cursor-pointer hover:shadow-neo-lg hover:scale-105 flex flex-col items-center min-w-0 ${
                   user.center === "Arbúcies" 
                     ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20" 
                     : "bg-green-500/10 border-green-500/30 hover:bg-green-500/20"
                 }`}
               >
-                {/* Foto de perfil */}
-                <div className="mb-2">
+                <div className="mb-2 flex-shrink-0">
                   <img 
                     src={user.profileImageUrl || user.avatar} 
                     alt={user.name}
@@ -497,12 +493,10 @@ const Users = () => {
                   />
                 </div>
                 
-                {/* Nom */}
-                <h3 className="font-semibold text-sm sm:text-base text-center line-clamp-2 mb-1 px-1">
+                <h3 className="font-semibold text-sm sm:text-base text-center line-clamp-2 mb-1 px-1 w-full break-words">
                   {user.name}
                 </h3>
                 
-                {/* Centre */}
                 <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium shadow-neo-inset ${
                   user.center === "Arbúcies" 
                     ? "bg-blue-500/30 text-blue-700" 
