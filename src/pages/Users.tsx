@@ -1,5 +1,4 @@
 import { useState } from "react";
-// MANTENIM la importació del component NeoCard
 import { NeoCard } from "@/components/NeoCard"; 
 import { Users as UsersIcon, Search, Plus, Upload, Info, ChevronDown, ChevronUp, MapPin, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -302,7 +301,8 @@ const Users = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-full overflow-x-hidden px-4 sm:px-6">
+    // CANVI FETS AQUÍ: `px-4 sm:px-6` ha canviat a `px-2 sm:px-6`
+    <div className="space-y-6 max-w-full overflow-x-hidden px-2 sm:px-6"> 
       {/* 🎯 Capçalera neta */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -326,7 +326,6 @@ const Users = () => {
       {/* 🆕 UN SOL desplegable per tota la info d'importació */}
       <Collapsible open={showInstructions} onOpenChange={setShowInstructions}>
         <CollapsibleContent>
-          {/* Aquesta secció no la fem neomòrfica, ja que és una caixa d'informació */}
           <div className="bg-blue-50/30 border border-blue-200/50 rounded-xl p-4 space-y-4">
             {/* Deporsite */}
             <div className="space-y-2">
