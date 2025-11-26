@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { Users as UsersIcon, Search, Plus, Pencil, Trash2, Upload, Info, ChevronDown, ChevronUp, MapPin, Download } from "lucide-react";
+import { Users as UsersIcon, Search, Plus, Upload, Info, ChevronDown, ChevronUp, MapPin, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUsers, User } from "@/hooks/useUsers"; 
@@ -34,7 +34,6 @@ const Users = () => {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
-  const [showDeporsiteInstructions, setShowDeporsiteInstructions] = useState(false);
 
   const sortedUsers = [...users].sort((a, b) => 
     (a.name || '').localeCompare(b.name || '', 'ca', { sensitivity: 'base' })
@@ -302,8 +301,9 @@ const Users = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-full overflow-x-hidden">
-      <div className="flex flex-col gap-4">
+    <div className="space-y-6 max-w-full overflow-x-hidden px-4 sm:px-6">
+      {/* 🎯 Capçalera neta */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
           <div className="min-w-0">
@@ -312,161 +312,127 @@ const Users = () => {
           </div>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-2 w-full">
-          <label htmlFor="deporsite-upload" className="flex-1 min-w-0">
-            <Button 
-              className="shadow-neo hover:shadow-neo-sm gap-2 w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white" 
-              disabled={isImporting}
-              asChild
-            >
-              <span className="cursor-pointer">
-                <Download className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">{isImporting ? "Important..." : "Deporsite"}</span>
-              </span>
-            </Button>
-          </label>
-          <input
-            id="deporsite-upload"
-            type="file"
-            accept=".json"
-            onChange={handleImportDeporsite}
-            className="hidden"
-          />
-
-          <label htmlFor="excel-upload" className="flex-1 min-w-0">
-            <Button 
-              className="shadow-neo hover:shadow-neo-sm gap-2 w-full" 
-              variant="outline"
-              disabled={isImporting}
-              asChild
-            >
-              <span className="cursor-pointer">
-                <Upload className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">{isImporting ? "Important..." : "Excel"}</span>
-              </span>
-            </Button>
-          </label>
-          <input
-            id="excel-upload"
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleImportExcel}
-            className="hidden"
-          />
-
-          <Button onClick={handleAddNew} className="shadow-neo hover:shadow-neo-sm gap-2 flex-1 sm:flex-none min-w-0">
-            <Plus className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate hidden sm:inline">Afegir</span>
-            <span className="sm:hidden">+</span>
-          </Button>
-        </div>
+        {/* 🆕 Botó d'informació discret */}
+        <button
+          onClick={() => setShowInstructions(!showInstructions)}
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+          title="Com importar usuaris"
+        >
+          <Info className="w-5 h-5 text-muted-foreground" />
+        </button>
       </div>
 
-      <Collapsible open={showDeporsiteInstructions} onOpenChange={setShowDeporsiteInstructions}>
-        <CollapsibleTrigger asChild>
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 p-2 h-auto"
-          >
-            <Info className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm truncate">Com sincronitzar amb Deporsite</span>
-            {showDeporsiteInstructions ? <ChevronUp className="w-4 h-4 ml-auto flex-shrink-0" /> : <ChevronDown className="w-4 h-4 ml-auto flex-shrink-0" />}
-          </Button>
-        </CollapsibleTrigger>
-        
-        <CollapsibleContent>
-          <NeoCard className="bg-red-50/50 mt-2">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-red-900 mb-2 text-sm sm:text-base">Pas a pas per sincronitzar</h3>
-                <ol className="text-xs sm:text-sm text-red-700 space-y-2 list-decimal list-inside">
-                  <li>Obre l'<strong>extensió de Chrome "Deporsite User Sync"</strong></li>
-                  <li>Inicia sessió a <strong>candelfi.deporsite.net</strong></li>
-                  <li>Clica l'extensió i tria les dates a sincronitzar</li>
-                  <li>Descarrega el fitxer <strong>deporsite-users-XXXX.json</strong></li>
-                  <li>Clica <strong>"Importar Deporsite"</strong> aquí dalt</li>
-                  <li>Selecciona el fitxer JSON descarregat</li>
-                </ol>
-                <p className="text-xs text-red-600 mt-3 bg-red-100 p-2 rounded">
-                  ✨ <strong>Màgia automàtica:</strong> Els usuaris nous es crearan, els existents s'actualitzaran amb totes les sessions, i el centre (Arbúcies/Sant Hilari) s'assignarà automàticament!
-                </p>
-              </div>
-            </div>
-          </NeoCard>
-        </CollapsibleContent>
-      </Collapsible>
-
+      {/* 🆕 UN SOL desplegable per tota la info d'importació */}
       <Collapsible open={showInstructions} onOpenChange={setShowInstructions}>
-        <CollapsibleTrigger asChild>
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2 h-auto"
-          >
-            <Info className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm truncate">Com importar usuaris des d'Excel</span>
-            {showInstructions ? <ChevronUp className="w-4 h-4 ml-auto flex-shrink-0" /> : <ChevronDown className="w-4 h-4 ml-auto flex-shrink-0" />}
-          </Button>
-        </CollapsibleTrigger>
-        
         <CollapsibleContent>
-          <NeoCard className="bg-blue-50/50 mt-2">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-blue-900 mb-2 text-sm sm:text-base">Format del fitxer Excel</h3>
-                <p className="text-xs sm:text-sm text-blue-700 mb-2">
-                  El teu fitxer Excel ha de tenir aquestes columnes:
-                </p>
-                <ul className="text-xs text-blue-600 space-y-1 list-disc list-inside">
-                  <li><strong>Nom Complet</strong> (obligatori)</li>
-                  <li><strong>Gimnàs</strong> (Arbúcies o Sant Hilari)</li>
-                  <li><strong>Data Aniversari</strong> (DD/MM/YYYY)</li>
-                  <li><strong>Sessions Habituals</strong> (separats per comes)</li>
-                  <li><strong>Telèfon</strong></li>
-                  <li><strong>Email</strong></li>
-                  <li><strong>URL Foto Perfil</strong> (opcional)</li>
-                  <li><strong>Notes</strong> (opcional)</li>
-                </ul>
+          <div className="bg-blue-50/30 border border-blue-200/50 rounded-xl p-4 space-y-4">
+            {/* Deporsite */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Download className="w-4 h-4 text-red-600" />
+                <h3 className="font-semibold text-sm">Importar des de Deporsite</h3>
               </div>
+              <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside ml-6">
+                <li>Obre l'extensió de Chrome "Deporsite User Sync"</li>
+                <li>Inicia sessió a candelfi.deporsite.net</li>
+                <li>Tria les dates i descarrega el fitxer JSON</li>
+                <li>Clica el botó de sota i selecciona el fitxer</li>
+              </ol>
+              <label htmlFor="deporsite-upload">
+                <Button 
+                  className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white" 
+                  size="sm"
+                  disabled={isImporting}
+                  asChild
+                >
+                  <span className="cursor-pointer">
+                    <Download className="w-4 h-4 mr-2" />
+                    {isImporting ? "Important..." : "Importar Deporsite"}
+                  </span>
+                </Button>
+              </label>
+              <input
+                id="deporsite-upload"
+                type="file"
+                accept=".json"
+                onChange={handleImportDeporsite}
+                className="hidden"
+              />
             </div>
-          </NeoCard>
+
+            <div className="border-t border-blue-200/50"></div>
+
+            {/* Excel */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Upload className="w-4 h-4 text-green-600" />
+                <h3 className="font-semibold text-sm">Importar des d'Excel</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Columnes necessàries: Nom Complet, Gimnàs, Data Aniversari, Sessions Habituals, Telèfon, Email
+              </p>
+              <label htmlFor="excel-upload">
+                <Button 
+                  size="sm"
+                  variant="outline"
+                  disabled={isImporting}
+                  asChild
+                >
+                  <span className="cursor-pointer">
+                    <Upload className="w-4 h-4 mr-2" />
+                    {isImporting ? "Important..." : "Importar Excel"}
+                  </span>
+                </Button>
+              </label>
+              <input
+                id="excel-upload"
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportExcel}
+                className="hidden"
+              />
+            </div>
+          </div>
         </CollapsibleContent>
       </Collapsible>
 
+      {/* 🎯 Filtres nets sense ombres */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
         <div className="sm:col-span-1 min-w-0">
-            <NeoCard className="h-full">
-                <Select value={centerFilter} onValueChange={setCenterFilter}>
-                    <SelectTrigger className="shadow-neo-inset border-0 text-sm sm:text-base h-10 sm:h-12 w-full">
-                        <MapPin className="w-4 h-4 mr-2 text-muted-foreground flex-shrink-0" />
-                        <SelectValue placeholder="Filtrar per centre" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Tots els Centres</SelectItem>
-                        <SelectItem value="Arbúcies">Arbúcies</SelectItem>
-                        <SelectItem value="Sant Hilari">Sant Hilari</SelectItem>
-                    </SelectContent>
-                </Select>
-            </NeoCard>
+          <div className="bg-background border border-border rounded-xl p-3">
+            <Select value={centerFilter} onValueChange={setCenterFilter}>
+              <SelectTrigger className="border-0 h-auto p-0 focus:ring-0">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <SelectValue placeholder="Filtrar per centre" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tots els Centres</SelectItem>
+                <SelectItem value="Arbúcies">Arbúcies</SelectItem>
+                <SelectItem value="Sant Hilari">Sant Hilari</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="sm:col-span-2 min-w-0">
-            <NeoCard className="h-full">
-                <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-                <Input 
-                    placeholder="Cercar per nom o email..." 
-                    className="pl-9 sm:pl-10 shadow-neo-inset border-0 text-sm sm:text-base h-10 sm:h-12 w-full"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                </div>
-            </NeoCard>
+          <div className="bg-background border border-border rounded-xl p-3">
+            <div className="relative">
+              <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input 
+                placeholder="Cercar per nom o email..." 
+                className="pl-6 border-0 h-auto p-0 focus-visible:ring-0 text-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      <NeoCard>
+      {/* 🎯 Grid d'usuaris net sense ombres */}
+      <div className="bg-background border border-border rounded-xl p-4">
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
         ) : filteredUsers.length === 0 ? (
@@ -479,17 +445,17 @@ const Users = () => {
               <div
                 key={user.id}
                 onClick={() => handleViewUser(user)}
-                className={`p-3 rounded-xl shadow-neo transition-all border-2 cursor-pointer hover:shadow-neo-lg hover:scale-105 flex flex-col items-center min-w-0 ${
+                className={`p-3 rounded-xl transition-all border-2 cursor-pointer hover:scale-105 flex flex-col items-center min-w-0 ${
                   user.center === "Arbúcies" 
-                    ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20" 
-                    : "bg-green-500/10 border-green-500/30 hover:bg-green-500/20"
+                    ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 hover:border-blue-500/50" 
+                    : "bg-green-500/10 border-green-500/30 hover:bg-green-500/20 hover:border-green-500/50"
                 }`}
               >
                 <div className="mb-2 flex-shrink-0">
                   <img 
                     src={user.profileImageUrl || user.avatar} 
                     alt={user.name}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-neo object-cover ring-2 ring-white"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover ring-2 ring-white"
                   />
                 </div>
                 
@@ -497,7 +463,7 @@ const Users = () => {
                   {user.name}
                 </h3>
                 
-                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium shadow-neo-inset ${
+                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${
                   user.center === "Arbúcies" 
                     ? "bg-blue-500/30 text-blue-700" 
                     : "bg-green-500/30 text-green-700"
@@ -508,7 +474,16 @@ const Users = () => {
             ))}
           </div>
         )}
-      </NeoCard>
+      </div>
+
+      {/* 🆕 BOTÓ FLOTANT per afegir usuaris */}
+      <button
+        onClick={handleAddNew}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg hover:shadow-xl transition-all z-50 flex items-center justify-center"
+        title="Afegir usuari"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
 
       <UserDetailModal
         user={viewingUser}
