@@ -397,38 +397,34 @@ const Users = () => {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* 🎯 Filtres amb neomòrfic */}
+      {/* 🎯 Filtres amb neomòrfic subtil i elegant */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
         <div className="sm:col-span-1 min-w-0">
-          <NeoCard>
-            <Select value={centerFilter} onValueChange={setCenterFilter}>
-              <SelectTrigger className="shadow-neo-inset border-0 h-auto p-3 focus:ring-0">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <SelectValue placeholder="Filtrar per centre" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tots els Centres</SelectItem>
-                <SelectItem value="Arbúcies">Arbúcies</SelectItem>
-                <SelectItem value="Sant Hilari">Sant Hilari</SelectItem>
-              </SelectContent>
-            </Select>
-          </NeoCard>
+          <Select value={centerFilter} onValueChange={setCenterFilter}>
+            <SelectTrigger className="shadow-neo-inset border-0 h-12 px-4 focus:ring-0 rounded-xl">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <SelectValue placeholder="Filtrar per centre" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tots els Centres</SelectItem>
+              <SelectItem value="Arbúcies">Arbúcies</SelectItem>
+              <SelectItem value="Sant Hilari">Sant Hilari</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="sm:col-span-2 min-w-0">
-          <NeoCard>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
-              <Input 
-                placeholder="Cercar per nom o email..." 
-                className="pl-10 pr-3 shadow-neo-inset border-0 h-12 focus-visible:ring-0"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </NeoCard>
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+            <Input 
+              placeholder="Cercar per nom o email..." 
+              className="pl-11 pr-4 shadow-neo-inset border-0 h-12 focus-visible:ring-0 rounded-xl"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
