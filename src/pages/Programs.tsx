@@ -270,18 +270,19 @@ const Programs = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Dumbbell className="w-8 h-8 text-primary" />
+    <div className="space-y-6 w-full">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <Dumbbell className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
           <div>
             <h1 className="text-3xl font-bold text-foreground">Programes</h1>
             <p className="text-muted-foreground">Gestió dels programes i subprogrames</p>
           </div>
         </div>
-        <Button onClick={() => setShowAddProgram(true)} className="shadow-neo hover:shadow-neo-sm gap-2">
-          <Plus className="w-4 h-4" />
-          Nou programa
+        <Button onClick={() => setShowAddProgram(true)} className="shadow-neo hover:shadow-neo-sm gap-2 w-full sm:w-auto">
+          <Plus className="w-4 h-4 flex-shrink-0" />
+          <span className="hidden sm:inline">Nou programa</span>
+          <span className="sm:hidden">Nou</span>
         </Button>
       </div>
 
@@ -296,7 +297,7 @@ const Programs = () => {
           </Button>
         </NeoCard>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full">
           {Object.values(programs).map((program) => {
             const { subprogram: activeSubprogram, days: activeDays } = getActiveSubprogram(program.id);
             const hasSubprograms = Object.keys(program.subprograms).length > 0;
@@ -308,12 +309,12 @@ const Programs = () => {
             return (
               <NeoCard 
                 key={program.id} 
-                className="relative cursor-pointer hover:shadow-neo-lg transition-all"
+                className="relative cursor-pointer hover:shadow-neo-lg transition-all min-w-0"
                 onClick={() => hasSubprograms && handleOpenSubprograms(program.id)}
               >
                 <div className="flex items-start gap-4 mb-4">
                   <div 
-                    className="w-16 h-16 rounded-xl shadow-neo flex items-center justify-center text-white font-bold text-xl relative group"
+                    className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl shadow-neo flex items-center justify-center text-white font-bold text-lg sm:text-xl relative group flex-shrink-0"
                     style={{ backgroundColor: program.color }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -327,8 +328,8 @@ const Programs = () => {
                       <Palette className="w-6 h-6 text-white" />
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold mb-1">{program.name}</h3>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg sm:text-xl font-semibold mb-1 break-words">{program.name}</h3>
                     {hasSubprograms ? (
                       <>
                         {activeSubprogram ? (
@@ -380,7 +381,7 @@ const Programs = () => {
                 </div>
 
                 {/* Accions del programa */}
-                <div className="flex gap-2 pt-3 border-t">
+                <div className="flex flex-col sm:flex-row gap-2 pt-3 border-t">
                   {hasSubprograms ? (
                     <Button
                       size="sm"
