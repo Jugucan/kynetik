@@ -132,9 +132,9 @@ const Schedules = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Clock className="w-8 h-8 text-primary" />
+    <div className="space-y-6 w-full">
+      <div className="flex items-center gap-3 min-w-0">
+        <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
         <div>
           <h1 className="text-3xl font-bold text-foreground">Horaris</h1>
           <p className="text-muted-foreground">Gestiona els horaris de sessions dels centres</p>
@@ -142,28 +142,28 @@ const Schedules = () => {
       </div>
 
       {/* Horari actiu */}
-      <NeoCard>
-        <div className="flex items-center justify-between mb-4">
+      <NeoCard className="min-w-0">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
           <h2 className="text-xl font-semibold">Horari actiu</h2>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleCreateNew(false)}
-              className="shadow-neo hover:shadow-neo-sm"
+              className="shadow-neo hover:shadow-neo-sm w-full sm:w-auto"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Crear nou
+              <Plus className="h-4 w-4 mr-2 flex-shrink-0" />
+              <span className="truncate">Crear nou</span>
             </Button>
             {activeSchedule && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleCreateNew(true)}
-                className="shadow-neo hover:shadow-neo-sm"
+                className="shadow-neo hover:shadow-neo-sm w-full sm:w-auto"
               >
-                <Copy className="h-4 w-4 mr-2" />
-                Copiar actiu
+                <Copy className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="truncate">Copiar actiu</span>
               </Button>
             )}
           </div>
@@ -171,9 +171,9 @@ const Schedules = () => {
 
         {activeSchedule ? (
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset bg-green-500/10">
-              <div>
-                <p className="font-semibold text-green-700">{activeSchedule.name || "Horari actiu"}</p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-xl shadow-neo-inset bg-green-500/10">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-green-700 truncate">{activeSchedule.name || "Horari actiu"}</p>
                 <p className="text-sm text-muted-foreground">
                   Des del {new Date(activeSchedule.startDate).toLocaleDateString("ca-ES")}
                 </p>
@@ -197,15 +197,15 @@ const Schedules = () => {
                 if (daySessions.length === 0) return null;
 
                 return (
-                  <div key={dayIndex} className="p-3 rounded-xl shadow-neo-inset">
-                    <p className="font-semibold mb-2">{dayName}</p>
-                    <div className="flex flex-wrap gap-2">
+                  <div key={dayIndex} className="p-3 rounded-xl shadow-neo-inset min-w-0">
+                    <p className="font-semibold mb-2 text-sm sm:text-base">{dayName}</p>
+                    <div className="flex flex-wrap gap-2 w-full">
                       {daySessions.map((session, sIdx) => (
                         <div
                           key={sIdx}
-                          className={`px-3 py-1 rounded-lg ${programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'} text-white text-sm font-medium`}
+                          className={`px-2 sm:px-3 py-1 rounded-lg ${programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'} text-white text-xs sm:text-sm font-medium break-all`}
                         >
-                          {session.time} - {session.program} ({session.center})
+                          <span className="truncate">{session.time} - {session.program} ({session.center})</span>
                         </div>
                       ))}
                     </div>
@@ -227,39 +227,39 @@ const Schedules = () => {
 
       {/* Editor d'horari */}
       {editingSchedule && (
-        <NeoCard>
-          <div className="flex items-center justify-between mb-4">
+        <NeoCard className="min-w-0">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
             <h2 className="text-xl font-semibold">
               {schedules.find(s => s.id === editingSchedule.id) ? "Editar horari" : "Nou horari"}
             </h2>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setEditingSchedule(null)}
-                className="shadow-neo hover:shadow-neo-sm"
+                className="shadow-neo hover:shadow-neo-sm w-full sm:w-auto"
               >
-                <X className="h-4 w-4 mr-2" />
-                Cancel·lar
+                <X className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="truncate">Cancel·lar</span>
               </Button>
               <Button
                 size="sm"
                 onClick={handleSaveSchedule}
                 disabled={isSaving}
-                className="shadow-neo hover:shadow-neo-sm"
+                className="shadow-neo hover:shadow-neo-sm w-full sm:w-auto"
               >
                 {isSaving ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2 className="h-4 w-4 animate-spin mr-2 flex-shrink-0" />
                 ) : (
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save className="h-4 w-4 mr-2 flex-shrink-0" />
                 )}
-                Desar
+                <span className="truncate">Desar</span>
               </Button>
             </div>
           </div>
 
           <div className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
               <div>
                 <Label htmlFor="schedule-name">Nom de l'horari</Label>
                 <Input
@@ -304,8 +304,8 @@ const Schedules = () => {
                 const daySessions = editingSchedule.sessions[dayIndex] || [];
 
                 return (
-                  <div key={dayIndex} className="p-4 rounded-xl shadow-neo-inset">
-                    <div className="flex items-center justify-between mb-3">
+                  <div key={dayIndex} className="p-3 sm:p-4 rounded-xl shadow-neo-inset min-w-0">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
                       <Label className="font-semibold">{dayName}</Label>
                       <Button
                         variant="outline"
@@ -319,8 +319,8 @@ const Schedules = () => {
 
                     <div className="space-y-2">
                       {daySessions.map((session, sIdx) => (
-                        <div key={sIdx} className="grid grid-cols-12 gap-2 items-center">
-                          <div className="col-span-3">
+                        <div key={sIdx} className="grid grid-cols-12 gap-2 items-center min-w-0">
+                          <div className="col-span-12 sm:col-span-3">
                             <Input
                               type="time"
                               value={session.time}
@@ -328,7 +328,7 @@ const Schedules = () => {
                               className="shadow-neo-inset border-0 text-sm"
                             />
                           </div>
-                          <div className="col-span-3">
+                          <div className="col-span-12 sm:col-span-3">
                             <Select
                               value={session.program}
                               onValueChange={(value) => handleUpdateSession(dayIndex, sIdx, 'program', value)}
@@ -345,7 +345,7 @@ const Schedules = () => {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="col-span-5">
+                          <div className="col-span-11 sm:col-span-5">
                             <Select
                               value={session.center}
                               onValueChange={(value) => handleUpdateSession(dayIndex, sIdx, 'center', value as CenterType)}
@@ -359,7 +359,7 @@ const Schedules = () => {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="col-span-1 flex justify-end">
+                          <div className="col-span-1 flex justify-end items-center">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -400,15 +400,15 @@ const Schedules = () => {
           {showHistory && (
             <div className="space-y-3">
               {inactiveSchedules.map((schedule) => (
-                <div key={schedule.id} className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset">
-                  <div>
-                    <p className="font-medium">{schedule.name || "Horari"}</p>
+                <div key={schedule.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-xl shadow-neo-inset min-w-0">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate">{schedule.name || "Horari"}</p>
                     <p className="text-sm text-muted-foreground">
                       {new Date(schedule.startDate).toLocaleDateString("ca-ES")}
                       {schedule.endDate && ` - ${new Date(schedule.endDate).toLocaleDateString("ca-ES")}`}
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <Button
                       variant="outline"
                       size="sm"
