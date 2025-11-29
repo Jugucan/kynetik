@@ -453,7 +453,7 @@ const Stats = () => {
   
   return (
     // Aplicació de pb-8 i px-2 sm:px-4 com a contenidor general.
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 max-w-7xl mx-auto pb-8"> 
+    <div className="space-y-4 sm:space-y-6 w-full max-w-7xl mx-auto pb-8"> 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -465,7 +465,7 @@ const Stats = () => {
         </div>
 
         <Select value={centerFilter} onValueChange={setCenterFilter}>
-          <SelectTrigger className="w-full sm:w-56 shadow-neo">
+          <SelectTrigger className="w-full sm:w-56 shadow-neo-inset border-0">
             <div className="flex items-center">
               <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
               <SelectValue />
@@ -480,9 +480,9 @@ const Stats = () => {
       </div>
 
       {/* Estadístiques principals - Reducció del gap a gap-1.5 en mòbil per a grid-cols-2 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full">
         {/* TARGETA 1: Usuaris únics - p-3 en mòbil, p-4 en desktop */}
-        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100"> 
+        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100 min-w-0"> 
           <div className="flex flex-col gap-1"> 
             <div className="flex items-center justify-between gap-1">
               <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" /> 
@@ -554,7 +554,7 @@ const Stats = () => {
       {/* Pestanyes amb tota la resta d'informació */}
       <Tabs defaultValue="overview" className="space-y-4">
         <ScrollArea className="w-full whitespace-nowrap pb-2">
-          <TabsList className="inline-flex w-auto sm:grid sm:w-full sm:grid-cols-6">
+          <TabsList className="inline-flex w-auto sm:grid sm:w-full sm:grid-cols-6 gap-1">
             <TabsTrigger value="overview" className="text-xs sm:text-sm px-3">Resum</TabsTrigger>
             <TabsTrigger value="evolution" className="text-xs sm:text-sm px-3">Evolució</TabsTrigger>
             <TabsTrigger value="programs" className="text-xs sm:text-sm px-3">Programes</TabsTrigger>
@@ -567,8 +567,8 @@ const Stats = () => {
         {/* Nova pestanya: Resum General */}
         <TabsContent value="overview" className="space-y-4">
           {/* Estadístiques secundàries - Mantenim p-4/p-6 perquè són 1 columna en mòbil. */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-pink-50 to-pink-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
+            <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-pink-50 to-pink-100 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3 min-w-0">
                   <Users className="w-8 h-8 sm:w-10 sm:h-10 text-pink-600 flex-shrink-0" />
@@ -618,8 +618,8 @@ const Stats = () => {
           </div>
 
           {/* Indicadors petits - Reducció del gap a gap-1.5 per a sm:grid-cols-3 */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
-            <NeoCard className="p-3"> 
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+            <NeoCard className="p-3 min-w-0"> 
               <div className="flex items-center justify-between mb-1 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <Percent className="w-4 h-4 text-blue-600 flex-shrink-0" />
@@ -633,7 +633,7 @@ const Stats = () => {
               <p className="text-xl sm:text-2xl font-bold">{stats.retentionRate}%</p>
             </NeoCard>
 
-            <NeoCard className="p-3">
+            <NeoCard className="p-3 min-w-0">
               <div className="flex items-center justify-between mb-1 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <TrendingUp className="w-4 h-4 text-green-600 flex-shrink-0" />
@@ -647,7 +647,7 @@ const Stats = () => {
               <p className="text-xl sm:text-2xl font-bold">{stats.monthlyGrowth}%</p>
             </NeoCard>
 
-            <NeoCard className="p-3">
+            <NeoCard className="p-3 min-w-0">
               <div className="flex items-center justify-between mb-1 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <Clock className="w-4 h-4 text-orange-600 flex-shrink-0" />
@@ -664,7 +664,7 @@ const Stats = () => {
         </TabsContent>
 
         <TabsContent value="evolution" className="space-y-4">
-          <NeoCard className="p-4 sm:p-6">
+          <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <h3 className="text-lg sm:text-xl font-semibold">Tendència General</h3>
               {stats.trend === 'up' && (
@@ -715,7 +715,7 @@ const Stats = () => {
             </div>
           </NeoCard>
 
-          <NeoCard className="p-4 sm:p-6">
+          <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
               <h3 className="text-lg sm:text-xl font-semibold">
                 {attendanceView === 'year' ? 'Total Assistències per Any' : 'Mitjana Mensual d\'Assistències'}
@@ -800,7 +800,7 @@ const Stats = () => {
             </div>
           </NeoCard>
 
-          <NeoCard className="p-4 sm:p-6">
+          <NeoCard className="p-4 sm:p-6 min-w-0">
             <h3 className="text-lg sm:text-xl font-semibold mb-4">Últims 12 Mesos</h3>
             <Separator className="mb-4" />
             <ScrollArea className="h-80">
@@ -855,7 +855,7 @@ const Stats = () => {
         </TabsContent>
 
         <TabsContent value="programs" className="space-y-4">
-          <NeoCard className="p-4 sm:p-6">
+          <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-primary flex-shrink-0" />
               <h3 className="text-lg sm:text-xl font-semibold">Classes per Programa</h3>
@@ -890,7 +890,7 @@ const Stats = () => {
         </TabsContent>
 
         <TabsContent value="users" className="space-y-4">
-          <NeoCard className="p-4 sm:p-6">
+          <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-yellow-600 flex-shrink-0" />
               <h3 className="text-lg sm:text-xl font-semibold">Top 10 Usuaris Més Fidels</h3>
@@ -915,7 +915,7 @@ const Stats = () => {
             </div>
           </NeoCard>
 
-          <NeoCard className="p-4 sm:p-6">
+          <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
               <div className="flex items-center gap-2">
                 <UserX className="w-5 h-5 text-red-600 flex-shrink-0" />
@@ -959,19 +959,19 @@ const Stats = () => {
         </TabsContent>
 
         <TabsContent value="centers" className="space-y-4">
-          <NeoCard className="p-4 sm:p-6">
+          <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex items-center gap-2 mb-4">
               <MapPin className="w-5 h-5 text-primary flex-shrink-0" />
               <h3 className="text-lg sm:text-xl font-semibold">Distribució per Centre</h3>
             </div>
             <Separator className="mb-4" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
               {Object.entries(stats.centerCount).map(([center, count]) => {
                 const totalAllCenters = Object.values(stats.centerCount).reduce((a, b) => a + b, 0);
                 const percentage = (count / totalAllCenters) * 100;
 
                 return (
-                  <div key={center} className="p-4 sm:p-6 bg-muted/30 rounded-lg text-center">
+                  <div key={center} className="p-4 sm:p-6 bg-muted/30 rounded-lg text-center min-w-0">
                     <p className="text-3xl sm:text-4xl font-bold mb-2">{count}</p>
                     <p className="text-sm font-medium mb-3 truncate">{center}</p>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -991,7 +991,7 @@ const Stats = () => {
         </TabsContent>
 
         <TabsContent value="weekdays" className="space-y-4">
-          <NeoCard className="p-4 sm:p-6">
+          <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="w-5 h-5 text-primary flex-shrink-0" />
               <h3 className="text-lg sm:text-xl font-semibold">Classes per Dia de la Setmana</h3>
