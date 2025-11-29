@@ -100,8 +100,8 @@ export const CenterManagement = ({
 
   return (
     <>
-      <NeoCard>
-        <div className="flex items-center justify-between mb-4">
+      <NeoCard className="min-w-0">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-primary" />
             <h2 className="text-xl font-semibold">Centres</h2>
@@ -111,7 +111,7 @@ export const CenterManagement = ({
             variant="outline"
             size="sm"
             onClick={() => setShowAddCenter(!showAddCenter)}
-            className="shadow-neo hover:shadow-neo-sm"
+            className="shadow-neo hover:shadow-neo-sm w-full sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
             Afegir centre
@@ -119,7 +119,7 @@ export const CenterManagement = ({
         </div>
 
         {showAddCenter && (
-          <div className="p-4 mb-4 rounded-xl shadow-neo-inset bg-green-50">
+          <div className="p-4 mb-4 rounded-xl shadow-neo-inset bg-green-50 min-w-0">
             <h3 className="font-semibold mb-3">Nou centre</h3>
             <div className="space-y-4">
               <div>
@@ -180,14 +180,14 @@ export const CenterManagement = ({
           </div>
         )}
 
-        <div className="space-y-3">
+        <div className="space-y-3 w-full">
           {centers.map((center) => (
             <div 
               key={center.id} 
-              className={`p-4 rounded-xl shadow-neo ${center.isActive ? 'bg-white' : 'bg-gray-100 opacity-75'}`}
+              className={`p-3 sm:p-4 rounded-xl shadow-neo ${center.isActive ? 'bg-white' : 'bg-gray-100 opacity-75'} min-w-0`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                   {center.isActive && (
                     <button
                       onClick={() => onToggleExpanded(center.id)}
@@ -196,8 +196,8 @@ export const CenterManagement = ({
                       {expandedCenters[center.id] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </button>
                   )}
-                  <div>
-                    <h3 className="font-semibold">{center.name}</h3>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-sm sm:text-base truncate">{center.name}</h3>
                     <p className="text-xs text-muted-foreground">
                       {center.isActive ? (
                         <>Dies: {center.workDays.map(d => dayNamesList[d-1]?.slice(0,2)).join(', ')} • {center.availableVacationDays} dies vacances</>
@@ -207,7 +207,7 @@ export const CenterManagement = ({
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                   {center.isActive ? (
                     <Button
                       variant="outline"
@@ -254,7 +254,7 @@ export const CenterManagement = ({
 
               {expandedCenters[center.id] && center.isActive && (
                 <div className="mt-4 pt-4 border-t space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                     <div>
                       <Label>Dies laborables</Label>
                       <div className="flex flex-wrap gap-2 mt-2">
