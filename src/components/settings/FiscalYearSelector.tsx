@@ -14,16 +14,16 @@ export const FiscalYearSelector = ({
   onYearChange 
 }: FiscalYearSelectorProps) => {
   return (
-    <NeoCard className="p-4 bg-gray-50 border-gray-200">
-      <div className="flex items-center space-x-4">
-        <Label htmlFor="fiscal-year-select" className="whitespace-nowrap font-semibold text-lg">
+    <NeoCard className="p-4 bg-gray-50 border-gray-200 min-w-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 min-w-0">
+        <Label htmlFor="fiscal-year-select" className="whitespace-nowrap font-semibold text-base sm:text-lg flex-shrink-0">
           Any Fiscal (Feb-Gen)
         </Label>
         <Select 
           value={String(selectedFiscalYear)} 
           onValueChange={(value) => onYearChange(Number(value))}
         >
-          <SelectTrigger id="fiscal-year-select" className="w-[180px] shadow-neo">
+          <SelectTrigger id="fiscal-year-select" className="w-full sm:w-[180px] shadow-neo-inset border-0">
             <SelectValue placeholder="Selecciona any" />
           </SelectTrigger>
           <SelectContent>
