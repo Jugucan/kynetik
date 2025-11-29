@@ -63,8 +63,8 @@ export const HolidayManagement = ({
   onEditHolidayReason,
 }: HolidayManagementProps) => {
   return (
-    <NeoCard>
-      <div className="flex items-center justify-between mb-4">
+    <NeoCard className="min-w-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
           <CalendarIcon className="w-5 h-5 text-accent" />
           <h2 className="text-xl font-semibold">Festius oficials</h2>
@@ -74,7 +74,7 @@ export const HolidayManagement = ({
           variant="outline"
           size="sm"
           onClick={onRegenerateHolidays}
-          className="shadow-neo hover:shadow-neo-sm"
+          className="shadow-neo hover:shadow-neo-sm w-full sm:w-auto"
         >
           <RefreshCw className="h-4 w-4 mr-2" />
           Regenerar festius
@@ -86,11 +86,11 @@ export const HolidayManagement = ({
       </p>
       
       {officialHolidays.length > 0 ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
           {officialHolidays.sort((a, b) => a.date.getTime() - b.date.getTime()).map((holiday) => (
             <div 
               key={holiday.date.getTime()} 
-              className="flex flex-col p-3 rounded-xl shadow-neo-inset bg-accent-500/10"
+              className="flex flex-col p-3 rounded-xl shadow-neo-inset bg-accent-500/10 min-w-0"
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="font-semibold text-sm text-accent-700">
