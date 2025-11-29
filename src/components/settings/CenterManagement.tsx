@@ -167,12 +167,12 @@ export const CenterManagement = ({
                   className="mt-1 shadow-neo-inset border-0 w-24"
                 />
               </div>
-              <div className="flex gap-2">
-                <Button onClick={handleAddCenter} disabled={!newCenterName.trim()}>
+              <div className="flex flex-col sm:flex-row gap-2 w-full">
+                <Button onClick={handleAddCenter} disabled={!newCenterName.trim()} className="w-full sm:w-auto">
                   <Save className="h-4 w-4 mr-2" />
                   Crear centre
                 </Button>
-                <Button variant="outline" onClick={() => setShowAddCenter(false)}>
+                <Button variant="outline" onClick={() => setShowAddCenter(false)} className="w-full sm:w-auto">
                   Cancel·lar
                 </Button>
               </div>
@@ -216,7 +216,7 @@ export const CenterManagement = ({
                         e.stopPropagation();
                         setCenterToDeactivate(center);
                       }}
-                      className="text-orange-600 hover:text-orange-700"
+                      className="text-orange-600 hover:text-orange-700 w-full sm:w-auto"
                     >
                       <PowerOff className="h-4 w-4 mr-1" />
                       Desactivar
@@ -230,7 +230,7 @@ export const CenterManagement = ({
                           e.stopPropagation();
                           onReactivateCenter(center.id);
                         }}
-                        className="text-green-600 hover:text-green-700"
+                        className="text-green-600 hover:text-green-700 w-full sm:w-auto"
                       >
                         <Power className="h-4 w-4 mr-1" />
                         Reactivar
@@ -242,7 +242,7 @@ export const CenterManagement = ({
                           e.stopPropagation();
                           setCenterToDelete(center);
                         }}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-red-600 hover:text-red-700 w-full sm:w-auto"
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
                         Eliminar
