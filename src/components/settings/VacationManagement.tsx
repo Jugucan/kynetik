@@ -37,7 +37,7 @@ export const VacationManagement = ({
   renderDateList,
 }: VacationManagementProps) => {
   return (
-    <NeoCard>
+    <NeoCard className="min-w-0">
       <div className="flex items-center gap-2 mb-4">
         <CalendarIcon className="w-5 h-5 text-primary" />
         <h2 className="text-xl font-semibold">Dies de vacances generals</h2>
@@ -47,9 +47,9 @@ export const VacationManagement = ({
         Període laboral: {format(workYear.start, "dd/MM/yyyy")} - {format(workYear.end, "dd/MM/yyyy")}
       </p>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 w-full">
         {activeCenters.map(center => (
-          <div key={center.id} className="p-3 rounded-lg shadow-neo-inset">
+          <div key={center.id} className="p-3 rounded-lg shadow-neo-inset min-w-0">
             <h4 className="font-medium">{center.name}</h4>
             <div className="flex justify-between text-sm mt-2">
               <span className="text-muted-foreground">Disponibles:</span>
