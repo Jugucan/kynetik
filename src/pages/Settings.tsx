@@ -325,7 +325,7 @@ const Settings = () => {
                 value={currentReasonValue}
                 onChange={handleChange}
                 placeholder="Afegir motiu (opcional)"
-                className="h-6 text-xs p-1 mt-1 shadow-neo-inset border-0 bg-transparent"
+                className="h-6 text-xs p-1 mt-1 shadow-neo-inset border-0 bg-transparent w-full min-w-0"
             />
         );
     };
@@ -336,13 +336,13 @@ const Settings = () => {
         const label = type === 'vacation' ? 'Vacances' : 'Tancament';
 
         return dates.length > 0 ? (
-            <div className="p-3 mt-2 rounded-xl shadow-neo-inset">
+            <div className="p-3 mt-2 rounded-xl shadow-neo-inset min-w-0">
                 <p className="text-sm font-medium mb-2">{label}: {dates.length} dies</p>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2 sm:gap-3 w-full">
                     {dates.sort((a, b) => a.date.getTime() - b.date.getTime()).map((d) => (
                         <div 
                             key={d.date.getTime()} 
-                            className={`flex flex-col p-2 rounded-lg shadow-neo bg-${baseColor}-500/10 text-${baseColor}-700 relative`}
+                            className={`flex flex-col p-2 rounded-lg shadow-neo bg-${baseColor}-500/10 text-${baseColor}-700 relative min-w-0`}
                         >
                             <div className="flex items-center justify-between mb-1">
                                 <span className="font-semibold text-sm">
@@ -371,12 +371,12 @@ const Settings = () => {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center gap-3">
-                <SettingsIcon className="w-8 h-8 text-primary" />
-                <div>
-                    <h1 className="text-3xl font-bold text-foreground">Configuració</h1>
-                    <p className="text-muted-foreground">Gestiona centres, vacances, dies de tancament i dies laborables</p>
+        <div className="space-y-6 w-full">
+            <div className="flex items-center gap-3 min-w-0">
+                <SettingsIcon className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+                <div className="min-w-0">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Configuració</h1>
+                    <p className="text-sm text-muted-foreground">Gestiona centres, vacances, dies de tancament i dies laborables</p>
                 </div>
             </div>
 
@@ -410,7 +410,7 @@ const Settings = () => {
                 renderDateList={renderDateList}
             />
 
-            <form onSubmit={handleSave} className="grid gap-6">
+            <form onSubmit={handleSave} className="grid gap-6 w-full">
                 <VacationManagement
                     workYear={workYear}
                     activeCenters={activeCenters}
@@ -440,7 +440,7 @@ const Settings = () => {
                 />
 
                 <div className="flex justify-end">
-                    <Button type="submit" disabled={isSaving} className="shadow-neo hover:shadow-neo-sm">
+                    <Button type="submit" disabled={isSaving} className="shadow-neo hover:shadow-neo-sm w-full sm:w-auto">
                         {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                         {isSaving ? "Desant..." : "Desar canvis"}
                     </Button>
