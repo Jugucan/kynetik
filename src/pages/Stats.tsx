@@ -551,17 +551,16 @@ const Stats = () => {
       </div>
 
       {/* Pestanyes amb tota la resta d'informació */}
-      <Tabs defaultValue="overview" className="space-y-4 w-full">
-        <div className="w-full overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0">
-          <TabsList className="inline-flex w-auto sm:grid sm:w-full sm:grid-cols-6 gap-1 min-w-max">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm px-3">Resum</TabsTrigger>
-            <TabsTrigger value="evolution" className="text-xs sm:text-sm px-3">Evolució</TabsTrigger>
-            <TabsTrigger value="programs" className="text-xs sm:text-sm px-3">Programes</TabsTrigger>
-            <TabsTrigger value="users" className="text-xs sm:text-sm px-3">Usuaris</TabsTrigger>
-            <TabsTrigger value="centers" className="text-xs sm:text-sm px-3">Centres</TabsTrigger>
-            <TabsTrigger value="weekdays" className="text-xs sm:text-sm px-3">Dies setmana</TabsTrigger>
-          </TabsList>
-        </div>
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-6 md:w-auto">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm px-3">Resum</TabsTrigger>
+          <TabsTrigger value="evolution" className="text-xs sm:text-sm px-3">Evolució</TabsTrigger>
+          <TabsTrigger value="programs" className="text-xs sm:text-sm px-3">Programes</TabsTrigger>
+          <TabsTrigger value="users" className="text-xs sm:text-sm px-3">Usuaris</TabsTrigger>
+          <TabsTrigger value="centers" className="text-xs sm:text-sm px-3">Centres</TabsTrigger>
+          <TabsTrigger value="weekdays" className="text-xs sm:text-sm px-3">Dies setmana</TabsTrigger>
+        </TabsList>
+          </div>
 
         {/* Nova pestanya: Resum General */}
         <TabsContent value="overview" className="space-y-4">
