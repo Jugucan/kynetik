@@ -452,8 +452,7 @@ const Stats = () => {
   }
   
   return (
-    // Aplicació de pb-8 i px-2 sm:px-4 com a contenidor general.
-    <div className="space-y-4 sm:space-y-6 w-full max-w-7xl mx-auto pb-8 px-4 box-border overflow-x-hidden">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
