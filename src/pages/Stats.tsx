@@ -552,7 +552,7 @@ const Stats = () => {
 
       {/* Pestanyes amb tota la resta d'informació */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6 md:w-auto">
+        <TabsList className="flex overflow-x-auto whitespace-nowrap md:grid md:grid-cols-6 md:w-auto">
           <TabsTrigger value="overview" className="text-xs sm:text-sm px-3">Resum</TabsTrigger>
           <TabsTrigger value="evolution" className="text-xs sm:text-sm px-3">Evolució</TabsTrigger>
           <TabsTrigger value="programs" className="text-xs sm:text-sm px-3">Programes</TabsTrigger>
@@ -560,7 +560,7 @@ const Stats = () => {
           <TabsTrigger value="centers" className="text-xs sm:text-sm px-3">Centres</TabsTrigger>
           <TabsTrigger value="weekdays" className="text-xs sm:text-sm px-3">Dies setmana</TabsTrigger>
         </TabsList>
-          </div>
+          
 
         {/* Nova pestanya: Resum General */}
         <TabsContent value="overview" className="space-y-4">
