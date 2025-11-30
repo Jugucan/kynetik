@@ -453,7 +453,7 @@ const Stats = () => {
   
   return (
     // Aplicació de pb-8 i px-2 sm:px-4 com a contenidor general.
-    <div className="space-y-4 sm:space-y-6 w-full max-w-7xl mx-auto pb-8"> 
+    <div className="space-y-4 sm:space-y-6 w-full max-w-7xl mx-auto pb-8 px-2 sm:px-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -480,7 +480,7 @@ const Stats = () => {
       </div>
 
       {/* Estadístiques principals - Reducció del gap a gap-1.5 en mòbil per a grid-cols-2 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 w-full">
         {/* TARGETA 1: Usuaris únics - p-3 en mòbil, p-4 en desktop */}
         <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100 min-w-0"> 
           <div className="flex flex-col gap-1"> 
@@ -499,7 +499,7 @@ const Stats = () => {
         </NeoCard>
 
         {/* TARGETA 2: Classes fetes */}
-        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-green-50 to-green-100">
+        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-green-50 to-green-100 min-w-0">
           <div className="flex flex-col gap-1"> 
             <div className="flex items-center justify-between gap-1">
               <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 flex-shrink-0" />
@@ -516,7 +516,7 @@ const Stats = () => {
         </NeoCard>
 
         {/* TARGETA 3: Assistents per classe - Mantenim la correcció de text i p-3 */}
-        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-purple-50 to-purple-100">
+        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-purple-50 to-purple-100 min-w-0">
           <div className="flex flex-col gap-1"> 
             <div className="flex items-center justify-between gap-1">
               <Target className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 flex-shrink-0" />
@@ -528,13 +528,13 @@ const Stats = () => {
             <div>
               <p className="text-xl sm:text-3xl font-bold text-purple-700">{stats.avgAttendees}</p>
               {/* text-xs, leading-tight i break-words forçaran l'ajust sense veure's massa petit */}
-              <p className="text-xs sm:text-sm text-purple-600 leading-tight break-words">Assistents/classe</p>
+              <p className="text-[10px] sm:text-sm text-purple-600 leading-tight break-words">Assistents/classe</p>
             </div>
           </div>
         </NeoCard>
 
         {/* TARGETA 4: Usuaris actius */}
-        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-orange-50 to-orange-100">
+        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-orange-50 to-orange-100 min-w-0">
           <div className="flex flex-col gap-1"> 
             <div className="flex items-center justify-between gap-1">
               <UserCheck className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600 flex-shrink-0" />
@@ -618,7 +618,7 @@ const Stats = () => {
           </div>
 
           {/* Indicadors petits - Reducció del gap a gap-1.5 per a sm:grid-cols-3 */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full">
             <NeoCard className="p-3 min-w-0"> 
               <div className="flex items-center justify-between mb-1 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
