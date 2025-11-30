@@ -878,6 +878,10 @@ const Stats = () => {
                 );
               })}
             </div>
+          </NeoCard>
+        </TabsContent>
+
+        <TabsContent value="users" className="space-y-4">
           <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-yellow-600 flex-shrink-0" />
@@ -886,35 +890,22 @@ const Stats = () => {
             <Separator className="mb-4" />
             <div className="space-y-2">
               {stats.topUsers.map((user, idx) => (
-                <div
-                  key={user.id}
+                <div 
+                  key={user.id} 
                   onClick={() => setViewingUser(user)}
-                  className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded cursor-pointer hover:bg-muted/50 transition-colors gap-2 min-w-0"
+                  className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded cursor-pointer hover:bg-muted/50 transition-colors gap-2"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <Badge className={`${idx < 3 ? 'bg-yellow-500' : 'bg-muted'} flex-shrink-0`}>
                       #{idx + 1}
                     </Badge>
-          
-                    {/* Nom: forceixo max-width i truncate per evitar que empengi el layout */}
-                    <div className="min-w-0">
-                      <span className="font-medium text-sm sm:text-base truncate block max-w-[58vw] sm:max-w-[36ch]">
-                        {user.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground truncate block max-w-[58vw] sm:max-w-[36ch]">
-                        {user.email || ''}
-                      </span>
-                    </div>
+                    <span className="font-medium text-sm sm:text-base truncate">{user.name}</span>
                   </div>
-          
-                  <Badge variant="outline" className="flex-shrink-0">
-                    {user.totalSessions || 0} sessions
-                  </Badge>
+                  <Badge variant="outline" className="flex-shrink-0">{user.totalSessions || 0} sessions</Badge>
                 </div>
               ))}
             </div>
           </NeoCard>
-
 
           <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
@@ -934,27 +925,18 @@ const Stats = () => {
             </div>
             <Separator className="mb-4" />
             {stats.inactiveUsers.length > 0 ? (
-              <ScrollArea className="h-64 min-w-0">
+              <ScrollArea className="h-64">
                 <div className="space-y-2">
                   {stats.inactiveUsers.map((user) => (
-                    <div
-                      key={user.id}
+                    <div 
+                      key={user.id} 
                       onClick={() => setViewingUser(user)}
-                      className="flex items-center justify-between p-2 bg-red-50 rounded cursor-pointer hover:bg-red-100 transition-colors gap-2 min-w-0"
+                      className="flex items-center justify-between p-2 bg-red-50 rounded cursor-pointer hover:bg-red-100 transition-colors gap-2"
                     >
-                      {/* nom: bloqueig de redimensionament i truncate */}
-                      <div className="min-w-0">
-                        <span className="font-medium text-sm truncate block max-w-[60vw] sm:max-w-[30ch]">
-                          {user.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground truncate block max-w-[60vw] sm:max-w-[30ch]">
-                          {user.email || ''}
-                        </span>
-                      </div>
-          
+                      <span className="font-medium text-sm truncate">{user.name}</span>
                       <Badge variant="outline" className="bg-white flex-shrink-0">
-                        <Clock className="w-3 h-3 mr-1 inline-block" />
-                        <span className="inline-block ml-1">{user.daysSinceLastSession} dies</span>
+                        <Clock className="w-3 h-3 mr-1" />
+                        {user.daysSinceLastSession} dies
                       </Badge>
                     </div>
                   ))}
@@ -966,7 +948,6 @@ const Stats = () => {
               </p>
             )}
           </NeoCard>
-
         </TabsContent>
 
         <TabsContent value="centers" className="space-y-4">
