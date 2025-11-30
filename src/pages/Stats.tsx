@@ -32,7 +32,6 @@ const dateToKey = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-// Funció per normalitzar noms de centres
 const normalizeCenterName = (center: string | undefined): string => {
   if (!center) return 'na';
 
@@ -50,12 +49,10 @@ const normalizeCenterName = (center: string | undefined): string => {
   return normalized.split('').map(char => accentsMap[char] || char).join('');
 };
 
-// Funció per comparar centres
 const centersMatch = (center1: string | undefined, center2: string | undefined): boolean => {
   return normalizeCenterName(center1) === normalizeCenterName(center2);
 };
 
-// Component per mostrar info
 const InfoButton = ({ title, description }: { title: string; description: string }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -452,7 +449,7 @@ const Stats = () => {
   }
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -526,7 +523,6 @@ const Stats = () => {
             </div>
             <div>
               <p className="text-xl sm:text-3xl font-bold text-purple-700">{stats.avgAttendees}</p>
-              {/* text-xs, leading-tight i break-words forçaran l'ajust sense veure's massa petit */}
               <p className="text-[10px] sm:text-sm text-purple-600 leading-tight break-words">Assistents/classe</p>
             </div>
           </div>
@@ -553,7 +549,7 @@ const Stats = () => {
       {/* Pestanyes amb tota la resta d'informació */}
       <Tabs defaultValue="overview" className="space-y-4 w-full">
         <div className="w-full overflow-x-auto">
-          <TabsList className="inline-flex w-auto sm:grid sm:w-full sm:grid-cols-6 gap-1 min-w-0">
+          <TabsList className="inline-flex w-auto sm:grid sm:w-full sm:grid-cols-6 gap-1 min-w-0 flex-wrap">
             <TabsTrigger value="overview" className="text-xs sm:text-sm px-3">Resum</TabsTrigger>
             <TabsTrigger value="evolution" className="text-xs sm:text-sm px-3">Evolució</TabsTrigger>
             <TabsTrigger value="programs" className="text-xs sm:text-sm px-3">Programes</TabsTrigger>
@@ -563,9 +559,7 @@ const Stats = () => {
           </TabsList>
         </div>
 
-        {/* Nova pestanya: Resum General */}
         <TabsContent value="overview" className="space-y-4">
-          {/* Estadístiques secundàries - Mantenim p-4/p-6 perquè són 1 columna en mòbil. */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
             <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-pink-50 to-pink-100 min-w-0">
               <div className="flex items-start justify-between gap-2">
@@ -616,7 +610,6 @@ const Stats = () => {
             </NeoCard>
           </div>
 
-          {/* Indicadors petits - Reducció del gap a gap-1.5 per a sm:grid-cols-3 */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full">
             <NeoCard className="p-3 min-w-0"> 
               <div className="flex items-center justify-between mb-1 gap-2">
