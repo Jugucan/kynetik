@@ -455,7 +455,7 @@ const Stats = () => {
     // Aplicació de pb-8 i px-2 sm:px-4 com a contenidor general.
     <div className="space-y-4 sm:space-y-6 w-full max-w-7xl mx-auto pb-8 px-2 sm:px-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full overflow-hidden">
         <div className="flex items-center gap-3 min-w-0">
           <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
           <div className="min-w-0">
@@ -480,7 +480,7 @@ const Stats = () => {
       </div>
 
       {/* Estadístiques principals - Reducció del gap a gap-1.5 en mòbil per a grid-cols-2 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 w-full">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 w-full overflow-hidden">
         {/* TARGETA 1: Usuaris únics - p-3 en mòbil, p-4 en desktop */}
         <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100 min-w-0"> 
           <div className="flex flex-col gap-1"> 
@@ -552,9 +552,9 @@ const Stats = () => {
       </div>
 
       {/* Pestanyes amb tota la resta d'informació */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <ScrollArea className="w-full whitespace-nowrap pb-2">
-          <TabsList className="inline-flex w-auto sm:grid sm:w-full sm:grid-cols-6 gap-1">
+      <Tabs defaultValue="overview" className="space-y-4 w-full">
+        <div className="w-full overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto sm:grid sm:w-full sm:grid-cols-6 gap-1 min-w-max">
             <TabsTrigger value="overview" className="text-xs sm:text-sm px-3">Resum</TabsTrigger>
             <TabsTrigger value="evolution" className="text-xs sm:text-sm px-3">Evolució</TabsTrigger>
             <TabsTrigger value="programs" className="text-xs sm:text-sm px-3">Programes</TabsTrigger>
@@ -562,7 +562,7 @@ const Stats = () => {
             <TabsTrigger value="centers" className="text-xs sm:text-sm px-3">Centres</TabsTrigger>
             <TabsTrigger value="weekdays" className="text-xs sm:text-sm px-3">Dies setmana</TabsTrigger>
           </TabsList>
-        </ScrollArea>
+        </div>
 
         {/* Nova pestanya: Resum General */}
         <TabsContent value="overview" className="space-y-4">
