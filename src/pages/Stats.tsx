@@ -453,9 +453,9 @@ const Stats = () => {
   
   return (
     // Aplicació de pb-8 i px-2 sm:px-4 com a contenidor general.
-    <div className="space-y-4 sm:space-y-6 w-full max-w-7xl mx-auto pb-8 px-2 sm:px-4">
+    <div className="space-y-4 sm:space-y-6 w-full max-w-7xl mx-auto pb-8 px-4 box-border overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
           <div className="min-w-0">
@@ -480,7 +480,7 @@ const Stats = () => {
       </div>
 
       {/* Estadístiques principals - Reducció del gap a gap-1.5 en mòbil per a grid-cols-2 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 w-full overflow-hidden">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 w-full">
         {/* TARGETA 1: Usuaris únics - p-3 en mòbil, p-4 en desktop */}
         <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100 min-w-0"> 
           <div className="flex flex-col gap-1"> 
