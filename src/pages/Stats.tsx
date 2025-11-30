@@ -442,7 +442,7 @@ const Stats = () => {
         <div className="flex items-center gap-3">
           <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">Les Meves Estadístiques</h1>
+            <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">Les Meves Estadístiques</h1>
             <p className="text-sm text-muted-foreground">Anàlisi del teu rendiment com a instructora</p>
           </div>
         </div>
@@ -459,13 +459,13 @@ const Stats = () => {
         <div className="flex items-center gap-3 min-w-0">
           <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">Les Meves Estadístiques</h1>
+            <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">Les Meves Estadístiques</h1>
             <p className="text-sm text-muted-foreground">Classes reals segons el teu calendari</p>
           </div>
         </div>
 
         <Select value={centerFilter} onValueChange={setCenterFilter}>
-          <SelectTrigger className="w-full sm:w-56 shadow-neo-inset border-0">
+          <SelectTrigger className="w-full sm:w-56 shadow-neo-inset border-0 min-w-0">
             <div className="flex items-center">
               <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
               <SelectValue />
@@ -567,8 +567,8 @@ const Stats = () => {
         {/* Nova pestanya: Resum General */}
         <TabsContent value="overview" className="space-y-4">
           {/* Estadístiques secundàries - Mantenim p-4/p-6 perquè són 1 columna en mòbil. */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
-            <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-pink-50 to-pink-100 min-w-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
+            <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-pink-50 to-pink-100 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3 min-w-0">
                   <Users className="w-8 h-8 sm:w-10 sm:h-10 text-pink-600 flex-shrink-0" />
@@ -584,7 +584,7 @@ const Stats = () => {
               </div>
             </NeoCard>
 
-            <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-indigo-50 to-indigo-100">
+            <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-indigo-50 to-indigo-100">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3 min-w-0">
                   <TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600 flex-shrink-0" />
@@ -600,7 +600,7 @@ const Stats = () => {
               </div>
             </NeoCard>
 
-            <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-teal-50 to-teal-100">
+            <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-teal-50 to-teal-100">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3 min-w-0">
                   <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-teal-600 flex-shrink-0" />
