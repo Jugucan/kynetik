@@ -142,7 +142,7 @@ const Stats = () => {
 
   const isClosure = useCallback((date: Date) => {
     const dateKey = dateToKey(date);
-    return (closuresArbucies && closuresArbucies.hasOwnProperty(dateKey)) || 
+    return (closuresArbucies && closuresArbucies.hasOwnProperty(dateKey)) ||
            (closuresSantHilari && closuresSantHilari.hasOwnProperty(dateKey));
   }, [closuresArbucies, closuresSantHilari]);
 
@@ -186,7 +186,7 @@ const Stats = () => {
       center: string;
     }> = [];
 
-    const oldestScheduleDate = schedules.length > 0 
+    const oldestScheduleDate = schedules.length > 0
       ? schedules.reduce((oldest, schedule) => {
           return schedule.startDate < oldest ? schedule.startDate : oldest;
         }, schedules[0].startDate)
@@ -213,7 +213,7 @@ const Stats = () => {
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    const allUserAttendances = users.flatMap(user => 
+    const allUserAttendances = users.flatMap(user =>
       (user.sessions || []).map(s => ({
         ...s,
         userName: user.name
@@ -276,7 +276,7 @@ const Stats = () => {
 
     const currentMonthSessions = monthlyData[monthlyData.length - 1]?.classes || 0;
     const previousMonthSessions = monthlyData[monthlyData.length - 2]?.classes || 0;
-    const monthlyGrowth = previousMonthSessions > 0 
+    const monthlyGrowth = previousMonthSessions > 0
       ? (((currentMonthSessions - previousMonthSessions) / previousMonthSessions) * 100).toFixed(1)
       : 0;
 
@@ -447,10 +447,9 @@ const Stats = () => {
       </div>
     );
   }
-  
+
   return (
-    <div className="space-y-6 px-4">
-      {/* Header */}
+    <div className="space-y-6 px-4 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
@@ -475,15 +474,13 @@ const Stats = () => {
         </Select>
       </div>
 
-      {/* Estadístiques principals - Reducció del gap a gap-1.5 en mòbil per a grid-cols-2 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 w-full">>
-        {/* TARGETA 1: Usuaris únics - p-3 en mòbil, p-4 en desktop */}
-        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100 min-w-0"> 
-          <div className="flex flex-col gap-1"> 
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full">
+        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100 min-w-0">
+          <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-1">
-              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" /> 
-              <InfoButton 
-                title="Usuaris únics" 
+              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" />
+              <InfoButton
+                title="Usuaris únics"
                 description="Total de persones diferents que han vingut a les teves classes des del començament."
               />
             </div>
@@ -494,13 +491,12 @@ const Stats = () => {
           </div>
         </NeoCard>
 
-        {/* TARGETA 2: Classes fetes */}
         <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-green-50 to-green-100 min-w-0">
-          <div className="flex flex-col gap-1"> 
+          <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-1">
               <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 flex-shrink-0" />
-              <InfoButton 
-                title="Classes fetes" 
+              <InfoButton
+                title="Classes fetes"
                 description="Total de classes que has impartit segons el teu calendari. No inclou dies festius, vacances, tancaments dels gimnasos ni sessions eliminades."
               />
             </div>
@@ -511,13 +507,12 @@ const Stats = () => {
           </div>
         </NeoCard>
 
-        {/* TARGETA 3: Assistents per classe - Mantenim la correcció de text i p-3 */}
         <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-purple-50 to-purple-100 min-w-0">
-          <div className="flex flex-col gap-1"> 
+          <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-1">
               <Target className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 flex-shrink-0" />
-              <InfoButton 
-                title="Assistents per classe" 
+              <InfoButton
+                title="Assistents per classe"
                 description="Mitjana de persones que assisteixen a cada una de les teves classes. Es calcula dividint el total d'assistències entre el total de classes."
               />
             </div>
@@ -528,13 +523,12 @@ const Stats = () => {
           </div>
         </NeoCard>
 
-        {/* TARGETA 4: Usuaris actius */}
         <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-orange-50 to-orange-100 min-w-0">
-          <div className="flex flex-col gap-1"> 
+          <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-1">
               <UserCheck className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600 flex-shrink-0" />
-              <InfoButton 
-                title="Usuaris actius" 
+              <InfoButton
+                title="Usuaris actius"
                 description="Nombre d'usuaris que han assistit almenys una vegada a les teves classes en els últims 30 dies."
               />
             </div>
@@ -546,16 +540,15 @@ const Stats = () => {
         </NeoCard>
       </div>
 
-      {/* Pestanyes amb tota la resta d'informació */}
       <Tabs defaultValue="overview" className="space-y-4 w-full">
-        <div className="w-full overflow-x-auto">
-          <TabsList className="inline-flex w-auto sm:grid sm:w-full sm:grid-cols-6 gap-1 min-w-0 flex-wrap">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm px-3">Resum</TabsTrigger>
-            <TabsTrigger value="evolution" className="text-xs sm:text-sm px-3">Evolució</TabsTrigger>
-            <TabsTrigger value="programs" className="text-xs sm:text-sm px-3">Programes</TabsTrigger>
-            <TabsTrigger value="users" className="text-xs sm:text-sm px-3">Usuaris</TabsTrigger>
-            <TabsTrigger value="centers" className="text-xs sm:text-sm px-3">Centres</TabsTrigger>
-            <TabsTrigger value="weekdays" className="text-xs sm:text-sm px-3">Dies setmana</TabsTrigger>
+        <div className="w-full">
+          <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full gap-1">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm px-2">Resum</TabsTrigger>
+            <TabsTrigger value="evolution" className="text-xs sm:text-sm px-2">Evolució</TabsTrigger>
+            <TabsTrigger value="programs" className="text-xs sm:text-sm px-2">Programes</TabsTrigger>
+            <TabsTrigger value="users" className="text-xs sm:text-sm px-2">Usuaris</TabsTrigger>
+            <TabsTrigger value="centers" className="text-xs sm:text-sm px-2">Centres</TabsTrigger>
+            <TabsTrigger value="weekdays" className="text-xs sm:text-sm px-2">Dies setmana</TabsTrigger>
           </TabsList>
         </div>
 
@@ -570,8 +563,8 @@ const Stats = () => {
                     <p className="text-xs sm:text-sm text-pink-600">Total assistències</p>
                   </div>
                 </div>
-                <InfoButton 
-                  title="Total assistències" 
+                <InfoButton
+                  title="Total assistències"
                   description="Nombre total de vegades que els usuaris han assistit a les teves classes. Un mateix usuari pot comptar múltiples vegades."
                 />
               </div>
@@ -586,8 +579,8 @@ const Stats = () => {
                     <p className="text-xs sm:text-sm text-indigo-600">Mitjana assist./any</p>
                   </div>
                 </div>
-                <InfoButton 
-                  title="Mitjana d'assistències per any" 
+                <InfoButton
+                  title="Mitjana d'assistències per any"
                   description="Mitjana d'assistències que reps cada any. Es calcula dividint el total d'assistències entre el nombre d'anys amb dades."
                 />
               </div>
@@ -602,8 +595,8 @@ const Stats = () => {
                     <p className="text-xs sm:text-sm text-teal-600">Dia més actiu</p>
                   </div>
                 </div>
-                <InfoButton 
-                  title="Dia més actiu" 
+                <InfoButton
+                  title="Dia més actiu"
                   description={`El dia de la setmana en què fas més classes.\n\n${stats.mostPopularDay ? `Total de classes els ${stats.mostPopularDay[0]}: ${stats.mostPopularDay[1]}` : 'Sense dades'}`}
                 />
               </div>
@@ -611,7 +604,7 @@ const Stats = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full">
-            <NeoCard className="p-3 min-w-0"> 
+            <NeoCard className="p-3 min-w-0">
               <div className="flex items-center justify-between mb-1 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <Percent className="w-4 h-4 text-blue-600 flex-shrink-0" />
@@ -631,8 +624,8 @@ const Stats = () => {
                   <TrendingUp className="w-4 h-4 text-green-600 flex-shrink-0" />
                   <p className="text-xs text-muted-foreground truncate">Creixement mensual</p>
                 </div>
-                <InfoButton 
-                  title="Creixement mensual" 
+                <InfoButton
+                  title="Creixement mensual"
                   description="Comparació del nombre de classes entre el mes actual i l'anterior. Un valor positiu indica que has fet més classes aquest mes que l'anterior."
                 />
               </div>
@@ -645,8 +638,8 @@ const Stats = () => {
                   <Clock className="w-4 h-4 text-orange-600 flex-shrink-0" />
                   <p className="text-xs text-muted-foreground truncate">Franja preferida</p>
                 </div>
-                <InfoButton 
-                  title="Franja horària preferida" 
+                <InfoButton
+                  title="Franja horària preferida"
                   description="La franja horària on fas més classes:\n• Matí: abans de les 12h\n• Tarda: de 12h a 18h\n• Vespre: després de les 18h"
                 />
               </div>
@@ -690,7 +683,7 @@ const Stats = () => {
                       <Badge variant="outline">{yearData.count} classes</Badge>
                     </div>
                     <div className="h-8 bg-muted rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full bg-primary transition-all flex items-center justify-end pr-2"
                         style={{ width: `${percentage}%` }}
                       >
@@ -727,8 +720,8 @@ const Stats = () => {
                     Mitjana mensual
                   </button>
                 </div>
-                <InfoButton 
-                  title="Visió assistències" 
+                <InfoButton
+                  title="Visió assistències"
                   description="Canvia entre la vista per anys (totals) i la vista de la mitjana mensual per veure patrons estacionals al llarg dels mesos."
                 />
               </div>
@@ -747,7 +740,7 @@ const Stats = () => {
                         <Badge variant="outline" className="bg-blue-50">{yearData.count} assistències</Badge>
                       </div>
                       <div className="h-8 bg-muted rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full bg-blue-500 transition-all flex items-center justify-end pr-2"
                           style={{ width: `${percentage}%` }}
                         >
@@ -773,7 +766,7 @@ const Stats = () => {
                           <Badge variant="outline" className="bg-blue-50">{m.avg}</Badge>
                         </div>
                         <div className="h-8 bg-muted rounded-full overflow-hidden">
-                          <div 
+                          <div
                             className="h-full bg-blue-500 transition-all flex items-center justify-end pr-2"
                             style={{ width: `${pct}%` }}
                           >
@@ -810,7 +803,7 @@ const Stats = () => {
                       <div className="flex items-center gap-2 sm:gap-3">
                         <span className="text-xs text-muted-foreground min-w-[56px] sm:min-w-[90px] flex-shrink-0">Classes:</span>
                         <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden min-w-0">
-                          <div 
+                          <div
                             className="h-full bg-green-500 transition-all"
                             style={{ width: `${classesPercentage}%` }}
                           />
@@ -821,7 +814,7 @@ const Stats = () => {
                       <div className="flex items-center gap-2 sm:gap-3">
                         <span className="text-xs text-muted-foreground min-w-[56px] sm:min-w-[90px] flex-shrink-0">Assistències:</span>
                         <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden min-w-0">
-                          <div 
+                          <div
                             className="h-full bg-blue-500 transition-all"
                             style={{ width: `${attendancesPercentage}%` }}
                           />
@@ -869,7 +862,7 @@ const Stats = () => {
                       </div>
                     </div>
                     <div className="h-6 bg-muted rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all"
                         style={{ width: `${percentage}%` }}
                       />
@@ -888,10 +881,10 @@ const Stats = () => {
               <h3 className="text-base sm:text-xl font-semibold">Top 10 Usuaris Fidels</h3>
             </div>
             <Separator className="mb-4" />
-            <div className="space-y-2 overflow-hidden">
+            <div className="space-y-2">
               {stats.topUsers.map((user, idx) => (
-                <div 
-                  key={user.id} 
+                <div
+                  key={user.id}
                   onClick={() => setViewingUser(user)}
                   className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded cursor-pointer hover:bg-muted/50 transition-colors gap-2"
                 >
@@ -899,9 +892,9 @@ const Stats = () => {
                     <Badge className={`${idx < 3 ? 'bg-yellow-500' : 'bg-muted'} flex-shrink-0`}>
                       #{idx + 1}
                     </Badge>
-                    <span className="font-medium text-sm sm:text-base truncate max-w-[120px] sm:max-w-none">{user.name}</span>
+                    <span className="font-medium text-sm sm:text-base truncate">{user.name}</span>
                   </div>
-                  <Badge variant="outline" className="flex-shrink-0 text-xs">{user.totalSessions || 0}</Badge>
+                  <Badge variant="outline" className="flex-shrink-0">{user.totalSessions || 0} sessions</Badge>
                 </div>
               ))}
             </div>
@@ -927,18 +920,17 @@ const Stats = () => {
             <Separator className="mb-4" />
             {stats.inactiveUsers.length > 0 ? (
               <ScrollArea className="h-64">
-                <div className="space-y-2 overflow-hidden">
+                <div className="space-y-2">
                   {stats.inactiveUsers.map((user) => (
-                    <div 
-                      key={user.id} 
+                    <div
+                      key={user.id}
                       onClick={() => setViewingUser(user)}
                       className="flex items-center justify-between p-2 bg-red-50 rounded cursor-pointer hover:bg-red-100 transition-colors gap-2"
                     >
-                      <span className="font-medium text-sm truncate max-w-[120px] sm:max-w-none">{user.name}</span>
-                      <Badge variant="outline" className="bg-white flex-shrink-0 text-xs">
+                      <span className="font-medium text-sm truncate">{user.name}</span>
+                      <Badge variant="outline" className="bg-white flex-shrink-0">
                         <Clock className="w-3 h-3 mr-1" />
-                        <span className="hidden sm:inline">{user.daysSinceLastSession} dies</span>
-                        <span className="sm:hidden">{user.daysSinceLastSession}d</span>
+                        {user.daysSinceLastSession} dies
                       </Badge>
                     </div>
                   ))}
@@ -946,7 +938,7 @@ const Stats = () => {
               </ScrollArea>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-4">
-                🎉 No hi ha usuaris inactius!
+                No hi ha usuaris inactius!
               </p>
             )}
           </NeoCard>
@@ -969,7 +961,7 @@ const Stats = () => {
                     <p className="text-3xl sm:text-4xl font-bold mb-2">{count}</p>
                     <p className="text-sm font-medium mb-3 truncate">{center}</p>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className={`h-full ${center === 'Arbúcies' ? 'bg-blue-500' : 'bg-green-500'}`}
                         style={{ width: `${percentage}%` }}
                       />
@@ -1003,7 +995,7 @@ const Stats = () => {
                       <Badge variant="outline">{dayData.count} classes</Badge>
                     </div>
                     <div className="h-8 bg-muted rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full bg-gradient-to-r from-teal-500 to-teal-400 transition-all flex items-center justify-end pr-2"
                         style={{ width: `${percentage}%` }}
                       >
