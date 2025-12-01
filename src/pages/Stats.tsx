@@ -476,7 +476,7 @@ const Stats = () => {
       </div>
 
       {/* Estadístiques principals - Reducció del gap a gap-1.5 en mòbil per a grid-cols-2 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 w-full -mx-4 px-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 w-full">>
         {/* TARGETA 1: Usuaris únics - p-3 en mòbil, p-4 en desktop */}
         <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100 min-w-0"> 
           <div className="flex flex-col gap-1"> 
@@ -888,7 +888,7 @@ const Stats = () => {
               <h3 className="text-base sm:text-xl font-semibold">Top 10 Usuaris Fidels</h3>
             </div>
             <Separator className="mb-4" />
-            <div className="space-y-2">
+            <div className="space-y-2 overflow-hidden">
               {stats.topUsers.map((user, idx) => (
                 <div 
                   key={user.id} 
@@ -899,9 +899,9 @@ const Stats = () => {
                     <Badge className={`${idx < 3 ? 'bg-yellow-500' : 'bg-muted'} flex-shrink-0`}>
                       #{idx + 1}
                     </Badge>
-                    <span className="font-medium text-sm sm:text-base truncate">{user.name}</span>
+                    <span className="font-medium text-sm sm:text-base truncate max-w-[120px] sm:max-w-none">{user.name}</span>
                   </div>
-                  <Badge variant="outline" className="flex-shrink-0">{user.totalSessions || 0} sessions</Badge>
+                  <Badge variant="outline" className="flex-shrink-0 text-xs">{user.totalSessions || 0}</Badge>
                 </div>
               ))}
             </div>
@@ -927,17 +927,18 @@ const Stats = () => {
             <Separator className="mb-4" />
             {stats.inactiveUsers.length > 0 ? (
               <ScrollArea className="h-64">
-                <div className="space-y-2">
+                <div className="space-y-2 overflow-hidden">
                   {stats.inactiveUsers.map((user) => (
                     <div 
                       key={user.id} 
                       onClick={() => setViewingUser(user)}
                       className="flex items-center justify-between p-2 bg-red-50 rounded cursor-pointer hover:bg-red-100 transition-colors gap-2"
                     >
-                      <span className="font-medium text-sm truncate">{user.name}</span>
-                      <Badge variant="outline" className="bg-white flex-shrink-0">
+                      <span className="font-medium text-sm truncate max-w-[120px] sm:max-w-none">{user.name}</span>
+                      <Badge variant="outline" className="bg-white flex-shrink-0 text-xs">
                         <Clock className="w-3 h-3 mr-1" />
-                        {user.daysSinceLastSession} dies
+                        <span className="hidden sm:inline">{user.daysSinceLastSession} dies</span>
+                        <span className="sm:hidden">{user.daysSinceLastSession}d</span>
                       </Badge>
                     </div>
                   ))}
