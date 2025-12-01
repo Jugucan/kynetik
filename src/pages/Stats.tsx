@@ -449,7 +449,7 @@ const Stats = () => {
   }
   
   return (
-    <div className="space-y-6 overflow-x-hidden">
+    <div className="space-y-6 px-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -476,7 +476,7 @@ const Stats = () => {
       </div>
 
       {/* Estadístiques principals - Reducció del gap a gap-1.5 en mòbil per a grid-cols-2 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 w-full">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 w-full -mx-4 px-4">
         {/* TARGETA 1: Usuaris únics - p-3 en mòbil, p-4 en desktop */}
         <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-blue-100 min-w-0"> 
           <div className="flex flex-col gap-1"> 
@@ -885,7 +885,7 @@ const Stats = () => {
           <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-yellow-600 flex-shrink-0" />
-              <h3 className="text-lg sm:text-xl font-semibold">Top 10 Usuaris Més Fidels</h3>
+              <h3 className="text-base sm:text-xl font-semibold">Top 10 Usuaris Fidels</h3>
             </div>
             <Separator className="mb-4" />
             <div className="space-y-2">
@@ -911,16 +911,17 @@ const Stats = () => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
               <div className="flex items-center gap-2">
                 <UserX className="w-5 h-5 text-red-600 flex-shrink-0" />
-                <h3 className="text-lg sm:text-xl font-semibold">Usuaris Inactius (+60 dies)</h3>
+                <h3 className="text-base sm:text-xl font-semibold">Usuaris Inactius (+60d)</h3>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setInactiveSortOrder(inactiveSortOrder === 'desc' ? 'asc' : 'desc')}
-                className="gap-2 w-full sm:w-auto"
+                className="gap-2 w-full sm:w-auto text-xs sm:text-sm"
               >
                 <ArrowUpDown className="w-4 h-4" />
-                {inactiveSortOrder === 'desc' ? 'Més dies' : 'Menys dies'}
+                <span className="hidden sm:inline">{inactiveSortOrder === 'desc' ? 'Més dies' : 'Menys dies'}</span>
+                <span className="sm:hidden">{inactiveSortOrder === 'desc' ? '▼ Dies' : '▲ Dies'}</span>
               </Button>
             </div>
             <Separator className="mb-4" />
