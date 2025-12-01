@@ -449,7 +449,7 @@ const Stats = () => {
   }
 
   return (
-    <div className="space-y-6 px-4 max-w-7xl mx-auto">
+    <div className="space-y-6 px-4 max-w-7xl mx-auto overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
@@ -540,7 +540,7 @@ const Stats = () => {
         </NeoCard>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4 w-full">
+      <Tabs defaultValue="overview" className="space-y-6 w-full">
         <div className="w-full">
           <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full gap-1">
             <TabsTrigger value="overview" className="text-xs sm:text-sm px-2">Resum</TabsTrigger>
@@ -874,33 +874,33 @@ const Stats = () => {
           </NeoCard>
         </TabsContent>
 
-        <TabsContent value="users" className="space-y-4">
-          <NeoCard className="p-4 sm:p-6 min-w-0">
+        <TabsContent value="users" className="space-y-4 overflow-x-hidden">
+          <NeoCard className="p-4 sm:p-6 min-w-0 overflow-hidden">
             <div className="flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-yellow-600 flex-shrink-0" />
               <h3 className="text-base sm:text-xl font-semibold">Top 10 Usuaris Fidels</h3>
             </div>
             <Separator className="mb-4" />
-            <div className="space-y-2">
+            <div className="space-y-2 overflow-x-hidden">
               {stats.topUsers.map((user, idx) => (
                 <div
                   key={user.id}
                   onClick={() => setViewingUser(user)}
-                  className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded cursor-pointer hover:bg-muted/50 transition-colors gap-2"
+                  className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded cursor-pointer hover:bg-muted/50 transition-colors gap-2 overflow-hidden"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Badge className={`${idx < 3 ? 'bg-yellow-500' : 'bg-muted'} flex-shrink-0`}>
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 overflow-hidden flex-1">
+                    <Badge className={`${idx < 3 ? 'bg-yellow-500' : 'bg-muted'} flex-shrink-0 text-[10px] sm:text-xs px-1.5 sm:px-2`}>
                       #{idx + 1}
                     </Badge>
-                    <span className="font-medium text-sm sm:text-base truncate">{user.name}</span>
+                    <span className="font-medium text-xs sm:text-base truncate">{user.name}</span>
                   </div>
-                  <Badge variant="outline" className="flex-shrink-0">{user.totalSessions || 0} sessions</Badge>
+                  <Badge variant="outline" className="flex-shrink-0 text-[10px] sm:text-xs whitespace-nowrap">{user.totalSessions || 0} sessions</Badge>
                 </div>
               ))}
             </div>
           </NeoCard>
 
-          <NeoCard className="p-4 sm:p-6 min-w-0">
+          <NeoCard className="p-4 sm:p-6 min-w-0 overflow-hidden">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
               <div className="flex items-center gap-2">
                 <UserX className="w-5 h-5 text-red-600 flex-shrink-0" />
@@ -919,17 +919,17 @@ const Stats = () => {
             </div>
             <Separator className="mb-4" />
             {stats.inactiveUsers.length > 0 ? (
-              <ScrollArea className="h-64">
-                <div className="space-y-2">
+              <ScrollArea className="h-64 overflow-x-hidden">
+                <div className="space-y-2 overflow-x-hidden">
                   {stats.inactiveUsers.map((user) => (
                     <div
                       key={user.id}
                       onClick={() => setViewingUser(user)}
-                      className="flex items-center justify-between p-2 bg-red-50 rounded cursor-pointer hover:bg-red-100 transition-colors gap-2"
+                      className="flex items-center justify-between p-2 bg-red-50 rounded cursor-pointer hover:bg-red-100 transition-colors gap-2 overflow-hidden"
                     >
-                      <span className="font-medium text-sm truncate">{user.name}</span>
-                      <Badge variant="outline" className="bg-white flex-shrink-0">
-                        <Clock className="w-3 h-3 mr-1" />
+                      <span className="font-medium text-xs sm:text-sm truncate flex-1">{user.name}</span>
+                      <Badge variant="outline" className="bg-white flex-shrink-0 text-[10px] sm:text-xs whitespace-nowrap">
+                        <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
                         {user.daysSinceLastSession} dies
                       </Badge>
                     </div>
