@@ -541,9 +541,9 @@ const Stats = () => {
       </div>
 
       {/* MÉS ESPAI entre pestanyes i contingut: space-y-6 en lloc de 4 */}
-      <Tabs defaultValue="overview" className="space-y-6 w-full overflow-x-hidden">
+      <Tabs defaultValue="overview" className="space-y-6 w-full">
         <div className="w-full">
-          <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full gap-1 mb-6">
+          <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full gap-1">
             <TabsTrigger value="overview" className="text-xs sm:text-sm px-2">Resum</TabsTrigger>
             <TabsTrigger value="evolution" className="text-xs sm:text-sm px-2">Evolució</TabsTrigger>
             <TabsTrigger value="programs" className="text-xs sm:text-sm px-2">Programes</TabsTrigger>
