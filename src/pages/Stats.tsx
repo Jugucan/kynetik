@@ -876,7 +876,7 @@ const Stats = () => {
         </TabsContent>
 
         {/* PESTANYA USUARIS: overflow controlat i texts més compactes en mòbil */}
-        <TabsContent value="users" className="space-y-4 overflow-x-hidden min-w-0 w-full">
+        <TabsContent value="users" className="space-y-4 overflow-x-hidden min-w-0 w-full max-w-full">
           <NeoCard className="p-4 sm:p-6 min-w-0 overflow-hidden">
             <div className="flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-yellow-600 flex-shrink-0" />
@@ -888,15 +888,15 @@ const Stats = () => {
                 <div
                   key={user.id}
                   onClick={() => setViewingUser(user)}
-                  className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded cursor-pointer hover:bg-muted/50 transition-colors gap-2 min-w-0"
+                  className="flex items-center justify-between p-2 sm:p-3 bg-muted/30 rounded cursor-pointer hover:bg-muted/50 transition-colors gap-2 min-w-0 max-w-full"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
                     <Badge
                       className={`${idx < 3 ? 'bg-yellow-500' : 'bg-muted'} flex-shrink-0 text-[10px] sm:text-xs px-2 py-1`}
                     >
                       #{idx + 1}
                     </Badge>
-                    <span className="font-medium text-sm sm:text-base truncate">
+                    <span className="font-medium text-sm sm:text-base truncate block min-w-0">
                       {user.name}
                     </span>
                   </div>
@@ -904,7 +904,8 @@ const Stats = () => {
                     variant="outline"
                     className="flex-shrink-0 whitespace-nowrap text-[10px] sm:text-xs px-2 py-1"
                   >
-                    {user.totalSessions || 0} sessions
+                    <span className="hidden sm:inline">{user.totalSessions || 0} sessions</span>
+                    <span className="sm:hidden">{user.totalSessions || 0}</span>
                   </Badge>
                 </div>
               ))}
@@ -936,17 +937,18 @@ const Stats = () => {
                     <div
                       key={user.id}
                       onClick={() => setViewingUser(user)}
-                      className="flex items-center justify-between p-2 bg-red-50 rounded cursor-pointer hover:bg-red-100 transition-colors gap-2 min-w-0"
+                      className="flex items-center justify-between p-2 bg-red-50 rounded cursor-pointer hover:bg-red-100 transition-colors gap-2 min-w-0 max-w-full"
                     >
-                      <span className="font-medium text-sm truncate">
+                      <span className="font-medium text-sm truncate block min-w-0 flex-1 overflow-hidden">
                         {user.name}
                       </span>
                       <Badge
                         variant="outline"
-                        className="bg-white flex-shrink-0 text-[10px] sm:text-xs px-2 py-1"
+                        className="bg-white flex-shrink-0 text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1"
                       >
-                        <Clock className="w-3 h-3 mr-1" />
-                        {user.daysSinceLastSession} dies
+                        <Clock className="w-3 h-3 mr-0.5 sm:mr-1" />
+                        <span className="hidden sm:inline">{user.daysSinceLastSession} dies</span>
+                        <span className="sm:hidden">{user.daysSinceLastSession}d</span>
                       </Badge>
                     </div>
                   ))}
