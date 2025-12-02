@@ -876,7 +876,7 @@ const Stats = () => {
         </TabsContent>
 
         {/* PESTANYA USUARIS: overflow controlat i texts més compactes en mòbil */}
-        <TabsContent value="users" className="space-y-4 overflow-x-hidden">
+        <TabsContent value="users" className="space-y-4 overflow-x-hidden min-w-0 w-full">
           <NeoCard className="p-4 sm:p-6 min-w-0 overflow-hidden">
             <div className="flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-yellow-600 flex-shrink-0" />
@@ -930,7 +930,7 @@ const Stats = () => {
             </div>
             <Separator className="mb-4" />
             {stats.inactiveUsers.length > 0 ? (
-              <ScrollArea className="h-64">
+              <ScrollArea className="h-64 min-w-0">
                 <div className="space-y-2">
                   {stats.inactiveUsers.map((user) => (
                     <div
@@ -943,7 +943,7 @@ const Stats = () => {
                       </span>
                       <Badge
                         variant="outline"
-                        className="bg-white flex-shrink-0 whitespace-nowrap text-[10px] sm:text-xs px-2 py-1"
+                        className="bg-white flex-shrink-0 text-[10px] sm:text-xs px-2 py-1"
                       >
                         <Clock className="w-3 h-3 mr-1" />
                         {user.daysSinceLastSession} dies
