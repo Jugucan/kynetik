@@ -449,7 +449,8 @@ const Stats = () => {
   }
 
   return (
-    <div className="space-y-6 px-4 max-w-7xl mx-auto overflow-x-hidden">
+    <div className="w-full max-w-full overflow-x-hidden">
+      <div className="space-y-6 px-4 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
@@ -1044,6 +1045,7 @@ const Stats = () => {
         onEdit={() => {}}
       />
     </div>
+  </div>
   );
 };
 
