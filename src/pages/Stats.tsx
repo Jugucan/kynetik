@@ -542,7 +542,7 @@ const Stats = () => {
       </div>
 
       {/* MÉS ESPAI entre pestanyes i contingut: space-y-6 en lloc de 4 */}
-      <Tabs defaultValue="overview" className="space-y-8 w-full">
+      <Tabs defaultValue="overview" className="space-y-10 w-full">
         <div className="w-full">
           <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full gap-1 pb-6">
             <TabsTrigger value="overview" className="text-xs sm:text-sm px-2">Resum</TabsTrigger>
@@ -554,7 +554,7 @@ const Stats = () => {
           </TabsList>
         </div>
 
-        <TabsContent value="overview" className="space-y-4 mt-16">
+        <TabsContent value="overview" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
             <NeoCard className="p-3 sm:p-6 bg-gradient-to-br from-pink-50 to-pink-100 min-w-0">
               <div className="flex items-start justify-between gap-2">
@@ -650,7 +650,7 @@ const Stats = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="evolution" className="space-y-4 mt-16">
+        <TabsContent value="evolution" className="space-y-4">
           <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <h3 className="text-lg sm:text-xl font-semibold">Tendència General</h3>
@@ -841,7 +841,7 @@ const Stats = () => {
           </NeoCard>
         </TabsContent>
 
-        <TabsContent value="programs" className="space-y-4 mt-16">
+        <TabsContent value="programs" className="space-y-4">
           <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-primary flex-shrink-0" />
@@ -877,7 +877,7 @@ const Stats = () => {
         </TabsContent>
 
         {/* PESTANYA USUARIS: overflow controlat i texts més compactes en mòbil */}
-        <TabsContent value="users" className="space-y-4 mt-16">
+        <TabsContent value="users" className="space-y-4">
           <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-yellow-600 flex-shrink-0" />
@@ -963,7 +963,7 @@ const Stats = () => {
           </NeoCard>
         </TabsContent>
 
-        <TabsContent value="centers" className="space-y-4 mt-16">
+        <TabsContent value="centers" className="space-y-4">
           <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex items-center gap-2 mb-4">
               <MapPin className="w-5 h-5 text-primary flex-shrink-0" />
@@ -995,7 +995,7 @@ const Stats = () => {
           </NeoCard>
         </TabsContent>
 
-        <TabsContent value="weekdays" className="space-y-4 mt-16">
+        <TabsContent value="weekdays" className="space-y-4">
           <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="w-5 h-5 text-primary flex-shrink-0" />
