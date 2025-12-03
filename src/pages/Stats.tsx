@@ -1043,6 +1043,7 @@ const Stats = () => {
         isOpen={!!viewingUser}
         onClose={() => setViewingUser(null)}
         onEdit={() => {}}
+        allUsers={users}
       />
     </div>
   </div>
