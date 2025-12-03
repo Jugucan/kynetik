@@ -39,7 +39,7 @@ const App = () => (
                   <SidebarProvider>
                     <div className="flex min-h-screen w-full bg-background">
                       <AppSidebar />
-                      <main className="flex-1 p-8">
+                      <main className="flex-1 p-4 sm:p-8 overflow-x-hidden min-w-0">
                         <div className="mb-4">
                           <SidebarTrigger className="shadow-neo hover:shadow-neo-sm" />
                         </div>
