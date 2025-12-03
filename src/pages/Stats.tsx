@@ -877,7 +877,7 @@ const Stats = () => {
         </TabsContent>
 
         {/* PESTANYA USUARIS: overflow controlat i texts més compactes en mòbil */}
-        <TabsContent value="users" className="space-y-4 overflow-x-hidden min-w-0 w-full mt-6"> className="space-y-4 overflow-x-hidden min-w-0 w-full max-w-full">
+        <TabsContent value="users" className="space-y-4 overflow-x-hidden min-w-0 w-full mt-6">
           <NeoCard className="p-4 sm:p-6 min-w-0">
             <div className="flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-yellow-600 flex-shrink-0" />
