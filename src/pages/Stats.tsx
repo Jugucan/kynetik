@@ -368,7 +368,16 @@ const Stats = () => {
       .slice(0, 10);
 
     const inactiveUsers = users
-      .filter(user => (user.daysSinceLastSession || 0) > 60)
+      .filter(user => {
+        // Primer: comprovar si l'usuari està inactiu (+60 dies)
+        if ((user.daysSinceLastSession || 0) <= 60) return false;
+        
+        // Segon: si el filtre és "all", mostrar tots els inactius
+        if (centerFilter === "all") return true;
+        
+        // Tercer: filtrar per centre - comprovar si l'usuari té sessions al centre seleccionat
+        return (user.sessions || []).some(s => centersMatch(s.center, centerFilter));
+      })
       .sort((a, b) => {
         const diffA = a.daysSinceLastSession || 0;
         const diffB = b.daysSinceLastSession || 0;
@@ -945,11 +954,11 @@ const Stats = () => {
                       </span>
                       <Badge
                         variant="outline"
-                        className="bg-white flex-shrink-0 text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1"
+                        className="bg-white flex-shrink-0 whitespace-nowrap text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1"
                       >
                         <Clock className="w-3 h-3 mr-0.5 sm:mr-1" />
                         <span className="hidden sm:inline">{user.daysSinceLastSession} dies</span>
-                        <span className="sm:hidden">{user.daysSinceLastSession}d</span>
+                        <span className="inline sm:hidden">{user.daysSinceLastSession}d</span>
                       </Badge>
                     </div>
                   ))}
