@@ -134,7 +134,7 @@ const StatsNew = () => {
           </TabsContent>
 
           <TabsContent value="programs">
-            <TabPrograms stats={stats} />
+            <TabPrograms stats={stats} onUserClick={setViewingUser} />
           </TabsContent>
 
           <TabsContent value="users">
