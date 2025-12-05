@@ -14,7 +14,6 @@ import Programs from "./pages/Programs";
 import Mixtos from "./pages/Mixtos";
 import Schedules from "./pages/Schedules";
 import Stats from "./pages/Stats";
-import StatsNew from "./pages/Stats-NEW";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -51,8 +50,7 @@ const App = () => (
                           <Route path="/programs" element={<Programs />} />
                           <Route path="/mixtos" element={<Mixtos />} />
                           <Route path="/schedules" element={<Schedules />} />
-                          <Route path="/stats" element={<Stats />} />
-                          <Route path="/stats-new" element={<ProtectedRoute><StatsNew /></ProtectedRoute>} />
+                          <Route path="/stats" element={<Stats />} />                          
                           <Route 
                             path="/settings" 
                             element={
