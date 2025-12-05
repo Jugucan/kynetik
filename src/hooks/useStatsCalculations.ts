@@ -318,6 +318,74 @@ export const useStatsCalculations = ({
       return { month: name, avg };
     });
 
+    // NOUS CÀLCULS: Assistències per programa i mes
+    const attendancesByProgramMonth: { [key: string]: { [month: string]: number } } = {};
+    filteredAttendances.forEach(attendance => {
+      const program = attendance.activity;
+      const yearMonth = attendance.date.slice(0, 7); // Format: "2024-01"
+      
+      if (!attendancesByProgramMonth[program]) {
+        attendancesByProgramMonth[program] = {};
+      }
+      attendancesByProgramMonth[program][yearMonth] = (attendancesByProgramMonth[program][yearMonth] || 0) + 1;
+    });
+
+    // Generar els últims 12 mesos per la gràfica
+    const last12Months: string[] = [];
+    const last12MonthsLabels: string[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const yearMonth = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+      const label = date.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
+      last12Months.push(yearMonth);
+      last12MonthsLabels.push(label);
+    }
+
+    // Crear dataset per cada programa
+    const programAttendancesOverTime = programData.map(prog => {
+      const data = last12Months.map(month => 
+        attendancesByProgramMonth[prog.name]?.[month] || 0
+      );
+      return {
+        program: prog.name,
+        data: data
+      };
+    });
+
+    // NOUS CÀLCULS: Top usuaris per programa
+    const topUsersByProgram: { [program: string]: any[] } = {};
+    
+    programData.forEach(prog => {
+      const programName = prog.name;
+      
+      // Comptar sessions per usuari en aquest programa
+      const userSessionsCount: { [userId: string]: { user: any; count: number } } = {};
+      
+      filteredAttendances.forEach(attendance => {
+        if (attendance.activity === programName) {
+          const userId = attendance.userName; // Usem el nom com a ID temporal
+          
+          if (!userSessionsCount[userId]) {
+            const user = users.find(u => u.name === userId);
+            userSessionsCount[userId] = {
+              user: user || { name: userId, id: userId },
+              count: 0
+            };
+          }
+          userSessionsCount[userId].count++;
+        }
+      });
+      
+      // Ordenar i agafar top 10
+      topUsersByProgram[programName] = Object.values(userSessionsCount)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10)
+        .map(item => ({
+          ...item.user,
+          sessionsInProgram: item.count
+        }));
+    });
+
     return {
       totalUsers,
       totalSessions,
@@ -340,7 +408,11 @@ export const useStatsCalculations = ({
       preferredTimeSlot: preferredTimeSlot ? timeSlotNames[preferredTimeSlot[0] as keyof typeof timeSlotNames] : 'N/A',
       recurrentUsers: recurrentUsersFiltered,
       classesByWeekday,
-      monthlyAverages
+      monthlyAverages,
+      // NOUS CAMPS
+      programAttendancesOverTime,
+      last12MonthsLabels,
+      topUsersByProgram
     };
   }, [users, centerFilter, inactiveSortOrder, schedules, customSessions, getSessionsForDate]);
 
