@@ -340,6 +340,7 @@ export const useStatsCalculations = ({
     
     allUserAttendances.forEach(attendance => {
       const program = attendance.activity;
+      if (!program) return; // Saltar si no té programa
       const yearMonth = attendance.date.slice(0, 7); // Format: "2024-01"
       const year = attendance.date.slice(0, 4); // Format: "2024"
       
@@ -370,13 +371,16 @@ export const useStatsCalculations = ({
       return date.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
     });
 
+    // Obtenir tots els programes reals amb assistències
+    const programsWithData = Array.from(realProgramNames).sort();
+
     // Crear dataset per cada programa (tots els mesos)
-    const programAttendancesOverTimeAll = programData.map(prog => {
+    const programAttendancesOverTimeAll = programsWithData.map(programName => {
       const data = allMonthsSorted.map(month => 
-        attendancesByProgramMonth[prog.name]?.[month] || 0
+        attendancesByProgramMonth[programName]?.[month] || 0
       );
       return {
-        program: prog.name,
+        program: programName,
         data: data
       };
     });
@@ -393,12 +397,12 @@ export const useStatsCalculations = ({
     }
 
     // Crear dataset per cada programa (últims 12 mesos)
-    const programAttendancesOverTime12 = programData.map(prog => {
+    const programAttendancesOverTime12 = programsWithData.map(programName => {
       const data = last12Months.map(month => 
-        attendancesByProgramMonth[prog.name]?.[month] || 0
+        attendancesByProgramMonth[programName]?.[month] || 0
       );
       return {
-        program: prog.name,
+        program: programName,
         data: data
       };
     });
@@ -411,12 +415,12 @@ export const useStatsCalculations = ({
     const allYearsSorted = Array.from(allYearsSet).sort();
 
     // Crear dataset per cada programa (per anys)
-    const programAttendancesByYear = programData.map(prog => {
+    const programAttendancesByYear = programsWithData.map(programName => {
       const data = allYearsSorted.map(year => 
-        attendancesByProgramYear[prog.name]?.[year] || 0
+        attendancesByProgramYear[programName]?.[year] || 0
       );
       return {
-        program: prog.name,
+        program: programName,
         data: data
       };
     });
