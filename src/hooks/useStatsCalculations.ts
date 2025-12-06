@@ -318,19 +318,54 @@ export const useStatsCalculations = ({
       return { month: name, avg };
     });
 
-    // NOUS CÀLCULS: Assistències per programa i mes
+    // NOUS CÀLCULS: Assistències per programa i mes/any
     const attendancesByProgramMonth: { [key: string]: { [month: string]: number } } = {};
-    filteredAttendances.forEach(attendance => {
+    const attendancesByProgramYear: { [key: string]: { [year: string]: number } } = {};
+    
+    allUserAttendances.forEach(attendance => {
       const program = attendance.activity;
       const yearMonth = attendance.date.slice(0, 7); // Format: "2024-01"
+      const year = attendance.date.slice(0, 4); // Format: "2024"
       
+      // Per mes
       if (!attendancesByProgramMonth[program]) {
         attendancesByProgramMonth[program] = {};
       }
       attendancesByProgramMonth[program][yearMonth] = (attendancesByProgramMonth[program][yearMonth] || 0) + 1;
+      
+      // Per any
+      if (!attendancesByProgramYear[program]) {
+        attendancesByProgramYear[program] = {};
+      }
+      attendancesByProgramYear[program][year] = (attendancesByProgramYear[program][year] || 0) + 1;
     });
 
-    // Generar els últims 12 mesos per la gràfica
+    // Obtenir tots els mesos disponibles (des del més antic fins avui)
+    const allMonthsSet = new Set<string>();
+    Object.values(attendancesByProgramMonth).forEach(programMonths => {
+      Object.keys(programMonths).forEach(month => allMonthsSet.add(month));
+    });
+    const allMonthsSorted = Array.from(allMonthsSet).sort();
+
+    // Generar labels per tots els mesos
+    const allMonthsLabels = allMonthsSorted.map(ym => {
+      const [year, month] = ym.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+      return date.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
+    });
+
+    // Crear dataset per cada programa (tots els mesos)
+    const programAttendancesOverTimeAll = programData.map(prog => {
+      const data = allMonthsSorted.map(month => 
+        attendancesByProgramMonth[prog.name]?.[month] || 0
+      );
+      return {
+        program: prog.name,
+        data: data
+      };
+    });
+
+    // Generar els últims 12 mesos per vista reduïda
     const last12Months: string[] = [];
     const last12MonthsLabels: string[] = [];
     for (let i = 11; i >= 0; i--) {
@@ -341,10 +376,28 @@ export const useStatsCalculations = ({
       last12MonthsLabels.push(label);
     }
 
-    // Crear dataset per cada programa
-    const programAttendancesOverTime = programData.map(prog => {
+    // Crear dataset per cada programa (últims 12 mesos)
+    const programAttendancesOverTime12 = programData.map(prog => {
       const data = last12Months.map(month => 
         attendancesByProgramMonth[prog.name]?.[month] || 0
+      );
+      return {
+        program: prog.name,
+        data: data
+      };
+    });
+
+    // Obtenir tots els anys disponibles
+    const allYearsSet = new Set<string>();
+    Object.values(attendancesByProgramYear).forEach(programYears => {
+      Object.keys(programYears).forEach(year => allYearsSet.add(year));
+    });
+    const allYearsSorted = Array.from(allYearsSet).sort();
+
+    // Crear dataset per cada programa (per anys)
+    const programAttendancesByYear = programData.map(prog => {
+      const data = allYearsSorted.map(year => 
+        attendancesByProgramYear[prog.name]?.[year] || 0
       );
       return {
         program: prog.name,
@@ -361,18 +414,23 @@ export const useStatsCalculations = ({
       // Comptar sessions per usuari en aquest programa
       const userSessionsCount: { [userId: string]: { user: any; count: number } } = {};
       
-      filteredAttendances.forEach(attendance => {
+      allUserAttendances.forEach(attendance => {
         if (attendance.activity === programName) {
-          const userId = attendance.userName; // Usem el nom com a ID temporal
+          const userName = attendance.userName;
           
-          if (!userSessionsCount[userId]) {
-            const user = users.find(u => u.name === userId);
-            userSessionsCount[userId] = {
-              user: user || { name: userId, id: userId },
-              count: 0
-            };
+          if (!userSessionsCount[userName]) {
+            const user = users.find(u => u.name === userName);
+            if (user) {
+              userSessionsCount[userName] = {
+                user: user,
+                count: 0
+              };
+            }
           }
-          userSessionsCount[userId].count++;
+          
+          if (userSessionsCount[userName]) {
+            userSessionsCount[userName].count++;
+          }
         }
       });
       
@@ -410,8 +468,12 @@ export const useStatsCalculations = ({
       classesByWeekday,
       monthlyAverages,
       // NOUS CAMPS
-      programAttendancesOverTime,
+      programAttendancesOverTime12, // Últims 12 mesos
+      programAttendancesOverTimeAll, // Tots els mesos des de l'inici
+      programAttendancesByYear, // Per anys
       last12MonthsLabels,
+      allMonthsLabels, // Tots els mesos
+      allYearsSorted, // Tots els anys
       topUsersByProgram
     };
   }, [users, centerFilter, inactiveSortOrder, schedules, customSessions, getSessionsForDate]);
