@@ -422,11 +422,18 @@ export const useStatsCalculations = ({
     });
 
     // NOUS CÀLCULS: Top usuaris per programa
+    // Primer obtenim tots els noms REALS de programes de les assistències
+    const realProgramNames = new Set<string>();
+    allUserAttendances.forEach(attendance => {
+      if (attendance.activity) {
+        realProgramNames.add(attendance.activity);
+      }
+    });
+    
     const topUsersByProgram: { [program: string]: any[] } = {};
     
-    programData.forEach(prog => {
-      const programName = prog.name;
-      
+    // Per cada nom real de programa
+    Array.from(realProgramNames).forEach(programName => {
       // Comptar sessions per usuari en aquest programa
       const userSessionsCount: { [userId: string]: { user: any; count: number } } = {};
       
