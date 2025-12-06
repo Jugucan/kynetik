@@ -318,21 +318,13 @@ export const useStatsCalculations = ({
       return { month: name, avg };
     });
 
-    // DEBUG: Veure estructura de dades
-    console.log('=== DEBUG STATS ===');
-    console.log('Total users:', users.length);
-    if (users.length > 0) {
-      console.log('Sample user:', users[0]);
-      console.log('Sample user sessions:', users[0].sessions);
-    }
-    console.log('All user attendances sample:', allUserAttendances.slice(0, 3));
-    if (allUserAttendances.length > 0) {
-      console.log('First attendance detail:', allUserAttendances[0]);
-      console.log('Keys in first attendance:', Object.keys(allUserAttendances[0]));
-    }
-    console.log('Filtered attendances sample:', filteredAttendances.slice(0, 3));
-    console.log('Program data:', programData);
-    console.log('==================');
+    // NOUS CÀLCULS: Obtenir tots els noms REALS de programes
+    const realProgramNames = new Set<string>();
+    allUserAttendances.forEach(attendance => {
+      if (attendance.activity) {
+        realProgramNames.add(attendance.activity);
+      }
+    });
 
     // NOUS CÀLCULS: Assistències per programa i mes/any
     const attendancesByProgramMonth: { [key: string]: { [month: string]: number } } = {};
@@ -340,41 +332,37 @@ export const useStatsCalculations = ({
     
     allUserAttendances.forEach(attendance => {
       const program = attendance.activity;
-      if (!program) return; // Saltar si no té programa
-      const yearMonth = attendance.date.slice(0, 7); // Format: "2024-01"
-      const year = attendance.date.slice(0, 4); // Format: "2024"
+      if (!program) return;
       
-      // Per mes
+      const yearMonth = attendance.date.slice(0, 7);
+      const year = attendance.date.slice(0, 4);
+      
       if (!attendancesByProgramMonth[program]) {
         attendancesByProgramMonth[program] = {};
       }
       attendancesByProgramMonth[program][yearMonth] = (attendancesByProgramMonth[program][yearMonth] || 0) + 1;
       
-      // Per any
       if (!attendancesByProgramYear[program]) {
         attendancesByProgramYear[program] = {};
       }
       attendancesByProgramYear[program][year] = (attendancesByProgramYear[program][year] || 0) + 1;
     });
 
-    // Obtenir tots els mesos disponibles (des del més antic fins avui)
+    // Obtenir tots els mesos disponibles
     const allMonthsSet = new Set<string>();
     Object.values(attendancesByProgramMonth).forEach(programMonths => {
       Object.keys(programMonths).forEach(month => allMonthsSet.add(month));
     });
     const allMonthsSorted = Array.from(allMonthsSet).sort();
 
-    // Generar labels per tots els mesos
     const allMonthsLabels = allMonthsSorted.map(ym => {
       const [year, month] = ym.split('-');
       const date = new Date(parseInt(year), parseInt(month) - 1, 1);
       return date.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
     });
 
-    // Obtenir tots els programes reals amb assistències
     const programsWithData = Array.from(realProgramNames).sort();
 
-    // Crear dataset per cada programa (tots els mesos)
     const programAttendancesOverTimeAll = programsWithData.map(programName => {
       const data = allMonthsSorted.map(month => 
         attendancesByProgramMonth[programName]?.[month] || 0
@@ -385,7 +373,6 @@ export const useStatsCalculations = ({
       };
     });
 
-    // Generar els últims 12 mesos per vista reduïda
     const last12Months: string[] = [];
     const last12MonthsLabels: string[] = [];
     for (let i = 11; i >= 0; i--) {
@@ -396,7 +383,6 @@ export const useStatsCalculations = ({
       last12MonthsLabels.push(label);
     }
 
-    // Crear dataset per cada programa (últims 12 mesos)
     const programAttendancesOverTime12 = programsWithData.map(programName => {
       const data = last12Months.map(month => 
         attendancesByProgramMonth[programName]?.[month] || 0
@@ -407,14 +393,12 @@ export const useStatsCalculations = ({
       };
     });
 
-    // Obtenir tots els anys disponibles
     const allYearsSet = new Set<string>();
     Object.values(attendancesByProgramYear).forEach(programYears => {
       Object.keys(programYears).forEach(year => allYearsSet.add(year));
     });
     const allYearsSorted = Array.from(allYearsSet).sort();
 
-    // Crear dataset per cada programa (per anys)
     const programAttendancesByYear = programsWithData.map(programName => {
       const data = allYearsSorted.map(year => 
         attendancesByProgramYear[programName]?.[year] || 0
@@ -426,19 +410,9 @@ export const useStatsCalculations = ({
     });
 
     // NOUS CÀLCULS: Top usuaris per programa
-    // Primer obtenim tots els noms REALS de programes de les assistències
-    const realProgramNames = new Set<string>();
-    allUserAttendances.forEach(attendance => {
-      if (attendance.activity) {
-        realProgramNames.add(attendance.activity);
-      }
-    });
-    
     const topUsersByProgram: { [program: string]: any[] } = {};
     
-    // Per cada nom real de programa
     Array.from(realProgramNames).forEach(programName => {
-      // Comptar sessions per usuari en aquest programa
       const userSessionsCount: { [userId: string]: { user: any; count: number } } = {};
       
       allUserAttendances.forEach(attendance => {
@@ -461,7 +435,6 @@ export const useStatsCalculations = ({
         }
       });
       
-      // Ordenar i agafar top 10
       topUsersByProgram[programName] = Object.values(userSessionsCount)
         .sort((a, b) => b.count - a.count)
         .slice(0, 10)
@@ -469,13 +442,6 @@ export const useStatsCalculations = ({
           ...item.user,
           sessionsInProgram: item.count
         }));
-    });
-    
-    // DEBUG: Verificar càlculs de top users
-    console.log('Top users by program calculated:', topUsersByProgram);
-    console.log('Programs with data:', Object.keys(topUsersByProgram));
-    Object.entries(topUsersByProgram).forEach(([prog, users]) => {
-      console.log(`${prog}: ${users.length} users`);
     });
 
     return {
@@ -501,13 +467,12 @@ export const useStatsCalculations = ({
       recurrentUsers: recurrentUsersFiltered,
       classesByWeekday,
       monthlyAverages,
-      // NOUS CAMPS
-      programAttendancesOverTime12, // Últims 12 mesos
-      programAttendancesOverTimeAll, // Tots els mesos des de l'inici
-      programAttendancesByYear, // Per anys
+      programAttendancesOverTime12,
+      programAttendancesOverTimeAll,
+      programAttendancesByYear,
       last12MonthsLabels,
-      allMonthsLabels, // Tots els mesos
-      allYearsSorted, // Tots els anys
+      allMonthsLabels,
+      allYearsSorted,
       topUsersByProgram
     };
   }, [users, centerFilter, inactiveSortOrder, schedules, customSessions, getSessionsForDate]);
