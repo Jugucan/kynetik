@@ -318,20 +318,25 @@ export const useStatsCalculations = ({
       return { month: name, avg };
     });
 
-    // NOUS CÀLCULS: Obtenir tots els noms REALS de programes
+    // NOUS CÀLCULS: Obtenir tots els noms de programes i normalitzar-los
+    const { normalizeProgramName } = await import('@/utils/statsHelpers');
+    
     const realProgramNames = new Set<string>();
-    allUserAttendances.forEach(attendance => {
+    
+    // Usar les assistències FILTRADES (no totes) per respectar el filtre de centres
+    filteredAttendances.forEach(attendance => {
       if (attendance.activity) {
-        realProgramNames.add(attendance.activity);
+        const normalized = normalizeProgramName(attendance.activity);
+        realProgramNames.add(normalized);
       }
     });
 
-    // NOUS CÀLCULS: Assistències per programa i mes/any
+    // NOUS CÀLCULS: Assistències per programa i mes/any (AMB FILTRE DE CENTRES)
     const attendancesByProgramMonth: { [key: string]: { [month: string]: number } } = {};
     const attendancesByProgramYear: { [key: string]: { [year: string]: number } } = {};
     
-    allUserAttendances.forEach(attendance => {
-      const program = attendance.activity;
+    filteredAttendances.forEach(attendance => {
+      const program = normalizeProgramName(attendance.activity);
       if (!program) return;
       
       const yearMonth = attendance.date.slice(0, 7);
@@ -404,6 +409,50 @@ export const useStatsCalculations = ({
         attendancesByProgramYear[programName]?.[year] || 0
       );
       return {
+        program: programName,
+        data: data
+      };
+    });
+
+    // NOUS CÀLCULS: Top usuaris per programa (AMB FILTRE DE CENTRES)
+    const topUsersByProgram: { [program: string]: any[] } = {};
+    
+    Array.from(realProgramNames).forEach(programName => {
+      const userSessionsCount: { [userId: string]: { user: any; count: number } } = {};
+      
+      // Usar filteredAttendances per respectar el filtre de centres
+      filteredAttendances.forEach(attendance => {
+        const normalizedActivity = normalizeProgramName(attendance.activity);
+        
+        if (normalizedActivity === programName) {
+          const userName = attendance.userName;
+          
+          if (!userSessionsCount[userName]) {
+            const user = users.find(u => u.name === userName);
+            if (user) {
+              userSessionsCount[userName] = {
+                user: user,
+                count: 0
+              };
+            }
+          }
+          
+          if (userSessionsCount[userName]) {
+            userSessionsCount[userName].count++;
+          }
+        }
+      });
+      
+      topUsersByProgram[programName] = Object.values(userSessionsCount)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10)
+        .map(item => ({
+          ...item.user,
+          sessionsInProgram: item.count
+        }));
+    });
+
+    return {
         program: programName,
         data: data
       };
