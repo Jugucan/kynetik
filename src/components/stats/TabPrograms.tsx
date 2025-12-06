@@ -15,8 +15,35 @@ export const TabPrograms = ({ stats, onUserClick }: TabProgramsProps) => {
   const [selectedProgram, setSelectedProgram] = useState<string>(
     stats.programData.length > 0 ? stats.programData[0].name : ""
   );
+  const [timeView, setTimeView] = useState<'12months' | 'allMonths' | 'years'>('12months');
 
   const topUsersForSelectedProgram = stats.topUsersByProgram[selectedProgram] || [];
+
+  // Seleccionar les dades segons la vista
+  const getDataForView = () => {
+    switch (timeView) {
+      case '12months':
+        return {
+          data: stats.programAttendancesOverTime12,
+          labels: stats.last12MonthsLabels,
+          title: 'Últims 12 Mesos'
+        };
+      case 'allMonths':
+        return {
+          data: stats.programAttendancesOverTimeAll,
+          labels: stats.allMonthsLabels,
+          title: 'Tot l\'Historial (per mesos)'
+        };
+      case 'years':
+        return {
+          data: stats.programAttendancesByYear,
+          labels: stats.allYearsSorted,
+          title: 'Tot l\'Historial (per anys)'
+        };
+    }
+  };
+
+  const viewData = getDataForView();
 
   return (
     <div className="space-y-4">
@@ -56,29 +83,51 @@ export const TabPrograms = ({ stats, onUserClick }: TabProgramsProps) => {
 
       {/* NOVA: Gràfica d'assistències per programa al llarg del temps */}
       <NeoCard className="p-4 sm:p-6 min-w-0">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="w-5 h-5 text-primary flex-shrink-0" />
-          <h3 className="text-lg sm:text-xl font-semibold">Evolució d'Assistències per Programa</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-primary flex-shrink-0" />
+            <h3 className="text-lg sm:text-xl font-semibold">Evolució d'Assistències per Programa</h3>
+          </div>
+          
+          <Select value={timeView} onValueChange={(value: any) => setTimeView(value)}>
+            <SelectTrigger className="w-full sm:w-56 min-w-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="12months">Últims 12 mesos</SelectItem>
+              <SelectItem value="allMonths">Tot l'historial (mesos)</SelectItem>
+              <SelectItem value="years">Tot l'historial (anys)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+        
         <Separator className="mb-4" />
         
         <div className="text-sm text-muted-foreground mb-4">
-          Últims 12 mesos - Assistències totals per programa
+          {viewData.title} - Assistències totals per programa
         </div>
 
         <ScrollArea className="h-96">
           <div className="space-y-6">
-            {stats.programAttendancesOverTime.map((programData: any) => {
-              const maxValue = Math.max(...programData.data);
+            {viewData.data.map((programData: any) => {
+              const maxValue = Math.max(...programData.data, 1);
+              const totalAttendances = programData.data.reduce((sum: number, val: number) => sum + val, 0);
               
               return (
                 <div key={programData.program} className="space-y-3">
-                  <h4 className="font-semibold text-sm">{programData.program}</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-sm">{programData.program}</h4>
+                    <Badge variant="outline" className="bg-primary/10">
+                      Total: {totalAttendances}
+                    </Badge>
+                  </div>
                   
                   <div className="space-y-2">
-                    {stats.last12MonthsLabels.map((label: string, idx: number) => {
+                    {viewData.labels.map((label: string, idx: number) => {
                       const value = programData.data[idx];
                       const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
+
+                      if (value === 0 && timeView === 'allMonths') return null;
 
                       return (
                         <div key={`${programData.program}-${label}`} className="flex items-center gap-3">
