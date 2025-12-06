@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from "react";
-import { dateToKey, centersMatch, Session } from "@/utils/statsHelpers";
+import { dateToKey, centersMatch, Session, normalizeProgramName } from "@/utils/statsHelpers";
 
 interface UseStatsCalculationsProps {
   users: any[];
@@ -319,8 +319,7 @@ export const useStatsCalculations = ({
     });
 
     // NOUS CÀLCULS: Obtenir tots els noms de programes i normalitzar-los
-    const { normalizeProgramName } = await import('@/utils/statsHelpers');
-    
+        
     const realProgramNames = new Set<string>();
     
     // Usar les assistències FILTRADES (no totes) per respectar el filtre de centres
