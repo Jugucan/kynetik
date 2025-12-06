@@ -12,9 +12,12 @@ interface TabProgramsProps {
 }
 
 export const TabPrograms = ({ stats, onUserClick }: TabProgramsProps) => {
-  const [selectedProgram, setSelectedProgram] = useState<string>(
-    stats.programData.length > 0 ? stats.programData[0].name : ""
-  );
+  const [selectedProgram, setSelectedProgram] = useState<string>("");
+
+  // Actualitzar el programa seleccionat quan les dades estiguin disponibles
+  if (selectedProgram === "" && stats.programData.length > 0) {
+    setSelectedProgram(stats.programData[0].name);
+  }
   const [timeView, setTimeView] = useState<'12months' | 'allMonths' | 'years'>('12months');
 
   const topUsersForSelectedProgram = stats.topUsersByProgram[selectedProgram] || [];
@@ -180,6 +183,13 @@ export const TabPrograms = ({ stats, onUserClick }: TabProgramsProps) => {
         
         <Separator className="mb-4" />
 
+        {(() => {
+          console.log('Selected program:', selectedProgram);
+          console.log('Top users for program:', topUsersForSelectedProgram);
+          console.log('All programs available:', stats.topUsersByProgram);
+          return null;
+        })()}
+        
         {topUsersForSelectedProgram.length > 0 ? (
           <div className="space-y-2">
             {topUsersForSelectedProgram.map((user: any, idx: number) => (
