@@ -318,6 +318,15 @@ export const useStatsCalculations = ({
       return { month: name, avg };
     });
 
+    // DEBUG: Veure estructura de dades
+    console.log('=== DEBUG STATS ===');
+    console.log('Total users:', users.length);
+    console.log('Sample user:', users[0]);
+    console.log('All user attendances:', allUserAttendances.slice(0, 5));
+    console.log('Filtered attendances:', filteredAttendances.slice(0, 5));
+    console.log('Program data:', programData);
+    console.log('==================');
+
     // NOUS CÀLCULS: Assistències per programa i mes/any
     const attendancesByProgramMonth: { [key: string]: { [month: string]: number } } = {};
     const attendancesByProgramYear: { [key: string]: { [year: string]: number } } = {};
