@@ -321,9 +321,16 @@ export const useStatsCalculations = ({
     // DEBUG: Veure estructura de dades
     console.log('=== DEBUG STATS ===');
     console.log('Total users:', users.length);
-    console.log('Sample user:', users[0]);
-    console.log('All user attendances:', allUserAttendances.slice(0, 5));
-    console.log('Filtered attendances:', filteredAttendances.slice(0, 5));
+    if (users.length > 0) {
+      console.log('Sample user:', users[0]);
+      console.log('Sample user sessions:', users[0].sessions);
+    }
+    console.log('All user attendances sample:', allUserAttendances.slice(0, 3));
+    if (allUserAttendances.length > 0) {
+      console.log('First attendance detail:', allUserAttendances[0]);
+      console.log('Keys in first attendance:', Object.keys(allUserAttendances[0]));
+    }
+    console.log('Filtered attendances sample:', filteredAttendances.slice(0, 3));
     console.log('Program data:', programData);
     console.log('==================');
 
