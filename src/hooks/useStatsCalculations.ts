@@ -459,6 +459,13 @@ export const useStatsCalculations = ({
           sessionsInProgram: item.count
         }));
     });
+    
+    // DEBUG: Verificar càlculs de top users
+    console.log('Top users by program calculated:', topUsersByProgram);
+    console.log('Programs with data:', Object.keys(topUsersByProgram));
+    Object.entries(topUsersByProgram).forEach(([prog, users]) => {
+      console.log(`${prog}: ${users.length} users`);
+    });
 
     return {
       totalUsers,
