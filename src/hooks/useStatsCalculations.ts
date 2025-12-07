@@ -487,6 +487,14 @@ export const useStatsCalculations = ({
           ...item.user,
           sessionsInProgram: item.count
         }));
+      
+      // DEBUG: Verificar que s'afegeix sessionsInProgram
+      if (programName === 'BB') {
+        console.log('=== DEBUG BB TOP USERS ===');
+        console.log('UserSessionsCount for BB:', Object.values(userSessionsCount).slice(0, 3));
+        console.log('Top users for BB:', topUsersByProgram[programName].slice(0, 3));
+        console.log('==========================');
+      }
     });
 
     return {
