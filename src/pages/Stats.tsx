@@ -17,6 +17,7 @@ import { TabPrograms } from "@/components/stats/TabPrograms";
 import { TabUsers } from "@/components/stats/TabUsers";
 import { TabCenters } from "@/components/stats/TabCenters";
 import { TabWeekdays } from "@/components/stats/TabWeekdays";
+import { TabAudit } from "@/components/stats/TabAudit";
 
 const StatsNew = () => {
   const { users, loading: usersLoading } = useUsers();
@@ -115,13 +116,14 @@ const StatsNew = () => {
 
         <Tabs defaultValue="overview" className="space-y-10 w-full">
           <div className="w-full">
-            <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full gap-1 pb-6">
+            <TabsList className="grid grid-cols-3 sm:grid-cols-7 w-full gap-1 pb-6">
               <TabsTrigger value="overview" className="text-xs sm:text-sm px-2">Resum</TabsTrigger>
               <TabsTrigger value="evolution" className="text-xs sm:text-sm px-2">Evolució</TabsTrigger>
               <TabsTrigger value="programs" className="text-xs sm:text-sm px-2">Programes</TabsTrigger>
               <TabsTrigger value="users" className="text-xs sm:text-sm px-2">Usuaris</TabsTrigger>
               <TabsTrigger value="centers" className="text-xs sm:text-sm px-2">Centres</TabsTrigger>
               <TabsTrigger value="weekdays" className="text-xs sm:text-sm px-2">Dies setmana</TabsTrigger>
+              <TabsTrigger value="audit" className="text-xs sm:text-sm px-2">Auditoria</TabsTrigger>
             </TabsList>
           </div>
 
@@ -153,6 +155,10 @@ const StatsNew = () => {
           <TabsContent value="weekdays">
             <TabWeekdays stats={stats} />
           </TabsContent>
+
+          <TabsContent value="audit">
+            <TabAudit stats={stats} />
+          </TabsContent>          
         </Tabs>
 
         <UserDetailModal
