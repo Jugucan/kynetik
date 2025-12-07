@@ -531,11 +531,68 @@ export const useStatsCalculations = ({
 
     const discrepancyMap = new Map<string, any>();
 
+    // NOVA FUNCIONALITAT: Detectar discrepàncies calendari vs gimnàs
+    const calendarDiscrepancies: Array<{
+      date: string;
+      time: string;
+      center: string;
+      gymProgram: string;
+      calendarProgram: string;
+      userName: string;
+      count: number;
+    }> = [];
+
+    // Funció per normalitzar noms de programes per comparar
+    const normalizeForComparison = (program: string): string => {
+      if (!program) return '';
+      
+      const normalized = program.toUpperCase()
+        .replace(/\s+/g, '')
+        .replace(/OUTDOOR/g, '')
+        .replace(/'/g, '');
+      
+      // Mapa de normalització
+      const map: { [key: string]: string } = {
+        'BODYPUMP': 'BP',
+        'BP': 'BP',
+        'BODYBALANCE': 'BB',
+        'BB': 'BB',
+        'BODYCOMBAT': 'BC',
+        'BC': 'BC',
+        'SHBAM': 'SB',
+        'SH\'BAM': 'SB',
+        'DANCE': 'SB',
+        'SB': 'SB',
+        'ESTIRAMIENTOS': 'ES',
+        'STRETCH': 'ES',
+        'ES': 'ES',
+        'RPM': 'RPM',
+        'BODYSTEP': 'BS',
+        'BS': 'BS',
+        'CXWORX': 'CX',
+        'CX': 'CX',
+        'SPRINT': 'SPRINT',
+        'GRIT': 'GRIT',
+        'BARRE': 'BARRE',
+        'TONE': 'TONE',
+        'CORE': 'CORE'
+      };
+      
+      return map[normalized] || normalized;
+    };
+
+    const discrepancyMap = new Map<string, any>();
+
     attendancesWithCalendarProgram.forEach(attendance => {
-      if (attendance.calendarProgram !== 'DESCONEGUT' && 
-          attendance.activity && 
-          attendance.calendarProgram !== attendance.activity.toUpperCase().substring(0, 2)) {
-        
+      if (attendance.calendarProgram === 'DESCONEGUT' || !attendance.activity) {
+        return;
+      }
+      
+      const normalizedCalendar = normalizeForComparison(attendance.calendarProgram);
+      const normalizedGym = normalizeForComparison(attendance.activity);
+      
+      // Només afegir si són diferents DESPRÉS de normalitzar
+      if (normalizedCalendar !== normalizedGym) {
         const key = `${attendance.date}-${attendance.time}-${attendance.center}`;
         
         if (!discrepancyMap.has(key)) {
@@ -551,7 +608,9 @@ export const useStatsCalculations = ({
         } else {
           const existing = discrepancyMap.get(key);
           existing.count++;
-          existing.userName += `, ${attendance.userName}`;
+          if (!existing.userName.includes(attendance.userName)) {
+            existing.userName += `, ${attendance.userName}`;
+          }
         }
       }
     });
