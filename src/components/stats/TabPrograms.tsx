@@ -24,8 +24,7 @@ export const TabPrograms = ({ stats, onUserClick }: TabProgramsProps) => {
   const [timeView, setTimeView] = useState<'12months' | 'allMonths' | 'years'>('12months');
 
   const topUsersForSelectedProgram = stats.topUsersByProgram[selectedProgram] || [];
-  const topUsersForSelectedProgram = stats.topUsersByProgram[selectedProgram] || [];
-
+  
   // DEBUG
   console.log('=== DEBUG TAB PROGRAMS ===');
   console.log('Selected program:', selectedProgram);
