@@ -480,7 +480,9 @@ export const useStatsCalculations = ({
         }
       });
       
-      topUsersByProgram[programName] = Object.values(userSessionsCount)
+      // Filtrar usuaris amb almenys 1 sessió
+      const usersWithSessions = Object.values(userSessionsCount)
+        .filter(item => item.count > 0)
         .sort((a, b) => b.count - a.count)
         .slice(0, 10)
         .map(item => ({
@@ -488,11 +490,30 @@ export const useStatsCalculations = ({
           sessionsInProgram: item.count
         }));
       
-      // DEBUG: Verificar que s'afegeix sessionsInProgram
+      topUsersByProgram[programName] = usersWithSessions;
+      
+      // DEBUG: Buscar GLORIA específicament
       if (programName === 'BB') {
         console.log('=== DEBUG BB TOP USERS ===');
-        console.log('UserSessionsCount for BB:', Object.values(userSessionsCount).slice(0, 3));
-        console.log('Top users for BB:', topUsersByProgram[programName].slice(0, 3));
+        console.log('Total users counted for BB:', Object.keys(userSessionsCount).length);
+        console.log('Top 3 users:', usersWithSessions.slice(0, 3).map(u => ({ name: u.name, sessions: u.sessionsInProgram })));
+        
+        // Buscar GLORIA
+        const gloria = usersWithSessions.find(u => u.name && u.name.includes('GLORIA'));
+        if (gloria) {
+          console.log('GLORIA found in BB ranking:', { name: gloria.name, sessionsInProgram: gloria.sessionsInProgram });
+        } else {
+          console.log('GLORIA NOT found in BB ranking');
+        }
+        
+        // Comprovar si GLORIA està a userSessionsCount
+        const gloriaInCount = Object.values(userSessionsCount).find((item: any) => 
+          item.user.name && item.user.name.includes('GLORIA')
+        );
+        if (gloriaInCount) {
+          console.log('GLORIA in userSessionsCount:', gloriaInCount);
+        }
+        
         console.log('==========================');
       }
     });
