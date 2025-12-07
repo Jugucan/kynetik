@@ -358,17 +358,21 @@ export const useStatsCalculations = ({
         attendance.center
       );
       
+      // DEBUG: Veure sessions de GLORIA
+      if (attendance.userName === 'GLORIA SALVADOR PRAT') {
+        console.log('GLORIA session:', {
+          date: attendance.date,
+          time: attendance.time,
+          center: attendance.center,
+          originalActivity: attendance.activity,
+          calendarProgram: programFromCalendar
+        });
+      }
+      
       return {
         ...attendance,
         calendarProgram: programFromCalendar
       };
-    });
-    
-    // Obtenir tots els programes únics
-    attendancesWithCalendarProgram.forEach(attendance => {
-      if (attendance.calendarProgram && attendance.calendarProgram !== 'DESCONEGUT') {
-        realProgramNames.add(attendance.calendarProgram);
-      }
     });
 
     // NOUS CÀLCULS: Assistències per programa i mes/any (AMB FILTRE DE CENTRES)
