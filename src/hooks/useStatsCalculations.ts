@@ -358,15 +358,11 @@ export const useStatsCalculations = ({
         attendance.center
       );
       
-      // DEBUG: Veure sessions de GLORIA
-      if (attendance.userName === 'GLORIA SALVADOR PRAT') {
-        console.log('GLORIA session:', {
-          date: attendance.date,
-          time: attendance.time,
-          center: attendance.center,
-          originalActivity: attendance.activity,
-          calendarProgram: programFromCalendar
-        });
+      // Detectar discrepàncies
+      if (programFromCalendar !== 'DESCONEGUT' && 
+          attendance.activity && 
+          !attendance.activity.toUpperCase().includes(programFromCalendar)) {
+        // Hi ha discrepància
       }
       
       return {
@@ -522,6 +518,51 @@ export const useStatsCalculations = ({
       }
     });
 
+    // NOVA FUNCIONALITAT: Detectar discrepàncies calendari vs gimnàs
+    const calendarDiscrepancies: Array<{
+      date: string;
+      time: string;
+      center: string;
+      gymProgram: string;
+      calendarProgram: string;
+      userName: string;
+      count: number;
+    }> = [];
+
+    const discrepancyMap = new Map<string, any>();
+
+    attendancesWithCalendarProgram.forEach(attendance => {
+      if (attendance.calendarProgram !== 'DESCONEGUT' && 
+          attendance.activity && 
+          attendance.calendarProgram !== attendance.activity.toUpperCase().substring(0, 2)) {
+        
+        const key = `${attendance.date}-${attendance.time}-${attendance.center}`;
+        
+        if (!discrepancyMap.has(key)) {
+          discrepancyMap.set(key, {
+            date: attendance.date,
+            time: attendance.time,
+            center: attendance.center,
+            gymProgram: attendance.activity,
+            calendarProgram: attendance.calendarProgram,
+            userName: attendance.userName,
+            count: 1
+          });
+        } else {
+          const existing = discrepancyMap.get(key);
+          existing.count++;
+          existing.userName += `, ${attendance.userName}`;
+        }
+      }
+    });
+
+    Array.from(discrepancyMap.values()).forEach(disc => {
+      calendarDiscrepancies.push(disc);
+    });
+
+    // Ordenar per data
+    calendarDiscrepancies.sort((a, b) => a.date.localeCompare(b.date));
+    
     return {
       totalUsers,
       totalSessions,
@@ -551,7 +592,8 @@ export const useStatsCalculations = ({
       last12MonthsLabels,
       allMonthsLabels,
       allYearsSorted,
-      topUsersByProgram
+      topUsersByProgram,
+      calendarDiscrepancies  // <-- AFEGIR AIXÒ
     };
   }, [users, centerFilter, inactiveSortOrder, schedules, customSessions, getSessionsForDate, getProgramFromCalendar]);
 
