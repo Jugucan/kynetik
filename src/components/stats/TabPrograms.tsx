@@ -14,9 +14,12 @@ interface TabProgramsProps {
 export const TabPrograms = ({ stats, onUserClick }: TabProgramsProps) => {
   const [selectedProgram, setSelectedProgram] = useState<string>("");
 
+  // Obtenir la llista de programes des de topUsersByProgram (que té els noms correctes)
+  const availablePrograms = Object.keys(stats.topUsersByProgram).sort();
+
   // Actualitzar el programa seleccionat quan les dades estiguin disponibles
-  if (selectedProgram === "" && stats.programData.length > 0) {
-    setSelectedProgram(stats.programData[0].name);
+  if (selectedProgram === "" && availablePrograms.length > 0) {
+    setSelectedProgram(availablePrograms[0]);
   }
   const [timeView, setTimeView] = useState<'12months' | 'allMonths' | 'years'>('12months');
 
@@ -172,9 +175,9 @@ export const TabPrograms = ({ stats, onUserClick }: TabProgramsProps) => {
               <SelectValue placeholder="Selecciona un programa" />
             </SelectTrigger>
             <SelectContent>
-              {stats.programData.map((prog: any) => (
-                <SelectItem key={prog.name} value={prog.name}>
-                  {prog.name}
+              {availablePrograms.map((programName: string) => (
+                <SelectItem key={programName} value={programName}>
+                  {programName}
                 </SelectItem>
               ))}
             </SelectContent>
