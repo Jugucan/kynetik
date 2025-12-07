@@ -24,6 +24,16 @@ export const TabPrograms = ({ stats, onUserClick }: TabProgramsProps) => {
   const [timeView, setTimeView] = useState<'12months' | 'allMonths' | 'years'>('12months');
 
   const topUsersForSelectedProgram = stats.topUsersByProgram[selectedProgram] || [];
+  const topUsersForSelectedProgram = stats.topUsersByProgram[selectedProgram] || [];
+
+  // DEBUG
+  console.log('=== DEBUG TAB PROGRAMS ===');
+  console.log('Selected program:', selectedProgram);
+  console.log('Available programs in topUsersByProgram:', Object.keys(stats.topUsersByProgram));
+  console.log('Available programs in programData:', stats.programData.map((p: any) => p.name));
+  console.log('Top users for selected program:', topUsersForSelectedProgram);
+  console.log('All topUsersByProgram:', stats.topUsersByProgram);
+  console.log('==========================');
 
   // Seleccionar les dades segons la vista
   const getDataForView = () => {
