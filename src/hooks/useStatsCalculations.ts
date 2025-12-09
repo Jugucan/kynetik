@@ -540,7 +540,7 @@ export const useStatsCalculations = ({
       
       // Mapa de normalització
       const map: { [key: string]: string } = {
-        'BODYPUMP': 'BP',
+        'BODYPUMP': 'BP',        
         'BP': 'BP',
         'BODYBALANCE': 'BB',
         'BB': 'BB',
@@ -550,7 +550,7 @@ export const useStatsCalculations = ({
         'SH\'BAM': 'SB',
         'DANCE': 'SB',
         'SB': 'SB',
-        'ESTIRAMIENTS': 'ES',
+        'ESTIRAMENTS': 'ES',
         'STRETCH': 'ES',
         'ES': 'ES',
         'RPM': 'RPM',
