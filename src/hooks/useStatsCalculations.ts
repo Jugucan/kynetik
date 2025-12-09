@@ -518,20 +518,7 @@ export const useStatsCalculations = ({
       }
     });
 
-    // NOVA FUNCIONALITAT: Detectar discrepàncies calendari vs gimnàs
-    const calendarDiscrepancies: Array<{
-      date: string;
-      time: string;
-      center: string;
-      gymProgram: string;
-      calendarProgram: string;
-      userName: string;
-      count: number;
-    }> = [];
-
-    const discrepancyMap = new Map<string, any>();
-
-    // NOVA FUNCIONALITAT: Detectar discrepàncies calendari vs gimnàs
+        // NOVA FUNCIONALITAT: Detectar discrepàncies calendari vs gimnàs
     const calendarDiscrepancies: Array<{
       date: string;
       time: string;
@@ -563,7 +550,7 @@ export const useStatsCalculations = ({
         'SH\'BAM': 'SB',
         'DANCE': 'SB',
         'SB': 'SB',
-        'ESTIRAMIENTOS': 'ES',
+        'ESTIRAMIENTS': 'ES',
         'STRETCH': 'ES',
         'ES': 'ES',
         'RPM': 'RPM',
