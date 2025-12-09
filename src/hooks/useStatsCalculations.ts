@@ -491,6 +491,7 @@ export const useStatsCalculations = ({
         }));
       
       topUsersByProgram[programName] = usersWithSessions;
+    });
       
       // DEBUG: Buscar GLORIA específicament
       if (programName === 'BB') {
