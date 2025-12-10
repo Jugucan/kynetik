@@ -360,6 +360,14 @@ export const useStatsCalculations = ({
       };
     });
     
+    // DEBUG: Veure mostres
+    console.log('=== DEBUG CALENDAR PROGRAMS ===');
+    console.log('Total filtered attendances:', filteredAttendances.length);
+    console.log('Sample attendances with calendar program:', attendancesWithCalendarProgram.slice(0, 5));
+    console.log('Real program names found:', Array.from(realProgramNames));
+    console.log('Programs with data (from classes):', programsWithData);
+    console.log('================================');
+    
     attendancesWithCalendarProgram.forEach(attendance => {
       if (attendance.calendarProgram && attendance.calendarProgram !== 'DESCONEGUT') {
         realProgramNames.add(attendance.calendarProgram);
