@@ -95,8 +95,13 @@ export const useStatsCalculations = ({
       return 'DESCONEGUT';
     }
     
+    // Millorar la neteja d'hores
     const cleanTime = (t: string) => {
-      return t.replace(/[^0-9:]/g, '').split('-')[0].trim();
+      // Treure TOTS els espais, salts de línia, tabulacions, etc.
+      const cleaned = t.replace(/[\s\n\r\t]+/g, '');
+      // Agafar només la part abans del guió
+      const startTime = cleaned.split('-')[0];
+      return startTime;
     };
     
     const attendanceStartTime = cleanTime(time);
@@ -108,6 +113,23 @@ export const useStatsCalculations = ({
       
       return timeMatches && centerMatches;
     });
+    
+    // DEBUG temporal per les primeres 3 assistències
+    if (!matchingSession && sessions.length > 0) {
+      const randomDebug = Math.random();
+      if (randomDebug < 0.001) { // Només 0.1% de les vegades per no saturar
+        console.log('No match:', {
+          date,
+          attendanceTime: attendanceStartTime,
+          center,
+          availableSessions: sessions.map(s => ({
+            time: cleanTime(s.time),
+            program: s.program,
+            center: s.center
+          }))
+        });
+      }
+    }
     
     return matchingSession?.program || 'DESCONEGUT';
   }, [getSessionsForDate]);
