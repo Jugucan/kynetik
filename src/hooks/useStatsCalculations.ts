@@ -369,12 +369,59 @@ export const useStatsCalculations = ({
     // NOUS CÀLCULS: Obtenir programes des del calendari
     const realProgramNames = new Set<string>();
     
+    // Funció per normalitzar noms de programes (treure OUTDOOR, variants, etc.)
+    const normalizeGymProgram = (program: string): string => {
+      if (!program) return '';
+      
+      const normalized = program.toUpperCase()
+        .replace(/\s+/g, '')
+        .replace(/OUTDOOR/g, '')
+        .replace(/'/g, '');
+      
+      // Mapa de normalització
+      const map: { [key: string]: string } = {
+        'BODYPUMP': 'BP',
+        'BP': 'BP',
+        'BODYBALANCE': 'BB',
+        'BB': 'BB',
+        'BODYCOMBAT': 'BC',
+        'BC': 'BC',
+        'SHBAM': 'SB',
+        'DANCE': 'SB',
+        'SB': 'SB',
+        'ESTIRAMIENTOS': 'ES',
+        'STRETCH': 'ES',
+        'ESTIRAMENTS': 'ES',
+        'ES': 'ES',
+        'RPM': 'RPM',
+        'BODYSTEP': 'BS',
+        'BS': 'BS',
+        'CXWORX': 'CX',
+        'CX': 'CX',
+        'SPRINT': 'SPRINT',
+        'GRIT': 'GRIT',
+        'BARRE': 'BARRE',
+        'TONE': 'TONE',
+        'CORE': 'CORE',
+        'CROSSTRAINING': 'CROSS',
+        'CROSS': 'CROSS'
+      };
+      
+      return map[normalized] || normalized;
+    };
+
     const attendancesWithCalendarProgram = filteredAttendances.map(attendance => {
-      const programFromCalendar = getProgramFromCalendar(
+      // Primer intent: buscar al calendari per hora exacta
+      let programFromCalendar = getProgramFromCalendar(
         attendance.date, 
         attendance.time, 
         attendance.center
       );
+      
+      // Si no troba al calendari, normalitzar el nom del gimnàs directament
+      if (programFromCalendar === 'DESCONEGUT' && attendance.activity) {
+        programFromCalendar = normalizeGymProgram(attendance.activity);
+      }
       
       return {
         ...attendance,
