@@ -640,7 +640,8 @@ export const useStatsCalculations = ({
       allMonthsLabels,
       allYearsSorted,
       topUsersByProgram,
-      calendarDiscrepancies  // <-- AFEGIR AIXÒ
+      calendarDiscrepancies, // <-- Amb coma!
+      topUsersByProgram
     };
   }, [users, centerFilter, inactiveSortOrder, schedules, customSessions, getSessionsForDate, getProgramFromCalendar]);
 
