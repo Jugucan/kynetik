@@ -86,26 +86,24 @@ export const useStatsCalculations = ({
   }, [customSessions, getScheduleForDate, isHoliday, isVacation, isClosure]);
 
   const getProgramFromCalendar = useCallback((date: string, time: string, center?: string): string => {
-    // Convertir date string a Date object
     const [year, month, day] = date.split('-').map(Number);
     const dateObj = new Date(year, month - 1, day);
     
-    // Obtenir sessions d'aquest dia
     const sessions = getSessionsForDate(dateObj);
     
-    // Buscar la sessió que coincideix amb l'hora i centre
+    if (sessions.length === 0) {
+      return 'DESCONEGUT';
+    }
+    
+    const cleanTime = (t: string) => {
+      return t.replace(/[^0-9:]/g, '').split('-')[0].trim();
+    };
+    
+    const attendanceStartTime = cleanTime(time);
+    
     const matchingSession = sessions.find(session => {
-      // Normalitzar l'hora (treure espais i salts de línia)
-      const sessionTime = session.time.replace(/\s+/g, '').replace(/\n/g, '');
-      const attendanceTime = time.replace(/\s+/g, '').replace(/\n/g, '');
-      
-      // Comprovar si l'hora coincideix (agafar només la hora d'inici)
-      const sessionStartTime = sessionTime.split('-')[0];
-      const attendanceStartTime = attendanceTime.split('-')[0];
-      
+      const sessionStartTime = cleanTime(session.time);
       const timeMatches = sessionStartTime === attendanceStartTime;
-      
-      // Si hi ha centre, també comprovar que coincideix
       const centerMatches = !center || !session.center || centersMatch(session.center, center);
       
       return timeMatches && centerMatches;
@@ -346,11 +344,9 @@ export const useStatsCalculations = ({
       const avg = arr.length > 0 ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length) : 0;
       return { month: name, avg };
     });
-
     // NOUS CÀLCULS: Obtenir programes des del calendari
     const realProgramNames = new Set<string>();
     
-    // Mapejar cada assistència al programa real del calendari
     const attendancesWithCalendarProgram = filteredAttendances.map(attendance => {
       const programFromCalendar = getProgramFromCalendar(
         attendance.date, 
@@ -358,20 +354,19 @@ export const useStatsCalculations = ({
         attendance.center
       );
       
-      // Detectar discrepàncies
-      if (programFromCalendar !== 'DESCONEGUT' && 
-          attendance.activity && 
-          !attendance.activity.toUpperCase().includes(programFromCalendar)) {
-        // Hi ha discrepància
-      }
-      
       return {
         ...attendance,
         calendarProgram: programFromCalendar
       };
     });
+    
+    attendancesWithCalendarProgram.forEach(attendance => {
+      if (attendance.calendarProgram && attendance.calendarProgram !== 'DESCONEGUT') {
+        realProgramNames.add(attendance.calendarProgram);
+      }
+    });
 
-    // NOUS CÀLCULS: Assistències per programa i mes/any (AMB FILTRE DE CENTRES)
+    // NOUS CÀLCULS: Assistències per programa i mes/any
     const attendancesByProgramMonth: { [key: string]: { [month: string]: number } } = {};
     const attendancesByProgramYear: { [key: string]: { [year: string]: number } } = {};
     
@@ -393,7 +388,6 @@ export const useStatsCalculations = ({
       attendancesByProgramYear[program][year] = (attendancesByProgramYear[program][year] || 0) + 1;
     });
 
-    // Obtenir tots els mesos disponibles
     const allMonthsSet = new Set<string>();
     Object.values(attendancesByProgramMonth).forEach(programMonths => {
       Object.keys(programMonths).forEach(month => allMonthsSet.add(month));
@@ -454,7 +448,7 @@ export const useStatsCalculations = ({
       };
     });
 
-    // NOUS CÀLCULS: Top usuaris per programa (AMB FILTRE DE CENTRES)
+    // NOUS CÀLCULS: Top usuaris per programa
     const topUsersByProgram: { [program: string]: any[] } = {};
     
     Array.from(realProgramNames).forEach(programName => {
@@ -480,7 +474,6 @@ export const useStatsCalculations = ({
         }
       });
       
-      // Filtrar usuaris amb almenys 1 sessió
       const usersWithSessions = Object.values(userSessionsCount)
         .filter(item => item.count > 0)
         .sort((a, b) => b.count - a.count)
@@ -492,45 +485,8 @@ export const useStatsCalculations = ({
       
       topUsersByProgram[programName] = usersWithSessions;
     });
-      
-      // DEBUG: Buscar GLORIA específicament
-      if (programName === 'BB') {
-        console.log('=== DEBUG BB TOP USERS ===');
-        console.log('Total users counted for BB:', Object.keys(userSessionsCount).length);
-        console.log('Top 3 users:', usersWithSessions.slice(0, 3).map(u => ({ name: u.name, sessions: u.sessionsInProgram })));
-        
-        // Buscar GLORIA
-        const gloria = usersWithSessions.find(u => u.name && u.name.includes('GLORIA'));
-        if (gloria) {
-          console.log('GLORIA found in BB ranking:', { name: gloria.name, sessionsInProgram: gloria.sessionsInProgram });
-        } else {
-          console.log('GLORIA NOT found in BB ranking');
-        }
-        
-        // Comprovar si GLORIA està a userSessionsCount
-        const gloriaInCount = Object.values(userSessionsCount).find((item: any) => 
-          item.user.name && item.user.name.includes('GLORIA')
-        );
-        if (gloriaInCount) {
-          console.log('GLORIA in userSessionsCount:', gloriaInCount);
-        }
-        
-        console.log('==========================');
-      }
-    });
 
-        // NOVA FUNCIONALITAT: Detectar discrepàncies calendari vs gimnàs
-    const calendarDiscrepancies: Array<{
-      date: string;
-      time: string;
-      center: string;
-      gymProgram: string;
-      calendarProgram: string;
-      userName: string;
-      count: number;
-    }> = [];
-
-    // Funció per normalitzar noms de programes per comparar
+    // NOVA FUNCIONALITAT: Detectar discrepàncies calendari vs gimnàs
     const normalizeForComparison = (program: string): string => {
       if (!program) return '';
       
@@ -539,9 +495,8 @@ export const useStatsCalculations = ({
         .replace(/OUTDOOR/g, '')
         .replace(/'/g, '');
       
-      // Mapa de normalització
       const map: { [key: string]: string } = {
-        'BODYPUMP': 'BP',        
+        'BODYPUMP': 'BP',
         'BP': 'BP',
         'BODYBALANCE': 'BB',
         'BB': 'BB',
@@ -551,7 +506,7 @@ export const useStatsCalculations = ({
         'SH\'BAM': 'SB',
         'DANCE': 'SB',
         'SB': 'SB',
-        'ESTIRAMENTS': 'ES',
+        'ESTIRAMIENTOS': 'ES',
         'STRETCH': 'ES',
         'ES': 'ES',
         'RPM': 'RPM',
@@ -569,6 +524,16 @@ export const useStatsCalculations = ({
       return map[normalized] || normalized;
     };
 
+    const calendarDiscrepancies: Array<{
+      date: string;
+      time: string;
+      center: string;
+      gymProgram: string;
+      calendarProgram: string;
+      userName: string;
+      count: number;
+    }> = [];
+
     const discrepancyMap = new Map<string, any>();
 
     attendancesWithCalendarProgram.forEach(attendance => {
@@ -579,7 +544,6 @@ export const useStatsCalculations = ({
       const normalizedCalendar = normalizeForComparison(attendance.calendarProgram);
       const normalizedGym = normalizeForComparison(attendance.activity);
       
-      // Només afegir si són diferents DESPRÉS de normalitzar
       if (normalizedCalendar !== normalizedGym) {
         const key = `${attendance.date}-${attendance.time}-${attendance.center}`;
         
@@ -607,9 +571,8 @@ export const useStatsCalculations = ({
       calendarDiscrepancies.push(disc);
     });
 
-    // Ordenar per data
     calendarDiscrepancies.sort((a, b) => a.date.localeCompare(b.date));
-    
+
     return {
       totalUsers,
       totalSessions,
@@ -640,8 +603,7 @@ export const useStatsCalculations = ({
       allMonthsLabels,
       allYearsSorted,
       topUsersByProgram,
-      calendarDiscrepancies, // <-- Amb coma!
-      topUsersByProgram
+      calendarDiscrepancies
     };
   }, [users, centerFilter, inactiveSortOrder, schedules, customSessions, getSessionsForDate, getProgramFromCalendar]);
 
