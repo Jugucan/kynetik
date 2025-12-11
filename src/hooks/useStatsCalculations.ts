@@ -411,27 +411,32 @@ export const useStatsCalculations = ({
     };
 
     const attendancesWithCalendarProgram = filteredAttendances.map(attendance => {
-      // Primer intent: buscar al calendari per hora exacta
-      let programFromCalendar = getProgramFromCalendar(
+      // Buscar al calendari per hora exacta
+      const programFromCalendar = getProgramFromCalendar(
         attendance.date, 
         attendance.time, 
         attendance.center
       );
       
-      // Si no troba al calendari, normalitzar el nom del gimnàs directament
-      if (programFromCalendar === 'DESCONEGUT' && attendance.activity) {
-        programFromCalendar = normalizeGymProgram(attendance.activity);
+      // Si NO està al calendari, normalitzar el nom del gimnàs però marcar-ho
+      let finalProgram = programFromCalendar;
+      let isInCalendar = programFromCalendar !== 'DESCONEGUT';
+      
+      if (!isInCalendar && attendance.activity) {
+        finalProgram = normalizeGymProgram(attendance.activity);
       }
       
       return {
         ...attendance,
-        calendarProgram: programFromCalendar
+        calendarProgram: finalProgram,
+        isInCalendar: isInCalendar
       };
     }); 
     
     
     attendancesWithCalendarProgram.forEach(attendance => {
-      if (attendance.calendarProgram && attendance.calendarProgram !== 'DESCONEGUT') {
+      // Només comptar programes que REALMENT estan al calendari
+      if (attendance.isInCalendar && attendance.calendarProgram && attendance.calendarProgram !== 'DESCONEGUT') {
         realProgramNames.add(attendance.calendarProgram);
       }
     });
@@ -626,7 +631,9 @@ export const useStatsCalculations = ({
       const normalizedCalendar = normalizeForComparison(attendance.calendarProgram);
       const normalizedGym = normalizeForComparison(attendance.activity);
       
-      if (normalizedCalendar !== normalizedGym) {
+      // Només marcar com a discrepància si està al calendari PERÒ és diferent
+      // NO marcar si simplement no està al calendari (això ja és normal)
+      if (attendance.isInCalendar && normalizedCalendar !== normalizedGym) {
         const key = `${attendance.date}-${attendance.time}-${attendance.center}`;
         
         if (!discrepancyMap.has(key)) {
