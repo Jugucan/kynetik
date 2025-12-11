@@ -577,25 +577,38 @@ export const useStatsCalculations = ({
     const normalizeForComparison = (program: string): string => {
       if (!program) return '';
       
-      const normalized = program.toUpperCase()
+      // Primer netegem espais, outdoor, apòstrofs
+      let normalized = program.toUpperCase()
         .replace(/\s+/g, '')
         .replace(/OUTDOOR/g, '')
         .replace(/'/g, '');
       
+      // Mapa de normalització AMPLIAT
       const map: { [key: string]: string } = {
+        // BODYPUMP
         'BODYPUMP': 'BP',
         'BP': 'BP',
+        
+        // BODYBALANCE
         'BODYBALANCE': 'BB',
         'BB': 'BB',
+        
+        // BODYCOMBAT
         'BODYCOMBAT': 'BC',
         'BC': 'BC',
+        
+        // SH'BAM
         'SHBAM': 'SB',
-        'SH\'BAM': 'SB',
         'DANCE': 'SB',
         'SB': 'SB',
+        
+        // ESTIRAMENTS (totes les variants!)
         'ESTIRAMIENTOS': 'ES',
+        'ESTIRAMENTS': 'ES',
         'STRETCH': 'ES',
         'ES': 'ES',
+        
+        // Altres
         'RPM': 'RPM',
         'BODYSTEP': 'BS',
         'BS': 'BS',
@@ -605,7 +618,9 @@ export const useStatsCalculations = ({
         'GRIT': 'GRIT',
         'BARRE': 'BARRE',
         'TONE': 'TONE',
-        'CORE': 'CORE'
+        'CORE': 'CORE',
+        'CROSSTRAINING': 'CROSS',
+        'CROSS': 'CROSS'
       };
       
       return map[normalized] || normalized;
