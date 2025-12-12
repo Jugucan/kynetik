@@ -677,7 +677,354 @@ export const useStatsCalculations = ({
 
     calendarDiscrepancies.sort((a, b) => a.date.localeCompare(b.date));
 
+    // AFEGIR AQUEST CODI AL FINAL DE useStatsCalculations.ts
+    // Just abans del return stats (línia ~580)
+    
+    // ============================================
+    // NOVA FUNCIONALITAT: DETECCIÓ DE PATRONS D'HORARI
+    // ============================================
+    
+    interface WeeklySchedule {
+      [dayOfWeek: number]: Array<{
+        time: string;
+        program: string;
+        center: string;
+        count: number;
+      }>;
+    }
+    
+    interface SchedulePeriod {
+      startDate: string;
+      endDate: string;
+      weeklySchedule: WeeklySchedule;
+      totalSessions: number;
+    }
+    
+    interface OutlierSession {
+      date: string;
+      time: string;
+      program: string;
+      center: string;
+      attendances: number;
+      reason: string;
+    }
+    
+    // Funció per agrupar sessions per setmana del dia
+    const groupSessionsByWeekday = (sessions: Array<{ date: string; time: string; activity: string; center: string }>) => {
+      const weekdayMap: WeeklySchedule = {};
+      
+      sessions.forEach(session => {
+        const [year, month, day] = session.date.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        const dayOfWeek = date.getDay(); // 0 = Diumenge, 1 = Dilluns, etc.
+        
+        if (!weekdayMap[dayOfWeek]) {
+          weekdayMap[dayOfWeek] = [];
+        }
+        
+        // Buscar si ja existeix aquesta combinació hora+programa+centre
+        const existing = weekdayMap[dayOfWeek].find(
+          s => s.time === session.time && 
+               s.program === session.activity && 
+               centersMatch(s.center, session.center)
+        );
+        
+        if (existing) {
+          existing.count++;
+        } else {
+          weekdayMap[dayOfWeek].push({
+            time: session.time,
+            program: session.activity,
+            center: session.center,
+            count: 1
+          });
+        }
+      });
+      
+      return weekdayMap;
+    };
+    
+    // Funció per comparar dos horaris setmanals
+    const schedulesAreSimilar = (schedule1: WeeklySchedule, schedule2: WeeklySchedule, threshold = 0.7): boolean => {
+      const days = [0, 1, 2, 3, 4, 5, 6];
+      let matchingDays = 0;
+      
+      days.forEach(day => {
+        const sessions1 = schedule1[day] || [];
+        const sessions2 = schedule2[day] || [];
+        
+        // Si ambdós dies estan buits, compte com a match
+        if (sessions1.length === 0 && sessions2.length === 0) {
+          matchingDays++;
+          return;
+        }
+        
+        // Si tenen el mateix nombre de sessions i coincideixen (aproximadament)
+        if (sessions1.length === sessions2.length && sessions1.length > 0) {
+          const matches = sessions1.filter(s1 => 
+            sessions2.some(s2 => 
+              s2.time === s1.time && 
+              s2.program === s1.program &&
+              centersMatch(s1.center, s2.center)
+            )
+          ).length;
+          
+          if (matches / sessions1.length >= 0.8) {
+            matchingDays++;
+          }
+        }
+      });
+      
+      return matchingDays / 7 >= threshold;
+    };
+    
+    // Detectar períodes d'horari
+    const detectSchedulePeriods = (attendances: Array<{ date: string; time: string; activity: string; center: string; userName: string }>): SchedulePeriod[] => {
+      if (attendances.length === 0) return [];
+      
+      // Ordenar per data
+      const sortedAttendances = [...attendances].sort((a, b) => a.date.localeCompare(b.date));
+      
+      const periods: SchedulePeriod[] = [];
+      let currentPeriodSessions: typeof sortedAttendances = [];
+      let currentPeriodStart = sortedAttendances[0].date;
+      
+      // Agrupar sessions en finestres de 4 setmanes per detectar patrons
+      const WINDOW_SIZE_DAYS = 28; // 4 setmanes
+      const MIN_SESSIONS_FOR_PERIOD = 8; // Mínim de sessions per considerar un patró
+      
+      for (let i = 0; i < sortedAttendances.length; i++) {
+        const session = sortedAttendances[i];
+        currentPeriodSessions.push(session);
+        
+        // Mirar si hem arribat al final o si hi ha un salt gran de dates
+        const isLastSession = i === sortedAttendances.length - 1;
+        let hasDateGap = false;
+        
+        if (!isLastSession) {
+          const nextSession = sortedAttendances[i + 1];
+          const currentDate = new Date(session.date);
+          const nextDate = new Date(nextSession.date);
+          const daysDiff = Math.floor((nextDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
+          hasDateGap = daysDiff > 14; // Si hi ha més de 2 setmanes de diferència
+        }
+        
+        // Crear període si:
+        // 1. És l'última sessió, O
+        // 2. Hi ha un salt gran de dates, O
+        // 3. Tenim prou sessions i detectem un canvi d'horari
+        if (isLastSession || hasDateGap || (currentPeriodSessions.length >= MIN_SESSIONS_FOR_PERIOD && i < sortedAttendances.length - 1)) {
+          const shouldCheckPatternChange = !isLastSession && !hasDateGap && i < sortedAttendances.length - MIN_SESSIONS_FOR_PERIOD;
+          
+          if (shouldCheckPatternChange) {
+            // Comparar horari actual amb les següents setmanes
+            const currentSchedule = groupSessionsByWeekday(currentPeriodSessions);
+            const nextWindowSessions = sortedAttendances.slice(i + 1, i + 1 + MIN_SESSIONS_FOR_PERIOD);
+            
+            if (nextWindowSessions.length >= MIN_SESSIONS_FOR_PERIOD) {
+              const nextSchedule = groupSessionsByWeekday(nextWindowSessions);
+              
+              // Si els horaris són diferents, tancar el període actual
+              if (!schedulesAreSimilar(currentSchedule, nextSchedule)) {
+                periods.push({
+                  startDate: currentPeriodStart,
+                  endDate: session.date,
+                  weeklySchedule: currentSchedule,
+                  totalSessions: currentPeriodSessions.length
+                });
+                
+                currentPeriodSessions = [];
+                currentPeriodStart = sortedAttendances[i + 1].date;
+                continue;
+              }
+            }
+          }
+          
+          // Tancar període si arribem aquí
+          if (isLastSession || hasDateGap) {
+            if (currentPeriodSessions.length >= 4) { // Mínim 4 sessions per ser un període vàlid
+              periods.push({
+                startDate: currentPeriodStart,
+                endDate: session.date,
+                weeklySchedule: groupSessionsByWeekday(currentPeriodSessions),
+                totalSessions: currentPeriodSessions.length
+              });
+            }
+            
+            if (!isLastSession && hasDateGap) {
+              currentPeriodSessions = [];
+              currentPeriodStart = sortedAttendances[i + 1].date;
+            }
+          }
+        }
+      }
+      
+      return periods;
+    };
+    
+    // Detectar sessions úniques (outliers) que no segueixen cap patró
+    const detectOutlierSessions = (
+      attendances: Array<{ date: string; time: string; activity: string; center: string; userName: string }>,
+      periods: SchedulePeriod[]
+    ): OutlierSession[] => {
+      const outliers: OutlierSession[] = [];
+      const outlierMap = new Map<string, { session: typeof attendances[0]; count: number; users: Set<string> }>();
+      
+      attendances.forEach(attendance => {
+        // Buscar si aquesta sessió està dins d'algun patró
+        const belongsToPeriod = periods.some(period => {
+          if (attendance.date < period.startDate || attendance.date > period.endDate) {
+            return false;
+          }
+          
+          const [year, month, day] = attendance.date.split('-').map(Number);
+          const date = new Date(year, month - 1, day);
+          const dayOfWeek = date.getDay();
+          
+          const sessionsForDay = period.weeklySchedule[dayOfWeek] || [];
+          return sessionsForDay.some(s => 
+            s.time === attendance.time && 
+            s.program === attendance.activity &&
+            centersMatch(s.center, attendance.center)
+          );
+        });
+        
+        if (!belongsToPeriod) {
+          const key = `${attendance.date}-${attendance.time}-${attendance.activity}-${attendance.center}`;
+          
+          if (!outlierMap.has(key)) {
+            outlierMap.set(key, {
+              session: attendance,
+              count: 1,
+              users: new Set([attendance.userName])
+            });
+          } else {
+            const existing = outlierMap.get(key)!;
+            existing.count++;
+            existing.users.add(attendance.userName);
+          }
+        }
+      });
+      
+      // Convertir a array i classificar les raons
+      Array.from(outlierMap.entries()).forEach(([key, data]) => {
+        let reason = 'Sessió única';
+        
+        // Intentar classificar la raó
+        const program = data.session.activity.toUpperCase();
+        if (program.includes('CROSS') || program.includes('TRAINING')) {
+          reason = 'Cross Training (activitat especial)';
+        } else if (data.count === 1) {
+          reason = 'Substitució única';
+        } else if (data.count <= 3) {
+          reason = 'Sessions esporàdiques';
+        } else {
+          reason = 'Activitat temporal';
+        }
+        
+        outliers.push({
+          date: data.session.date,
+          time: data.session.time,
+          program: data.session.activity,
+          center: data.session.center,
+          attendances: data.count,
+          reason
+        });
+      });
+      
+      return outliers.sort((a, b) => a.date.localeCompare(b.date));
+    };
+    
+    // Detectar sessions que falten al calendari
+    const detectMissingFromCalendar = (
+      attendances: Array<{ date: string; time: string; activity: string; center: string; userName: string; calendarProgram: string; isInCalendar: boolean }>,
+      periods: SchedulePeriod[]
+    ): Array<{
+      date: string;
+      time: string;
+      program: string;
+      center: string;
+      attendances: number;
+      belongsToPeriod: boolean;
+      periodInfo?: string;
+    }> => {
+      const missingMap = new Map<string, {
+        date: string;
+        time: string;
+        program: string;
+        center: string;
+        count: number;
+        belongsToPeriod: boolean;
+        periodInfo?: string;
+      }>();
+      
+      attendances.forEach(attendance => {
+        // Només sessions que NO estan al calendari
+        if (attendance.calendarProgram === 'DESCONEGUT' || !attendance.isInCalendar) {
+          const key = `${attendance.date}-${attendance.time}-${attendance.activity}-${attendance.center}`;
+          
+          // Buscar si pertany a algun període
+          let belongsToPeriod = false;
+          let periodInfo: string | undefined;
+          
+          periods.forEach((period, idx) => {
+            if (attendance.date >= period.startDate && attendance.date <= period.endDate) {
+              const [year, month, day] = attendance.date.split('-').map(Number);
+              const date = new Date(year, month - 1, day);
+              const dayOfWeek = date.getDay();
+              
+              const sessionsForDay = period.weeklySchedule[dayOfWeek] || [];
+              const inPattern = sessionsForDay.some(s => 
+                s.time === attendance.time && 
+                s.program === attendance.activity &&
+                centersMatch(s.center, attendance.center)
+              );
+              
+              if (inPattern) {
+                belongsToPeriod = true;
+                periodInfo = `Període ${idx + 1}: ${period.startDate} - ${period.endDate}`;
+              }
+            }
+          });
+          
+          if (!missingMap.has(key)) {
+            missingMap.set(key, {
+              date: attendance.date,
+              time: attendance.time,
+              program: attendance.activity,
+              center: attendance.center,
+              count: 1,
+              belongsToPeriod,
+              periodInfo
+            });
+          } else {
+            const existing = missingMap.get(key)!;
+            existing.count++;
+          }
+        }
+      });
+      
+      return Array.from(missingMap.values())
+        .sort((a, b) => {
+          // Primer les que pertanyen a períodes, després per data
+          if (a.belongsToPeriod && !b.belongsToPeriod) return -1;
+          if (!a.belongsToPeriod && b.belongsToPeriod) return 1;
+          return a.date.localeCompare(b.date);
+        });
+    };
+    
+    // CALCULAR TOT
+    const schedulePeriods = detectSchedulePeriods(filteredAttendances);
+    const outlierSessions = detectOutlierSessions(filteredAttendances, schedulePeriods);
+    const missingSessions = detectMissingFromCalendar(attendancesWithCalendarProgram, schedulePeriods);
+    
+    // ============================================
+    // FI NOVA FUNCIONALITAT
+    // ============================================
+    
+    // IMPORTANT: Afegir aquestes propietats al return statement:
     return {
+      // ... tots els altres camps existents ...
       totalUsers,
       totalSessions,
       totalAttendances,
@@ -707,9 +1054,13 @@ export const useStatsCalculations = ({
       allMonthsLabels,
       allYearsSorted,
       topUsersByProgram,
-      calendarDiscrepancies
+      calendarDiscrepancies,
+      
+      // AFEGIR AQUESTES 3 NOVES PROPIETATS:
+      schedulePeriods,
+      outlierSessions,
+      missingSessions
     };
-  }, [users, centerFilter, inactiveSortOrder, schedules, customSessions, getSessionsForDate, getProgramFromCalendar]);
 
   return stats;
 };
