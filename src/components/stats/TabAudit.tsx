@@ -1,5 +1,5 @@
 import { NeoCard } from "@/components/NeoCard";
-import { AlertTriangle, Calendar, TrendingUp, AlertCircle, CheckCircle2, Download } from "lucide-react";
+import { AlertTriangle, Upload, Calendar, TrendingUp, CheckCircle2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,136 +10,196 @@ interface TabAuditProps {
   stats: any;
 }
 
-const DAY_NAMES = ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte'];
+interface ScheduleData {
+  exportDate: string;
+  totalSessions: number;
+  dateRange: {
+    start: string;
+    end: string;
+  };
+  analysis?: {
+    seasons?: Array<{
+      startDate: string;
+      endDate: string;
+      classes: Array<{
+        dayOfWeek: string;
+        startTime: string;
+        endTime?: string;
+        activity: string;
+        center: string;
+        totalOccurrences: number;
+      }>;
+    }>;
+    recurring?: Array<{
+      dayOfWeek: string;
+      startTime: string;
+      endTime: string;
+      activity: string;
+      center: string;
+      firstDate: string;
+      lastDate: string;
+      totalOccurrences: number;
+    }>;
+    sporadic?: Array<{
+      dayOfWeek: string;
+      startTime: string;
+      endTime: string;
+      activity: string;
+      center: string;
+      firstDate: string;
+      lastDate: string;
+      totalOccurrences: number;
+    }>;
+  };
+}
+
+const DAY_NAMES_MAP: Record<string, string> = {
+  'dilluns': 'Dilluns',
+  'dimarts': 'Dimarts',
+  'dimecres': 'Dimecres',
+  'dijous': 'Dijous',
+  'divendres': 'Divendres',
+  'dissabte': 'Dissabte',
+  'diumenge': 'Diumenge'
+};
+
+const DAY_ORDER = ['dilluns', 'dimarts', 'dimecres', 'dijous', 'divendres', 'dissabte', 'diumenge'];
 
 export const TabAudit = ({ stats }: TabAuditProps) => {
-  const [expandedPeriod, setExpandedPeriod] = useState<number | null>(null);
-  
-  const discrepancies = stats.calendarDiscrepancies || [];
-  const periods = stats.schedulePeriods || [];
-  const outliers = stats.outlierSessions || [];
-  const missing = stats.missingSessions || [];
+  const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
+  const [expandedSeason, setExpandedSeason] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Funció per exportar a CSV
-  const exportToCSV = () => {
-    const csvRows: string[] = [];
-    
-    // Headers
-    csvRows.push('Tipus,Data,Hora,Programa,Centre,Detalls');
-    
-    // Sessions que falten (pertanyen a períodes)
-    missing.filter(m => m.belongsToPeriod).forEach(m => {
-      csvRows.push(`Falta al calendari (patró),${m.date},${m.time},${m.program},${m.center},"${m.periodInfo || ''}"`);
-    });
-    
-    // Sessions úniques
-    outliers.forEach(o => {
-      csvRows.push(`Sessió única,${o.date},${o.time},${o.program},${o.center},"${o.reason}"`);
-    });
-    
-    // Discrepàncies
-    discrepancies.forEach((d: any) => {
-      csvRows.push(`Discrepància,${d.date},${d.time},${d.calendarProgram} vs ${d.gymProgram},${d.center},"Revisar calendari"`);
-    });
-    
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `auditoria_calendari_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+  const discrepancies = stats.calendarDiscrepancies || [];
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setError(null);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        setScheduleData(json);
+      } catch (err) {
+        setError('Error llegint el fitxer JSON. Verifica que el format sigui correcte.');
+        console.error('Error parsing JSON:', err);
+      }
+    };
+    reader.onerror = () => {
+      setError('Error carregant el fitxer.');
+    };
+    reader.readAsText(file);
   };
 
-  // Calcular estadístiques ràpides
-  const totalMissing = missing.length;
-  const missingInPeriods = missing.filter(m => m.belongsToPeriod).length;
-  const totalIssues = discrepancies.length + totalMissing;
+  const clearData = () => {
+    setScheduleData(null);
+    setError(null);
+  };
 
   return (
     <div className="space-y-6">
-      {/* Resum d'estat */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <NeoCard className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50">
-          <div className="flex items-center gap-3">
-            <Calendar className="w-8 h-8 text-blue-600" />
-            <div>
-              <p className="text-2xl font-bold text-blue-900">{periods.length}</p>
-              <p className="text-sm text-blue-600">Períodes detectats</p>
-            </div>
-          </div>
-        </NeoCard>
-
-        <NeoCard className="p-4 bg-gradient-to-br from-orange-50 to-red-50">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-8 h-8 text-orange-600" />
-            <div>
-              <p className="text-2xl font-bold text-orange-900">{totalIssues}</p>
-              <p className="text-sm text-orange-600">Sessions a revisar</p>
-            </div>
-          </div>
-        </NeoCard>
-
-        <NeoCard className="p-4 bg-gradient-to-br from-purple-50 to-pink-50">
-          <div className="flex items-center gap-3">
-            <TrendingUp className="w-8 h-8 text-purple-600" />
-            <div>
-              <p className="text-2xl font-bold text-purple-900">{outliers.length}</p>
-              <p className="text-sm text-purple-600">Sessions úniques</p>
-            </div>
-          </div>
-        </NeoCard>
-      </div>
-
-      {/* Botó d'exportació */}
-      {totalIssues > 0 && (
-        <div className="flex justify-end">
-          <Button 
-            onClick={exportToCSV}
-            variant="outline"
-            size="sm"
-            className="gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Exportar Auditoria (CSV)
-          </Button>
-        </div>
-      )}
-
-      {/* SECCIÓ 1: Patrons d'horari detectats */}
-      <NeoCard className="p-4 sm:p-6 min-w-0 bg-gradient-to-br from-green-50 to-emerald-50">
+      {/* Càrrega de fitxer JSON */}
+      <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
         <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5 text-green-600 flex-shrink-0" />
-          <h3 className="text-lg sm:text-xl font-semibold">Patrons d'Horari Detectats</h3>
+          <Upload className="w-5 h-5 text-blue-600 flex-shrink-0" />
+          <h3 className="text-lg sm:text-xl font-semibold">Horaris Extrets del Gimnàs</h3>
         </div>
         <Separator className="mb-4" />
         
         <p className="text-sm text-muted-foreground mb-4">
-          Aquests són els períodes amb horari regular detectats a partir de les assistències reals dels gimnasos.
+          Puja el fitxer JSON amb els horaris extrets del gimnàs per visualitzar les temporades i sessions.
         </p>
 
-        {periods.length > 0 ? (
+        {!scheduleData ? (
+          <div className="flex flex-col items-center gap-4">
+            <label htmlFor="json-upload" className="cursor-pointer">
+              <div className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <Upload className="w-4 h-4" />
+                <span>Seleccionar fitxer JSON</span>
+              </div>
+              <input
+                id="json-upload"
+                type="file"
+                accept=".json"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </label>
+            
+            {error && (
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
+                {error}
+              </div>
+            )}
+          </div>
+        ) : (
           <div className="space-y-3">
-            {periods.map((period: any, idx: number) => {
-              const isExpanded = expandedPeriod === idx;
-              const hasSchedule = Object.keys(period.weeklySchedule).length > 0;
+            <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
+              <div>
+                <p className="font-semibold text-sm">Fitxer carregat correctament ✅</p>
+                <p className="text-xs text-muted-foreground">
+                  {scheduleData.totalSessions} sessions del {scheduleData.dateRange.start} al {scheduleData.dateRange.end}
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={clearData}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {scheduleData.analysis?.seasons && (
+              <div className="text-sm text-muted-foreground">
+                📅 {scheduleData.analysis.seasons.length} temporades detectades
+              </div>
+            )}
+          </div>
+        )}
+      </NeoCard>
+
+      {/* SECCIÓ 1: Temporades (Seasons) */}
+      {scheduleData?.analysis?.seasons && scheduleData.analysis.seasons.length > 0 && (
+        <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-green-50 to-emerald-50">
+          <div className="flex items-center gap-2 mb-4">
+            <Calendar className="w-5 h-5 text-green-600 flex-shrink-0" />
+            <h3 className="text-lg sm:text-xl font-semibold">Temporades d'Horari</h3>
+          </div>
+          <Separator className="mb-4" />
+          
+          <p className="text-sm text-muted-foreground mb-4">
+            Períodes detectats amb l'horari setmanal de cada etapa.
+          </p>
+
+          <div className="space-y-3">
+            {scheduleData.analysis.seasons.map((season, idx) => {
+              const isExpanded = expandedSeason === idx;
               
+              // Agrupar classes per dia de la setmana
+              const classesByDay = season.classes.reduce((acc, cls) => {
+                const day = cls.dayOfWeek.toLowerCase();
+                if (!acc[day]) acc[day] = [];
+                acc[day].push(cls);
+                return acc;
+              }, {} as Record<string, typeof season.classes>);
+
               return (
                 <div key={idx} className="p-4 bg-white rounded-lg border-2 border-green-200">
                   <div 
                     className="flex items-center justify-between cursor-pointer"
-                    onClick={() => setExpandedPeriod(isExpanded ? null : idx)}
+                    onClick={() => setExpandedSeason(isExpanded ? null : idx)}
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <Badge variant="outline" className="bg-green-100">
-                          Període {idx + 1}
+                          Temporada {idx + 1}
                         </Badge>
                         <span className="text-sm font-medium">
-                          {period.startDate} - {period.endDate}
+                          {season.startDate} - {season.endDate}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {period.totalSessions} sessions en aquest període
+                        {season.classes.length} classes diferents
                       </p>
                     </div>
                     <Button variant="ghost" size="sm">
@@ -147,30 +207,31 @@ export const TabAudit = ({ stats }: TabAuditProps) => {
                     </Button>
                   </div>
 
-                  {isExpanded && hasSchedule && (
+                  {isExpanded && (
                     <div className="mt-4 space-y-2">
                       <Separator className="mb-3" />
-                      <p className="text-sm font-semibold mb-2">Horari setmanal detectat:</p>
+                      <p className="text-sm font-semibold mb-2">Horari setmanal:</p>
                       
-                      {[1, 2, 3, 4, 5, 6, 0].map(dayNum => {
-                        const sessions = period.weeklySchedule[dayNum] || [];
-                        if (sessions.length === 0) return null;
+                      {DAY_ORDER.map(dayKey => {
+                        const classes = classesByDay[dayKey];
+                        if (!classes || classes.length === 0) return null;
                         
                         return (
-                          <div key={dayNum} className="pl-4 py-2 border-l-2 border-green-300">
-                            <p className="font-medium text-sm mb-1">{DAY_NAMES[dayNum]}</p>
+                          <div key={dayKey} className="pl-4 py-2 border-l-2 border-green-300">
+                            <p className="font-medium text-sm mb-1">{DAY_NAMES_MAP[dayKey]}</p>
                             <div className="space-y-1">
-                              {sessions
-                                .sort((a: any, b: any) => a.time.localeCompare(b.time))
-                                .map((session: any, sIdx: number) => (
-                                  <div key={sIdx} className="flex items-center gap-2 text-xs">
+                              {classes
+                                .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                                .map((cls, cIdx) => (
+                                  <div key={cIdx} className="flex items-center gap-2 text-xs">
                                     <Badge variant="secondary" className="font-mono text-xs">
-                                      {session.time}
+                                      {cls.startTime}
+                                      {cls.endTime && ` - ${cls.endTime}`}
                                     </Badge>
-                                    <span className="font-semibold">{session.program}</span>
-                                    <span className="text-muted-foreground">({session.center})</span>
+                                    <span className="font-semibold">{cls.activity}</span>
+                                    <span className="text-muted-foreground">({cls.center})</span>
                                     <span className="text-muted-foreground ml-auto">
-                                      {session.count}x
+                                      {cls.totalOccurrences}x
                                     </span>
                                   </div>
                                 ))}
@@ -184,136 +245,45 @@ export const TabAudit = ({ stats }: TabAuditProps) => {
               );
             })}
           </div>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            No s'han detectat períodes d'horari regular
-          </div>
-        )}
-      </NeoCard>
-
-      {/* SECCIÓ 2: Sessions que falten al calendari */}
-      {missing.length > 0 && (
-        <NeoCard className="p-4 sm:p-6 min-w-0 bg-gradient-to-br from-red-50 to-rose-50">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-            <h3 className="text-lg sm:text-xl font-semibold">Sessions que Falten al Calendari</h3>
-          </div>
-          <Separator className="mb-4" />
-          
-          <p className="text-sm text-muted-foreground mb-4">
-            Aquestes sessions han tingut assistències reals però no estan al teu calendari. 
-            {missingInPeriods > 0 && ` ${missingInPeriods} pertanyen a patrons regulars.`}
-          </p>
-
-          <Badge variant="outline" className="bg-red-100 mb-4">
-            {missing.length} sessions faltants
-          </Badge>
-
-          <ScrollArea className="h-96">
-            <div className="space-y-3">
-              {/* Primer: Sessions que pertanyen a períodes */}
-              {missing.filter(m => m.belongsToPeriod).length > 0 && (
-                <>
-                  <p className="text-sm font-semibold text-red-700 mb-2">
-                    ⚠️ Falten en patrons regulars:
-                  </p>
-                  {missing.filter(m => m.belongsToPeriod).map((sess: any, idx: number) => (
-                    <div key={idx} className="p-3 bg-white rounded-lg border-2 border-red-300">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-sm">{sess.date}</span>
-                        <Badge variant="outline">{sess.center}</Badge>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="secondary" className="font-mono">
-                          {sess.time}
-                        </Badge>
-                        <span className="font-bold text-red-700">{sess.program}</span>
-                      </div>
-
-                      {sess.periodInfo && (
-                        <p className="text-xs text-muted-foreground">
-                          📅 {sess.periodInfo}
-                        </p>
-                      )}
-                      
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {sess.attendances} assistències registrades
-                      </p>
-                    </div>
-                  ))}
-                </>
-              )}
-
-              {/* Després: Sessions úniques que també falten */}
-              {missing.filter(m => !m.belongsToPeriod).length > 0 && (
-                <>
-                  <Separator className="my-4" />
-                  <p className="text-sm font-semibold text-red-700 mb-2">
-                    Sessions úniques que també falten:
-                  </p>
-                  {missing.filter(m => !m.belongsToPeriod).map((sess: any, idx: number) => (
-                    <div key={idx} className="p-3 bg-white rounded-lg border border-red-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-sm">{sess.date}</span>
-                        <Badge variant="outline">{sess.center}</Badge>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="font-mono">
-                          {sess.time}
-                        </Badge>
-                        <span className="font-bold">{sess.program}</span>
-                      </div>
-                      
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {sess.attendances} assistències
-                      </p>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          </ScrollArea>
         </NeoCard>
       )}
 
-      {/* SECCIÓ 3: Sessions úniques (outliers) */}
-      {outliers.length > 0 && (
-        <NeoCard className="p-4 sm:p-6 min-w-0 bg-gradient-to-br from-purple-50 to-violet-50">
+      {/* SECCIÓ 2: Classes Recurrents */}
+      {scheduleData?.analysis?.recurring && scheduleData.analysis.recurring.length > 0 && (
+        <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-cyan-50">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-purple-600 flex-shrink-0" />
-            <h3 className="text-lg sm:text-xl font-semibold">Sessions Úniques / Substitucions</h3>
+            <TrendingUp className="w-5 h-5 text-blue-600 flex-shrink-0" />
+            <h3 className="text-lg sm:text-xl font-semibold">Classes Recurrents</h3>
           </div>
           <Separator className="mb-4" />
           
           <p className="text-sm text-muted-foreground mb-4">
-            Sessions que no encaixen en cap patró regular. Poden ser substitucions, activitats especials o sessions esporàdiques.
+            Classes amb horari fix que es repeteixen regularment.
           </p>
 
-          <Badge variant="outline" className="bg-purple-100 mb-4">
-            {outliers.length} sessions úniques
+          <Badge variant="outline" className="bg-blue-100 mb-4">
+            {scheduleData.analysis.recurring.length} classes recurrents
           </Badge>
 
           <ScrollArea className="h-96">
             <div className="space-y-2">
-              {outliers.map((outlier: any, idx: number) => (
-                <div key={idx} className="p-3 bg-white rounded-lg border border-purple-200">
+              {scheduleData.analysis.recurring.map((cls, idx) => (
+                <div key={idx} className="p-3 bg-white rounded-lg border border-blue-200">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-sm">{outlier.date}</span>
-                    <Badge variant="outline">{outlier.center}</Badge>
+                    <span className="font-semibold text-sm">{DAY_NAMES_MAP[cls.dayOfWeek.toLowerCase()]}</span>
+                    <Badge variant="outline">{cls.center}</Badge>
                   </div>
                   
                   <div className="flex items-center gap-2 mb-2">
                     <Badge variant="secondary" className="font-mono">
-                      {outlier.time}
+                      {cls.startTime} - {cls.endTime}
                     </Badge>
-                    <span className="font-bold">{outlier.program}</span>
+                    <span className="font-bold text-blue-700">{cls.activity}</span>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-purple-600 italic">{outlier.reason}</span>
-                    <span className="text-muted-foreground">{outlier.attendances} assist.</span>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{cls.firstDate} → {cls.lastDate}</span>
+                    <span>{cls.totalOccurrences} sessions</span>
                   </div>
                 </div>
               ))}
@@ -322,8 +292,52 @@ export const TabAudit = ({ stats }: TabAuditProps) => {
         </NeoCard>
       )}
 
-      {/* SECCIÓ 4: Discrepàncies calendari vs gimnàs (ja existent) */}
-      <NeoCard className="p-4 sm:p-6 min-w-0 bg-gradient-to-br from-yellow-50 to-orange-50">
+      {/* SECCIÓ 3: Classes Puntuals */}
+      {scheduleData?.analysis?.sporadic && scheduleData.analysis.sporadic.length > 0 && (
+        <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-purple-50 to-violet-50">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="w-5 h-5 text-purple-600 flex-shrink-0" />
+            <h3 className="text-lg sm:text-xl font-semibold">Classes Puntuals / Substitucions</h3>
+          </div>
+          <Separator className="mb-4" />
+          
+          <p className="text-sm text-muted-foreground mb-4">
+            Sessions puntuals, Cross Training, substitucions i activitats temporals.
+          </p>
+
+          <Badge variant="outline" className="bg-purple-100 mb-4">
+            {scheduleData.analysis.sporadic.length} sessions puntuals
+          </Badge>
+
+          <ScrollArea className="h-96">
+            <div className="space-y-2">
+              {scheduleData.analysis.sporadic.map((cls, idx) => (
+                <div key={idx} className="p-3 bg-white rounded-lg border border-purple-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-sm">{DAY_NAMES_MAP[cls.dayOfWeek.toLowerCase()]}</span>
+                    <Badge variant="outline">{cls.center}</Badge>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="secondary" className="font-mono">
+                      {cls.startTime} - {cls.endTime}
+                    </Badge>
+                    <span className="font-bold">{cls.activity}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">{cls.firstDate} → {cls.lastDate}</span>
+                    <span className="text-purple-600 italic">{cls.totalOccurrences} vegades</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </NeoCard>
+      )}
+
+      {/* SECCIÓ 4: Discrepàncies calendari vs gimnàs (JA EXISTENT) */}
+      <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-yellow-50 to-orange-50">
         <div className="flex items-center gap-2 mb-4">
           <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0" />
           <h3 className="text-lg sm:text-xl font-semibold">Discrepàncies: Calendari vs Gimnàs</h3>
@@ -387,21 +401,6 @@ export const TabAudit = ({ stats }: TabAuditProps) => {
           </div>
         )}
       </NeoCard>
-
-      {/* Missatge final positiu si tot està bé */}
-      {totalIssues === 0 && periods.length > 0 && (
-        <NeoCard className="p-6 bg-gradient-to-br from-green-50 to-emerald-100 border-2 border-green-300">
-          <div className="text-center">
-            <CheckCircle2 className="w-16 h-16 text-green-600 mx-auto mb-3" />
-            <h3 className="text-xl font-bold text-green-800 mb-2">
-              Perfecte! El teu calendari està complet 🎉
-            </h3>
-            <p className="text-sm text-green-700">
-              S'han detectat {periods.length} períodes d'horari i no hi ha cap sessió pendent de revisar.
-            </p>
-          </div>
-        </NeoCard>
-      )}
     </div>
   );
 };
