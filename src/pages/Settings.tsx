@@ -53,7 +53,6 @@ const Settings = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-    // 🆕 MODIFICACIÓ: Mostra sempre anys des de 2023 fins a 2 anys en el futur
     const availableFiscalYears = useMemo(() => {
         const allDates = [
             ...allVacationDates, 
@@ -62,9 +61,8 @@ const Settings = () => {
         ];
         const allFiscalYears = allDates.map(item => getFiscalYear(item.date));
         
-        // Assegura que sempre tenim des de 2023 fins a currentYear + 2
-        const minYear = 2023; // Any mínim fix
-        const maxYear = currentFiscalYear + 2; // Sempre 2 anys endavant
+        const minYear = 2023;
+        const maxYear = currentFiscalYear + 2;
         
         const yearsFromData = Array.from(new Set(allFiscalYears));
         const allYearsToShow = Array.from(new Set([...yearsFromData, minYear, maxYear, currentFiscalYear]));
@@ -251,18 +249,21 @@ const Settings = () => {
         }
     };
     
+    // 🔧 FUNCIÓ CORREGIDA: Ara guarda correctament a Firebase quan esborres dates
     const handleRemoveDate = async (dateToRemove: Date, type: 'vacation' | 'closure', centerId?: string) => {
         if (isInitialLoad) return;
         
         if (type === 'vacation') {
             const newAllVacations = allVacationDates.filter(d => !isSameDay(d.date, dateToRemove));
             setAllVacationDates(newAllVacations);
+            // ✅ CORRECCIÓ: Ara sí que guarda a Firebase!
             await saveToFirebase(newAllVacations, allClosuresByCenter, allOfficialHolidays);
         } else if (type === 'closure' && centerId) {
             const currentClosures = allClosuresByCenter[centerId] || [];
             const newClosuresForCenter = currentClosures.filter(d => !isSameDay(d.date, dateToRemove));
             const newAllClosures = { ...allClosuresByCenter, [centerId]: newClosuresForCenter };
             setAllClosuresByCenter(newAllClosures);
+            // ✅ CORRECCIÓ: Ara sí que guarda a Firebase!
             await saveToFirebase(allVacationDates, newAllClosures, allOfficialHolidays);
         }
     };
@@ -296,7 +297,6 @@ const Settings = () => {
 
     const getDatesOnly = (datesWithReason: DateWithReason[]): Date[] => datesWithReason.map(d => d.date);
 
-    // Components de renderització
     const ReasonInput = ({ date, reason, type, centerId }: { 
         date: Date, 
         reason: string,
