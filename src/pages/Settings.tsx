@@ -53,6 +53,7 @@ const Settings = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
 
+    // 🆕 MODIFICACIÓ: Mostra sempre anys des de 2023 fins a 2 anys en el futur
     const availableFiscalYears = useMemo(() => {
         const allDates = [
             ...allVacationDates, 
@@ -60,11 +61,18 @@ const Settings = () => {
             ...allOfficialHolidays
         ];
         const allFiscalYears = allDates.map(item => getFiscalYear(item.date));
-        const years = Array.from(new Set([...allFiscalYears, currentFiscalYear]));
-        if (years.length === 0) return [currentFiscalYear];
-        const minYear = Math.min(...years);
-        const maxYear = Math.max(...years);
-        return getFiscalYearsRange(minYear, maxYear).sort((a, b) => b - a);
+        
+        // Assegura que sempre tenim des de 2023 fins a currentYear + 2
+        const minYear = 2023; // Any mínim fix
+        const maxYear = currentFiscalYear + 2; // Sempre 2 anys endavant
+        
+        const yearsFromData = Array.from(new Set(allFiscalYears));
+        const allYearsToShow = Array.from(new Set([...yearsFromData, minYear, maxYear, currentFiscalYear]));
+        
+        const finalMinYear = Math.min(...allYearsToShow);
+        const finalMaxYear = Math.max(...allYearsToShow);
+        
+        return getFiscalYearsRange(finalMinYear, finalMaxYear).sort((a, b) => b - a);
     }, [allVacationDates, allClosuresByCenter, allOfficialHolidays, currentFiscalYear]);
 
     const vacationDates = useMemo(() => 
