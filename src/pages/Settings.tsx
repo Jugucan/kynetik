@@ -117,6 +117,7 @@ const Settings = () => {
         return result;
     }, [vacationDates, activeCenters, isWorkDay, workYear]);
 
+    // 🔧 FUNCIÓ CORREGIDA: Ara sobreescriu completament per esborrar dates
     const saveToFirebase = async (
         vacationsToSave: DateWithReason[],
         closuresToSave: Record<string, DateWithReason[]>,
@@ -136,8 +137,9 @@ const Settings = () => {
                 closuresSantHilari: closuresByCenter['sant-hilari'] || {},
             };
 
-            await setDoc(SETTINGS_DOC_REF, dataToSave, { merge: true });
-            console.log("✅ Dades guardades a Firebase");
+            // ✅ SENSE merge: true per sobreescriure completament
+            await setDoc(SETTINGS_DOC_REF, dataToSave);
+            console.log("✅ Dades guardades a Firebase (sobreescrites)");
         } catch (error) {
             console.error("❌ Error al guardar a Firebase:", error);
         }
@@ -249,21 +251,18 @@ const Settings = () => {
         }
     };
     
-    // 🔧 FUNCIÓ CORREGIDA: Ara guarda correctament a Firebase quan esborres dates
     const handleRemoveDate = async (dateToRemove: Date, type: 'vacation' | 'closure', centerId?: string) => {
         if (isInitialLoad) return;
         
         if (type === 'vacation') {
             const newAllVacations = allVacationDates.filter(d => !isSameDay(d.date, dateToRemove));
             setAllVacationDates(newAllVacations);
-            // ✅ CORRECCIÓ: Ara sí que guarda a Firebase!
             await saveToFirebase(newAllVacations, allClosuresByCenter, allOfficialHolidays);
         } else if (type === 'closure' && centerId) {
             const currentClosures = allClosuresByCenter[centerId] || [];
             const newClosuresForCenter = currentClosures.filter(d => !isSameDay(d.date, dateToRemove));
             const newAllClosures = { ...allClosuresByCenter, [centerId]: newClosuresForCenter };
             setAllClosuresByCenter(newAllClosures);
-            // ✅ CORRECCIÓ: Ara sí que guarda a Firebase!
             await saveToFirebase(allVacationDates, newAllClosures, allOfficialHolidays);
         }
     };
