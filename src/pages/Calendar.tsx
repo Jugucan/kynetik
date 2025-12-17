@@ -35,27 +35,31 @@ const getBillingPeriod = (referenceDate: Date): { start: Date; end: Date } => {
   let startMonth: number;
   let startYear: number;
   
+  // Si el dia és menor que 26, el període comença el mes anterior
   if (day < 26) {
     startMonth = month - 1;
-    startYear = month === 0 ? year - 1 : year;
+    startYear = year;
+    // Si estem al gener (month=0) i day<26, anem a desembre de l'any anterior
+    if (startMonth < 0) {
+      startMonth = 11;
+      startYear = year - 1;
+    }
   } else {
+    // Si el dia és 26 o més, el període comença aquest mateix mes
     startMonth = month;
     startYear = year;
   }
   
-  if (startMonth < 0) {
-    startMonth = 11;
-    startYear -= 1;
-  }
-  
+  // La data d'inici és sempre el dia 26 del startMonth/startYear
   const startDate = new Date(startYear, startMonth, 26);
   startDate.setHours(0, 0, 0, 0);
   
+  // La data final és el dia 25 del mes següent
   let endMonth = startMonth + 1;
   let endYear = startYear;
   if (endMonth > 11) {
     endMonth = 0;
-    endYear += 1;
+    endYear = startYear + 1;
   }
   
   const endDate = new Date(endYear, endMonth, 25);
