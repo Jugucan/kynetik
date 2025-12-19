@@ -8,7 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ca } from "date-fns/locale";
-import { Center, LocalHoliday } from "@/hooks/useCenters";
+import { Center, LocalHoliday, YearlyConfig } from "@/hooks/useCenters";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,16 +29,19 @@ interface CenterManagementProps {
   currentEditingCenter: string | null;
   isPopoverOpen: boolean;
   isSaving: boolean;
+  selectedFiscalYear: number; // 🆕 Any fiscal seleccionat
   onAddCenter: (center: Omit<Center, 'id' | 'createdAt'>) => Promise<void>;
   onDeactivateCenter: (centerId: string) => Promise<void>;
   onReactivateCenter: (centerId: string) => Promise<void>;
   onDeleteCenter: (centerId: string) => Promise<void>;
   onUpdateCenter: (centerId: string, updates: Partial<Center>) => Promise<void>;
+  onUpdateCenterYearlyConfig: (centerId: string, fiscalYear: number, config: YearlyConfig) => Promise<void>; // 🆕
   onToggleExpanded: (centerId: string) => void;
   onDateSelect: (dates: Date[] | undefined, centerId: string) => void;
   onPopoverChange: (open: boolean, centerId: string | null) => void;
   getDatesOnly: (dates: DateWithReason[]) => Date[];
   renderDateList: (dates: DateWithReason[], centerId: string) => React.ReactNode;
+  getCenterConfig: (centerId: string, fiscalYear: number) => YearlyConfig; // 🆕
 }
 
 export const CenterManagement = ({
@@ -49,16 +52,19 @@ export const CenterManagement = ({
   currentEditingCenter,
   isPopoverOpen,
   isSaving,
+  selectedFiscalYear, // 🆕
   onAddCenter,
   onDeactivateCenter,
   onReactivateCenter,
   onDeleteCenter,
   onUpdateCenter,
+  onUpdateCenterYearlyConfig, // 🆕
   onToggleExpanded,
   onDateSelect,
   onPopoverChange,
   getDatesOnly,
   renderDateList,
+  getCenterConfig, // 🆕
 }: CenterManagementProps) => {
   const [showAddCenter, setShowAddCenter] = useState(false);
   const [newCenterName, setNewCenterName] = useState('');
@@ -75,9 +81,12 @@ export const CenterManagement = ({
     await onAddCenter({
       name: newCenterName.trim(),
       isActive: true,
-      workDays: newCenterWorkDays,
-      availableVacationDays: newCenterVacationDays,
       localHolidays: [],
+      defaultConfig: {
+        workDays: newCenterWorkDays,
+        availableVacationDays: newCenterVacationDays,
+      },
+      yearlyConfigs: {},
     });
     
     setNewCenterName('');
@@ -96,6 +105,22 @@ export const CenterManagement = ({
     if (!centerToDelete) return;
     await onDeleteCenter(centerToDelete.id);
     setCenterToDelete(null);
+  };
+
+  // 🆕 Gestionar canvis en dies laborables per l'any actual
+  const handleWorkDaysChange = async (centerId: string, newWorkDays: number[]) => {
+    await onUpdateCenterYearlyConfig(centerId, selectedFiscalYear, {
+      ...getCenterConfig(centerId, selectedFiscalYear),
+      workDays: newWorkDays,
+    });
+  };
+
+  // 🆕 Gestionar canvis en dies de vacances per l'any actual
+  const handleVacationDaysChange = async (centerId: string, newVacationDays: number) => {
+    await onUpdateCenterYearlyConfig(centerId, selectedFiscalYear, {
+      ...getCenterConfig(centerId, selectedFiscalYear),
+      availableVacationDays: newVacationDays,
+    });
   };
 
   return (
@@ -181,153 +206,167 @@ export const CenterManagement = ({
         )}
 
         <div className="space-y-3 w-full">
-          {centers.map((center) => (
-            <div 
-              key={center.id} 
-              className={`p-3 sm:p-4 rounded-xl shadow-neo ${center.isActive ? 'bg-white' : 'bg-gray-100 opacity-75'} min-w-0`}
-            >
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                  {center.isActive && (
-                    <button
-                      onClick={() => onToggleExpanded(center.id)}
-                      className="p-1 rounded hover:bg-gray-100"
-                    >
-                      {expandedCenters[center.id] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </button>
-                  )}
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-sm sm:text-base truncate">{center.name}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {center.isActive ? (
-                        <>Dies: {center.workDays.map(d => dayNamesList[d-1]?.slice(0,2)).join(', ')} • {center.availableVacationDays} dies vacances</>
-                      ) : (
-                        <span className="text-orange-600">Desactivat el {center.deactivatedAt}</span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                  {center.isActive ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setCenterToDeactivate(center);
-                      }}
-                      className="text-orange-600 hover:text-orange-700 w-full sm:w-auto"
-                    >
-                      <PowerOff className="h-4 w-4 mr-1" />
-                      Desactivar
-                    </Button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onReactivateCenter(center.id);
-                        }}
-                        className="text-green-600 hover:text-green-700 w-full sm:w-auto"
+          {centers.map((center) => {
+            // 🆕 Obtenir configuració per l'any seleccionat
+            const config = getCenterConfig(center.id, selectedFiscalYear);
+            
+            return (
+              <div 
+                key={center.id} 
+                className={`p-3 sm:p-4 rounded-xl shadow-neo ${center.isActive ? 'bg-white' : 'bg-gray-100 opacity-75'} min-w-0`}
+              >
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                    {center.isActive && (
+                      <button
+                        onClick={() => onToggleExpanded(center.id)}
+                        className="p-1 rounded hover:bg-gray-100"
                       >
-                        <Power className="h-4 w-4 mr-1" />
-                        Reactivar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCenterToDelete(center);
-                        }}
-                        className="text-red-600 hover:text-red-700 w-full sm:w-auto"
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Eliminar
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {expandedCenters[center.id] && center.isActive && (
-                <div className="mt-4 pt-4 border-t space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                    <div>
-                      <Label>Dies laborables</Label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {dayNamesList.map((name, index) => {
-                          const dayIndex = index + 1;
-                          return (
-                            <label key={dayIndex} className="flex items-center gap-1 cursor-pointer text-sm">
-                              <input 
-                                type="checkbox" 
-                                checked={center.workDays.includes(dayIndex)} 
-                                onChange={() => {
-                                  const currentDays = center.workDays;
-                                  const newDays = currentDays.includes(dayIndex)
-                                    ? currentDays.filter(d => d !== dayIndex)
-                                    : [...currentDays, dayIndex].sort((a, b) => a - b);
-                                  onUpdateCenter(center.id, { workDays: newDays });
-                                }}
-                                className="rounded" 
-                              />
-                              <span>{name.slice(0, 3)}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Dies vacances disponibles</Label>
-                      <Input
-                        type="number"
-                        value={center.availableVacationDays}
-                        onChange={(e) => onUpdateCenter(center.id, { availableVacationDays: parseInt(e.target.value) || 0 })}
-                        className="mt-1 shadow-neo-inset border-0 w-24"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Utilitzats: {usedDaysByCenter[center.id] || 0} dies
+                        {expandedCenters[center.id] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </button>
+                    )}
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-sm sm:text-base truncate">{center.name}</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {center.isActive ? (
+                          <>Dies: {config.workDays.map(d => dayNamesList[d-1]?.slice(0,2)).join(', ')} • {config.availableVacationDays} dies vacances</>
+                        ) : (
+                          <span className="text-orange-600">Desactivat el {center.deactivatedAt}</span>
+                        )}
                       </p>
                     </div>
                   </div>
-
-                  <div>
-                    <Label className="mb-2 block">Dies de tancament</Label>
-                    <Popover 
-                      open={isPopoverOpen && currentEditingCenter === center.id} 
-                      onOpenChange={(open) => onPopoverChange(open, center.id)}
-                    >
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full shadow-neo hover:shadow-neo-sm justify-start" disabled={isSaving}>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Afegir dies de tancament
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                    {center.isActive ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCenterToDeactivate(center);
+                        }}
+                        className="text-orange-600 hover:text-orange-700 w-full sm:w-auto"
+                      >
+                        <PowerOff className="h-4 w-4 mr-1" />
+                        Desactivar
+                      </Button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onReactivateCenter(center.id);
+                          }}
+                          className="text-green-600 hover:text-green-700 w-full sm:w-auto"
+                        >
+                          <Power className="h-4 w-4 mr-1" />
+                          Reactivar
                         </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-3" align="start">
-                        <div className="space-y-3">
-                          <p className="text-sm text-muted-foreground">Selecciona les dates. Prem "Tancar" quan acabis.</p>
-                          <Calendar
-                            mode="multiple"
-                            selected={getDatesOnly(closuresByCenter[center.id] || [])}
-                            onSelect={(dates) => onDateSelect(dates, center.id)}
-                            locale={ca}
-                            className="rounded-md border shadow-neo"
-                          />
-                          <Button onClick={() => onPopoverChange(false, null)} className="w-full" size="sm">
-                            Tancar
-                          </Button>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                    {renderDateList(closuresByCenter[center.id] || [], center.id)}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCenterToDelete(center);
+                          }}
+                          className="text-red-600 hover:text-red-700 w-full sm:w-auto"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Eliminar
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {expandedCenters[center.id] && center.isActive && (
+                  <div className="mt-4 pt-4 border-t space-y-4">
+                    {/* 🆕 Avís sobre configuració per any */}
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-sm text-blue-800">
+                        <strong>📅 Configuració per l'any {selectedFiscalYear}-{selectedFiscalYear + 1}</strong>
+                        <br />
+                        Els canvis que facis aquí només afectaran aquest any fiscal.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                      <div>
+                        <Label>Dies laborables</Label>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {dayNamesList.map((name, index) => {
+                            const dayIndex = index + 1;
+                            return (
+                              <label key={dayIndex} className="flex items-center gap-1 cursor-pointer text-sm">
+                                <input 
+                                  type="checkbox" 
+                                  checked={config.workDays.includes(dayIndex)} 
+                                  onChange={() => {
+                                    const currentDays = config.workDays;
+                                    const newDays = currentDays.includes(dayIndex)
+                                      ? currentDays.filter(d => d !== dayIndex)
+                                      : [...currentDays, dayIndex].sort((a, b) => a - b);
+                                    handleWorkDaysChange(center.id, newDays);
+                                  }}
+                                  className="rounded" 
+                                />
+                                <span>{name.slice(0, 3)}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Dies vacances disponibles</Label>
+                        <Input
+                          type="number"
+                          value={config.availableVacationDays}
+                          onChange={(e) => handleVacationDaysChange(center.id, parseInt(e.target.value) || 0)}
+                          className="mt-1 shadow-neo-inset border-0 w-24"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Utilitzats: {usedDaysByCenter[center.id] || 0} dies
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="mb-2 block">Dies de tancament</Label>
+                      <Popover 
+                        open={isPopoverOpen && currentEditingCenter === center.id} 
+                        onOpenChange={(open) => onPopoverChange(open, center.id)}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full shadow-neo hover:shadow-neo-sm justify-start" disabled={isSaving}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Afegir dies de tancament
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-3" align="start">
+                          <div className="space-y-3">
+                            <p className="text-sm text-muted-foreground">Selecciona les dates. Prem "Tancar" quan acabis.</p>
+                            <Calendar
+                              mode="multiple"
+                              selected={getDatesOnly(closuresByCenter[center.id] || [])}
+                              onSelect={(dates) => onDateSelect(dates, center.id)}
+                              locale={ca}
+                              className="rounded-md border shadow-neo"
+                            />
+                            <Button onClick={() => onPopoverChange(false, null)} className="w-full" size="sm">
+                              Tancar
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                      {renderDateList(closuresByCenter[center.id] || [], center.id)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </NeoCard>
 
