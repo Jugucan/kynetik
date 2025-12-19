@@ -33,7 +33,9 @@ const Settings = () => {
         deactivateCenter,
         reactivateCenter,
         updateCenter,
+        updateCenterYearlyConfig,
         deleteCenter,
+        getCenterConfig,
     } = useCenters();
 
     const currentFiscalYear = useMemo(() => getFiscalYear(new Date()), []);
@@ -102,12 +104,14 @@ const Settings = () => {
         
         activeCenters.forEach(center => {
             let count = 0;
+            const config = getCenterConfig(center.id, selectedFiscalYear);
+            
             vacationDates.forEach(({ date }) => {
                 const isWithinWorkYear = (
                     (isAfter(date, workYear.start) || isSameDay(date, workYear.start)) && 
                     (isBefore(date, workYear.end) || isSameDay(date, workYear.end))
                 );
-                if (isWithinWorkYear && isWorkDay(date, center.workDays)) {
+                if (isWithinWorkYear && isWorkDay(date, config.workDays)) {
                     count++;
                 }
             });
@@ -115,9 +119,8 @@ const Settings = () => {
         });
         
         return result;
-    }, [vacationDates, activeCenters, isWorkDay, workYear]);
+    }, [vacationDates, activeCenters, isWorkDay, workYear, selectedFiscalYear, getCenterConfig]);
 
-    // 🔧 FUNCIÓ CORREGIDA: Ara sobreescriu completament per esborrar dates
     const saveToFirebase = async (
         vacationsToSave: DateWithReason[],
         closuresToSave: Record<string, DateWithReason[]>,
@@ -137,7 +140,6 @@ const Settings = () => {
                 closuresSantHilari: closuresByCenter['sant-hilari'] || {},
             };
 
-            // ✅ SENSE merge: true per sobreescriure completament
             await setDoc(SETTINGS_DOC_REF, dataToSave);
             console.log("✅ Dades guardades a Firebase (sobreescrites)");
         } catch (error) {
@@ -401,11 +403,13 @@ const Settings = () => {
                 currentEditingCenter={currentEditingCenter}
                 isPopoverOpen={isPopoverOpen}
                 isSaving={isSaving}
+                selectedFiscalYear={selectedFiscalYear}
                 onAddCenter={addCenter}
                 onDeactivateCenter={deactivateCenter}
                 onReactivateCenter={handleReactivateCenter}
                 onDeleteCenter={deleteCenter}
                 onUpdateCenter={updateCenter}
+                onUpdateCenterYearlyConfig={updateCenterYearlyConfig}
                 onToggleExpanded={(id) => setExpandedCenters(prev => ({ ...prev, [id]: !prev[id] }))}
                 onDateSelect={(dates, centerId) => handleDateSelect(dates, 'closure', centerId)}
                 onPopoverChange={(open, centerId) => {
@@ -415,6 +419,7 @@ const Settings = () => {
                 }}
                 getDatesOnly={getDatesOnly}
                 renderDateList={renderDateList}
+                getCenterConfig={getCenterConfig}
             />
 
             <form onSubmit={handleSave} className="grid gap-6 w-full">
