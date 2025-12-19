@@ -3,26 +3,38 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
+// 🆕 Configuració per any fiscal
+export interface YearlyConfig {
+  workDays: number[];
+  availableVacationDays: number;
+}
+
 // Interfície que defineix un centre
 export interface Center {
-  id: string;                    // Identificador únic (ex: 'arbucies', 'sant-hilari')
-  name: string;                  // Nom visible (ex: 'Arbúcies', 'Sant Hilari')
-  isActive: boolean;             // Si el centre està actiu o desactivat
-  workDays: number[];            // Dies laborables (1=Dilluns, 7=Diumenge)
-  availableVacationDays: number; // Dies de vacances disponibles
-  localHolidays: LocalHoliday[]; // Festius locals del centre
-  createdAt: string;             // Data de creació
-  deactivatedAt?: string;        // Data de desactivació (si està desactivat)
+  id: string;
+  name: string;
+  isActive: boolean;
+  localHolidays: LocalHoliday[];
+  createdAt: string;
+  deactivatedAt?: string;
+  
+  // 🆕 Configuració per defecte (per compatibilitat i nous anys)
+  defaultConfig: YearlyConfig;
+  
+  // 🆕 Configuracions específiques per any fiscal
+  yearlyConfigs?: Record<number, YearlyConfig>;
+  
+  // 🔙 COMPATIBILITAT: Camps antics (es mantenen però no s'usen)
+  workDays?: number[];
+  availableVacationDays?: number;
 }
 
-// Interfície per als festius locals
 export interface LocalHoliday {
-  month: number;  // Mes (0-11, on 0=Gener)
-  day: number;    // Dia del mes
-  name: string;   // Nom del festiu (ex: 'Festa Major')
+  month: number;
+  day: number;
+  name: string;
 }
 
-// Interfície per a les dades retornades pel hook
 export interface CentersData {
   centers: Center[];
   activeCenters: Center[];
@@ -31,31 +43,60 @@ export interface CentersData {
 
 const CENTERS_DOC_REF = doc(db, 'settings', 'centers');
 
-// Centres per defecte (els teus centres actuals)
+// Centres per defecte amb la nova estructura
 const defaultCenters: Center[] = [
   {
     id: 'arbucies',
     name: 'Arbúcies',
     isActive: true,
-    workDays: [1, 2, 4], // Dilluns, Dimarts, Dijous
-    availableVacationDays: 30,
     localHolidays: [
-      { month: 7, day: 16, name: 'Festa Major Arbúcies' } // Agost = mes 7
+      { month: 7, day: 16, name: 'Festa Major Arbúcies' }
     ],
     createdAt: '2024-01-01',
+    defaultConfig: {
+      workDays: [1, 2, 4],
+      availableVacationDays: 13,
+    },
+    yearlyConfigs: {},
   },
   {
     id: 'sant-hilari',
     name: 'Sant Hilari',
     isActive: true,
-    workDays: [3, 5], // Dimecres, Divendres
-    availableVacationDays: 20,
     localHolidays: [
-      { month: 0, day: 13, name: 'Sant Hilari (Festa Major)' } // Gener = mes 0
+      { month: 0, day: 13, name: 'Sant Hilari (Festa Major)' }
     ],
     createdAt: '2024-01-01',
+    defaultConfig: {
+      workDays: [3, 5],
+      availableVacationDays: 9,
+    },
+    yearlyConfigs: {},
   },
 ];
+
+// 🆕 Funció per migrar centres antics al nou format
+const migrateCenterToNewFormat = (center: any): Center => {
+  // Si ja té la nova estructura, retornar-lo tal qual
+  if (center.defaultConfig && center.yearlyConfigs !== undefined) {
+    return center as Center;
+  }
+  
+  // Migrar del format antic al nou
+  console.log("🔄 Migrant centre al nou format:", center.name);
+  
+  return {
+    ...center,
+    defaultConfig: {
+      workDays: center.workDays || [],
+      availableVacationDays: center.availableVacationDays || 0,
+    },
+    yearlyConfigs: {},
+    // Mantenim els camps antics per compatibilitat
+    workDays: center.workDays,
+    availableVacationDays: center.availableVacationDays,
+  };
+};
 
 export const useCenters = (): CentersData & {
   saveCenter: (center: Center) => Promise<void>;
@@ -63,9 +104,11 @@ export const useCenters = (): CentersData & {
   deactivateCenter: (centerId: string) => Promise<void>;
   reactivateCenter: (centerId: string) => Promise<void>;
   updateCenter: (centerId: string, updates: Partial<Center>) => Promise<void>;
+  updateCenterYearlyConfig: (centerId: string, fiscalYear: number, config: YearlyConfig) => Promise<void>;
   deleteCenter: (centerId: string) => Promise<void>;
   getCenterById: (centerId: string) => Center | undefined;
   getCenterByLegacyId: (legacyId: 'Arbucies' | 'SantHilari') => Center | undefined;
+  getCenterConfig: (centerId: string, fiscalYear: number) => YearlyConfig;
 } => {
   const [centers, setCenters] = useState<Center[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,11 +122,10 @@ export const useCenters = (): CentersData & {
       (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          const loadedCenters = data.centers || [];
-          console.log("✅ Centres carregats:", loadedCenters.length);
+          const loadedCenters = (data.centers || []).map(migrateCenterToNewFormat);
+          console.log("✅ Centres carregats i migrats:", loadedCenters.length);
           setCenters(loadedCenters);
         } else {
-          // Si no existeix el document, crear-lo amb els centres per defecte
           console.log("ℹ️ No existeixen centres, creant per defecte...");
           setDoc(CENTERS_DOC_REF, { centers: defaultCenters })
             .then(() => {
@@ -126,18 +168,18 @@ export const useCenters = (): CentersData & {
 
   // Afegir un nou centre
   const addCenter = async (centerData: Omit<Center, 'id' | 'createdAt'>): Promise<Center> => {
-    // Generar ID únic basat en el nom
     const id = centerData.name
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Eliminar accents
-      .replace(/[^a-z0-9]+/g, '-')     // Substituir caràcters especials per guions
-      .replace(/^-+|-+$/g, '');        // Eliminar guions al principi/final
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
 
     const newCenter: Center = {
       ...centerData,
       id,
       createdAt: new Date().toISOString().split('T')[0],
+      yearlyConfigs: {},
     };
 
     const updatedCenters = [...centers, newCenter];
@@ -147,7 +189,7 @@ export const useCenters = (): CentersData & {
     return newCenter;
   };
 
-  // Desactivar un centre (NO eliminar)
+  // Desactivar un centre
   const deactivateCenter = async (centerId: string) => {
     const updatedCenters = centers.map(c => 
       c.id === centerId 
@@ -166,7 +208,6 @@ export const useCenters = (): CentersData & {
   const reactivateCenter = async (centerId: string) => {
     const updatedCenters = centers.map(c => {
       if (c.id === centerId) {
-        // Creem una còpia del centre sense el camp deactivatedAt
         const { deactivatedAt, ...centerWithoutDeactivatedAt } = c;
         return {
           ...centerWithoutDeactivatedAt,
@@ -188,7 +229,29 @@ export const useCenters = (): CentersData & {
     console.log("✏️ Centre actualitzat:", centerId);
   };
 
-  // Eliminar un centre permanentment (ús amb precaució!)
+  // 🆕 Actualitzar configuració d'un any específic
+  const updateCenterYearlyConfig = async (
+    centerId: string, 
+    fiscalYear: number, 
+    config: YearlyConfig
+  ) => {
+    const updatedCenters = centers.map(c => {
+      if (c.id === centerId) {
+        return {
+          ...c,
+          yearlyConfigs: {
+            ...c.yearlyConfigs,
+            [fiscalYear]: config,
+          },
+        };
+      }
+      return c;
+    });
+    await saveCenters(updatedCenters);
+    console.log(`✏️ Configuració actualitzada per ${centerId} any ${fiscalYear}-${fiscalYear + 1}`);
+  };
+
+  // Eliminar un centre permanentment
   const deleteCenter = async (centerId: string) => {
     const updatedCenters = centers.filter(c => c.id !== centerId);
     await saveCenters(updatedCenters);
@@ -201,7 +264,6 @@ export const useCenters = (): CentersData & {
   };
 
   // Obtenir centre per ID antic (per compatibilitat)
-  // Això mapeja 'Arbucies' -> 'arbucies' i 'SantHilari' -> 'sant-hilari'
   const getCenterByLegacyId = (legacyId: 'Arbucies' | 'SantHilari'): Center | undefined => {
     const mapping: Record<string, string> = {
       'Arbucies': 'arbucies',
@@ -209,6 +271,22 @@ export const useCenters = (): CentersData & {
     };
     const newId = mapping[legacyId];
     return centers.find(c => c.id === newId);
+  };
+
+  // 🆕 Obtenir configuració d'un centre per un any fiscal específic
+  const getCenterConfig = (centerId: string, fiscalYear: number): YearlyConfig => {
+    const center = getCenterById(centerId);
+    if (!center) {
+      return { workDays: [], availableVacationDays: 0 };
+    }
+
+    // Si hi ha configuració específica per aquest any, usar-la
+    if (center.yearlyConfigs && center.yearlyConfigs[fiscalYear]) {
+      return center.yearlyConfigs[fiscalYear];
+    }
+
+    // Si no, usar la configuració per defecte
+    return center.defaultConfig;
   };
 
   // Filtrar només centres actius
@@ -223,8 +301,10 @@ export const useCenters = (): CentersData & {
     deactivateCenter,
     reactivateCenter,
     updateCenter,
+    updateCenterYearlyConfig,
     deleteCenter,
     getCenterById,
     getCenterByLegacyId,
+    getCenterConfig,
   };
 };
