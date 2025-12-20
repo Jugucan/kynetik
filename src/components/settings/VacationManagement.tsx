@@ -6,7 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ca } from "date-fns/locale";
-import { Center } from "@/hooks/useCenters";
+import { Center, YearlyConfig } from "@/hooks/useCenters";
 import { DateWithReason } from "@/utils/dateHelpers";
 
 interface VacationManagementProps {
@@ -17,6 +17,8 @@ interface VacationManagementProps {
   isPopoverOpen: boolean;
   isEditingVacation: boolean;
   isSaving: boolean;
+  selectedFiscalYear: number; // 🆕
+  getCenterConfig: (centerId: string, fiscalYear: number) => YearlyConfig; // 🆕
   onDateSelect: (dates: Date[] | undefined) => void;
   onPopoverChange: (open: boolean) => void;
   getDatesOnly: (dates: DateWithReason[]) => Date[];
@@ -31,6 +33,8 @@ export const VacationManagement = ({
   isPopoverOpen,
   isEditingVacation,
   isSaving,
+  selectedFiscalYear, // 🆕
+  getCenterConfig, // 🆕
   onDateSelect,
   onPopoverChange,
   getDatesOnly,
@@ -48,25 +52,33 @@ export const VacationManagement = ({
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 w-full">
-        {activeCenters.map(center => (
-          <div key={center.id} className="p-3 rounded-lg shadow-neo-inset min-w-0">
-            <h4 className="font-medium">{center.name}</h4>
-            <div className="flex justify-between text-sm mt-2">
-              <span className="text-muted-foreground">Disponibles:</span>
-              <span className="font-bold">{center.availableVacationDays}</span>
+        {activeCenters.map(center => {
+          // 🆕 Obtenir configuració per l'any fiscal seleccionat
+          const config = getCenterConfig(center.id, selectedFiscalYear);
+          const available = config.availableVacationDays;
+          const used = usedDaysByCenter[center.id] || 0;
+          const remaining = available - used;
+          
+          return (
+            <div key={center.id} className="p-3 rounded-lg shadow-neo-inset min-w-0">
+              <h4 className="font-medium">{center.name}</h4>
+              <div className="flex justify-between text-sm mt-2">
+                <span className="text-muted-foreground">Disponibles:</span>
+                <span className="font-bold">{available}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Utilitzats:</span>
+                <span className="font-bold text-primary">{used}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Restants:</span>
+                <span className={`font-bold ${remaining < 0 ? 'text-red-500' : 'text-green-600'}`}>
+                  {remaining}
+                </span>
+              </div>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Utilitzats:</span>
-              <span className="font-bold text-primary">{usedDaysByCenter[center.id] || 0}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Restants:</span>
-              <span className={`font-bold ${(center.availableVacationDays - (usedDaysByCenter[center.id] || 0)) < 0 ? 'text-red-500' : 'text-green-600'}`}>
-                {center.availableVacationDays - (usedDaysByCenter[center.id] || 0)}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="space-y-3">
