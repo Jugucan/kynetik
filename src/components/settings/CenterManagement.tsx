@@ -70,16 +70,30 @@ export const CenterManagement = ({
   const [newCenterName, setNewCenterName] = useState('');
   const [newCenterWorkDays, setNewCenterWorkDays] = useState<number[]>([]);
   const [newCenterVacationDays, setNewCenterVacationDays] = useState(20);
+  const [newCenterColor, setNewCenterColor] = useState('blue'); // 🆕
   const [centerToDeactivate, setCenterToDeactivate] = useState<Center | null>(null);
   const [centerToDelete, setCenterToDelete] = useState<Center | null>(null);
 
   const dayNamesList = ["Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", "Dissabte", "Diumenge"];
+  
+  // 🆕 Colors disponibles per als centres
+  const availableColors = [
+    { value: 'blue', label: 'Blau', class: 'bg-blue-500' },
+    { value: 'green', label: 'Verd', class: 'bg-green-500' },
+    { value: 'purple', label: 'Lila', class: 'bg-purple-500' },
+    { value: 'orange', label: 'Taronja', class: 'bg-orange-500' },
+    { value: 'red', label: 'Vermell', class: 'bg-red-500' },
+    { value: 'pink', label: 'Rosa', class: 'bg-pink-500' },
+    { value: 'yellow', label: 'Groc', class: 'bg-yellow-500' },
+    { value: 'indigo', label: 'Indi', class: 'bg-indigo-500' },
+  ];
 
   const handleAddCenter = async () => {
     if (!newCenterName.trim()) return;
     
     await onAddCenter({
       name: newCenterName.trim(),
+      color: newCenterColor, // 🆕
       isActive: true,
       localHolidays: [],
       defaultConfig: {
@@ -192,6 +206,22 @@ export const CenterManagement = ({
                   className="mt-1 shadow-neo-inset border-0 w-24"
                 />
               </div>
+              <div>
+                <Label>Color del centre</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {availableColors.map((color) => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      onClick={() => setNewCenterColor(color.value)}
+                      className={`w-10 h-10 rounded-full ${color.class} shadow-neo hover:shadow-neo-sm transition-all ${
+                        newCenterColor === color.value ? 'ring-4 ring-offset-2 ring-primary' : ''
+                      }`}
+                      title={color.label}
+                    />
+                  ))}
+                </div>
+              </div>
               <div className="flex flex-col sm:flex-row gap-2 w-full">
                 <Button onClick={handleAddCenter} disabled={!newCenterName.trim()} className="w-full sm:w-auto">
                   <Save className="h-4 w-4 mr-2" />
@@ -283,6 +313,24 @@ export const CenterManagement = ({
 
                 {expandedCenters[center.id] && center.isActive && (
                   <div className="mt-4 pt-4 border-t space-y-4">
+                    {/* 🆕 Selector de color del centre */}
+                    <div>
+                      <Label>Color del centre</Label>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {availableColors.map((color) => (
+                          <button
+                            key={color.value}
+                            type="button"
+                            onClick={() => onUpdateCenter(center.id, { color: color.value })}
+                            className={`w-10 h-10 rounded-full ${color.class} shadow-neo hover:shadow-neo-sm transition-all ${
+                              center.color === color.value ? 'ring-4 ring-offset-2 ring-primary' : ''
+                            }`}
+                            title={color.label}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
                     {/* 🆕 Avís sobre configuració per any */}
                     <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                       <p className="text-sm text-blue-800">
