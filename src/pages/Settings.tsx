@@ -431,6 +431,8 @@ const Settings = () => {
                     isPopoverOpen={isPopoverOpen}
                     isEditingVacation={isEditingVacation}
                     isSaving={isSaving}
+                    selectedFiscalYear={selectedFiscalYear}
+                    getCenterConfig={getCenterConfig}
                     onDateSelect={(dates) => handleDateSelect(dates, 'vacation')}
                     onPopoverChange={(open) => {
                         setIsPopoverOpen(open);
