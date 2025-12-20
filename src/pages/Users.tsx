@@ -4,6 +4,7 @@ import { Users as UsersIcon, Search, Plus, Upload, Info, ChevronDown, ChevronUp,
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUsers, User } from "@/hooks/useUsers"; 
+import { useCenters } from "@/hooks/useCenters";
 import { UserFormModal } from "@/components/UserFormModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ import {
 
 const Users = () => {
   const { users, loading, addUser, updateUser, deleteUser } = useUsers();
+  const { centers } = useCenters(); // 🆕
   const [searchQuery, setSearchQuery] = useState("");
   const [centerFilter, setCenterFilter] = useState<string>("all"); 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,6 +36,15 @@ const Users = () => {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  
+  // 🆕 Funció per obtenir el color d'un centre
+  const getCenterColor = (centerName: string): string => {
+    const center = centers.find(c => 
+      c.name.toLowerCase() === centerName.toLowerCase() ||
+      c.id === centerName.toLowerCase().replace(' ', '-')
+    );
+    return center?.color || 'blue'; // Color per defecte si no es troba
+  };
 
   const sortedUsers = [...users].sort((a, b) => 
     (a.name || '').localeCompare(b.name || '', 'ca', { sensitivity: 'base' })
@@ -442,11 +453,7 @@ const Users = () => {
               <div
                 key={user.id}
                 onClick={() => handleViewUser(user)}
-                className={`p-3 rounded-xl shadow-neo hover:shadow-neo-lg transition-all border-2 cursor-pointer hover:scale-105 flex flex-col items-center min-w-0 ${
-                  user.center === "Arbúcies" 
-                    ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 hover:border-blue-500/50" 
-                    : "bg-green-500/10 border-green-500/30 hover:bg-green-500/20 hover:border-green-500/50"
-                }`}
+                className={`p-3 rounded-xl shadow-neo hover:shadow-neo-lg transition-all border-2 cursor-pointer hover:scale-105 flex flex-col items-center min-w-0 bg-${getCenterColor(user.center || '')}-500/10 border-${getCenterColor(user.center || '')}-500/30 hover:bg-${getCenterColor(user.center || '')}-500/20 hover:border-${getCenterColor(user.center || '')}-500/50`}
               >
                 <div className="mb-2 flex-shrink-0">
                   <img 
@@ -460,11 +467,7 @@ const Users = () => {
                   {user.name}
                 </h3>
                 
-                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium shadow-neo-inset ${
-                  user.center === "Arbúcies" 
-                    ? "bg-blue-500/30 text-blue-700" 
-                    : "bg-green-500/30 text-green-700"
-                }`}>
+                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium shadow-neo-inset bg-${getCenterColor(user.center || '')}-500/30 text-${getCenterColor(user.center || '')}-700`}>
                   {user.center}
                 </span>
               </div>
