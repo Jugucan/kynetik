@@ -449,12 +449,57 @@ const Users = () => {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 w-full">
-            {filteredUsers.map((user) => (
-              <div
-                key={user.id}
-                onClick={() => handleViewUser(user)}
-                className={`p-3 rounded-xl shadow-neo hover:shadow-neo-lg transition-all border-2 cursor-pointer hover:scale-105 flex flex-col items-center min-w-0 bg-${getCenterColor(user.center || '')}-500/10 border-${getCenterColor(user.center || '')}-500/30 hover:bg-${getCenterColor(user.center || '')}-500/20 hover:border-${getCenterColor(user.center || '')}-500/50`}
-              >
+            {filteredUsers.map((user) => {
+              const centerColor = getCenterColor(user.center || '');
+              
+              // 🎨 Mapatge de colors a classes de Tailwind
+              const colorClasses = {
+                blue: 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 hover:border-blue-500/50',
+                green: 'bg-green-500/10 border-green-500/30 hover:bg-green-500/20 hover:border-green-500/50',
+                purple: 'bg-purple-500/10 border-purple-500/30 hover:bg-purple-500/20 hover:border-purple-500/50',
+                orange: 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 hover:border-orange-500/50',
+                red: 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20 hover:border-red-500/50',
+                pink: 'bg-pink-500/10 border-pink-500/30 hover:bg-pink-500/20 hover:border-pink-500/50',
+                yellow: 'bg-yellow-500/10 border-yellow-500/30 hover:bg-yellow-500/20 hover:border-yellow-500/50',
+                indigo: 'bg-indigo-500/10 border-indigo-500/30 hover:bg-indigo-500/20 hover:border-indigo-500/50',
+              };
+              
+              const badgeColorClasses = {
+                blue: 'bg-blue-500/30 text-blue-700',
+                green: 'bg-green-500/30 text-green-700',
+                purple: 'bg-purple-500/30 text-purple-700',
+                orange: 'bg-orange-500/30 text-orange-700',
+                red: 'bg-red-500/30 text-red-700',
+                pink: 'bg-pink-500/30 text-pink-700',
+                yellow: 'bg-yellow-500/30 text-yellow-700',
+                indigo: 'bg-indigo-500/30 text-indigo-700',
+              };
+              
+              return (
+                <div
+                  key={user.id}
+                  onClick={() => handleViewUser(user)}
+                  className={`p-3 rounded-xl shadow-neo hover:shadow-neo-lg transition-all border-2 cursor-pointer hover:scale-105 flex flex-col items-center min-w-0 ${colorClasses[centerColor as keyof typeof colorClasses] || colorClasses.blue}`}
+                >
+                  <div className="mb-2 flex-shrink-0">
+                    <img 
+                      src={user.profileImageUrl || user.avatar} 
+                      alt={user.name}
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-neo object-cover ring-2 ring-white"
+                    />
+                  </div>
+                  
+                  <h3 className="font-semibold text-sm sm:text-base text-center line-clamp-2 mb-1 px-1 w-full break-words">
+                    {user.name}
+                  </h3>
+                  
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium shadow-neo-inset ${badgeColorClasses[centerColor as keyof typeof badgeColorClasses] || badgeColorClasses.blue}`}>
+                    {user.center}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
                 <div className="mb-2 flex-shrink-0">
                   <img 
                     src={user.profileImageUrl || user.avatar} 
