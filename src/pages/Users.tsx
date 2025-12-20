@@ -452,7 +452,6 @@ const Users = () => {
             {filteredUsers.map((user) => {
               const centerColor = getCenterColor(user.center || '');
               
-              // 🎨 Mapatge de colors a classes de Tailwind
               const colorClasses = {
                 blue: 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 hover:border-blue-500/50',
                 green: 'bg-green-500/10 border-green-500/30 hover:bg-green-500/20 hover:border-green-500/50',
@@ -499,24 +498,6 @@ const Users = () => {
                 </div>
               );
             })}
-          </div>
-                <div className="mb-2 flex-shrink-0">
-                  <img 
-                    src={user.profileImageUrl || user.avatar} 
-                    alt={user.name}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-neo object-cover ring-2 ring-white"
-                  />
-                </div>
-                
-                <h3 className="font-semibold text-sm sm:text-base text-center line-clamp-2 mb-1 px-1 w-full break-words">
-                  {user.name}
-                </h3>
-                
-                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium shadow-neo-inset bg-${getCenterColor(user.center || '')}-500/30 text-${getCenterColor(user.center || '')}-700`}>
-                  {user.center}
-                </span>
-              </div>
-            ))}
           </div>
         )}
       </NeoCard>
