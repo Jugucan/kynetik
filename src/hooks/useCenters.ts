@@ -13,6 +13,7 @@ export interface YearlyConfig {
 export interface Center {
   id: string;
   name: string;
+  color: string; // 🆕 Color del centre en format Tailwind
   isActive: boolean;
   localHolidays: LocalHoliday[];
   createdAt: string;
@@ -48,6 +49,7 @@ const defaultCenters: Center[] = [
   {
     id: 'arbucies',
     name: 'Arbúcies',
+    color: 'blue', // 🆕
     isActive: true,
     localHolidays: [
       { month: 7, day: 16, name: 'Festa Major Arbúcies' }
@@ -63,6 +65,7 @@ const defaultCenters: Center[] = [
     id: 'sant-hilari',
     name: 'Sant Hilari',
     isActive: true,
+    color: 'green', // 🆕
     localHolidays: [
       { month: 0, day: 13, name: 'Sant Hilari (Festa Major)' }
     ],
