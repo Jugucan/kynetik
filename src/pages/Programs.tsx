@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { Dumbbell, Plus, Star, Edit, Trash2, PlayCircle, History, X, Palette, Calendar, Power, PowerOff } from "lucide-react";
+import { Dumbbell, Plus, Star, Edit, Trash2, PlayCircle, History, X, Palette, Calendar, Power, PowerOff, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePrograms } from "@/hooks/usePrograms";
 import {
@@ -32,6 +32,7 @@ const Programs = () => {
     programs, 
     loading, 
     addProgram,
+    updateProgramName,
     updateProgramColor,
     toggleProgramActive,
     addSubprogram, 
@@ -53,6 +54,7 @@ const Programs = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteSubprogramConfirm, setShowDeleteSubprogramConfirm] = useState(false);
   const [showEditColor, setShowEditColor] = useState(false);
+  const [showEditName, setShowEditName] = useState(false);
   const [showSubprograms, setShowSubprograms] = useState(false);
   
   // Estats per formularis
@@ -62,6 +64,7 @@ const Programs = () => {
   const [subprogramForm, setSubprogramForm] = useState({ name: "" });
   const [editingTracks, setEditingTracks] = useState<any[]>([]);
   const [editingColor, setEditingColor] = useState("#ef4444");
+  const [editingName, setEditingName] = useState("");
   const [editingLaunches, setEditingLaunches] = useState<any[]>([]);
 
   // Funció per afegir programa
@@ -79,6 +82,23 @@ const Programs = () => {
       setProgramForm({ name: "", code: "", color: "#ef4444" });
     } else {
       toast.error("Error al crear el programa");
+    }
+  };
+
+  // 🆕 Funció per actualitzar el nom
+  const handleUpdateName = async () => {
+    if (!editingName.trim()) {
+      toast.error("El nom no pot estar buit");
+      return;
+    }
+
+    const result = await updateProgramName(selectedProgramId, editingName);
+    
+    if (result.success) {
+      toast.success("Nom actualitzat correctament!");
+      setShowEditName(false);
+    } else {
+      toast.error("Error al actualitzar el nom");
     }
   };
 
@@ -329,7 +349,21 @@ const Programs = () => {
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg sm:text-xl font-semibold mb-1 break-words">{program.name}</h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-lg sm:text-xl font-semibold break-words">{program.name}</h3>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedProgramId(program.id);
+                          setEditingName(program.name);
+                          setShowEditName(true);
+                        }}
+                        className="text-muted-foreground hover:text-primary transition-colors p-1"
+                        title="Editar nom"
+                      >
+                        <Type className="w-4 h-4" />
+                      </button>
+                    </div>
                     {hasSubprograms ? (
                       <>
                         {activeSubprogram ? (
@@ -628,6 +662,55 @@ const Programs = () => {
             </Button>
             <Button onClick={handleAddProgram}>
               Crear programa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 🆕 Diàleg: Editar nom del programa */}
+      <Dialog open={showEditName} onOpenChange={setShowEditName}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar nom del programa</DialogTitle>
+            <DialogDescription>
+              Canvia el nom de {selectedProgramId && programs[selectedProgramId]?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-name">Nom del programa</Label>
+              <Input
+                id="edit-name"
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                placeholder="Ex: BodyPump"
+              />
+            </div>
+            
+            <div className="p-4 rounded-lg border-2 border-border">
+              <p className="text-sm text-muted-foreground mb-2">Previsualització:</p>
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-12 h-12 rounded-xl shadow-neo flex items-center justify-center text-white font-bold text-lg"
+                  style={{ backgroundColor: selectedProgramId && programs[selectedProgramId]?.color }}
+                >
+                  {selectedProgramId && programs[selectedProgramId]?.code}
+                </div>
+                <div>
+                  <p className="font-semibold">{editingName || "(sense nom)"}</p>
+                  <p className="text-xs text-muted-foreground">{selectedProgramId && programs[selectedProgramId]?.code}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditName(false)}>
+              Cancel·lar
+            </Button>
+            <Button onClick={handleUpdateName}>
+              Guardar nom
             </Button>
           </DialogFooter>
         </DialogContent>
