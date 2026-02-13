@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { Dumbbell, Plus, Star, Edit, Trash2, PlayCircle, History, X, Palette, Calendar, Power, PowerOff, Type } from "lucide-react";
+import { Dumbbell, Plus, Star, Edit, Trash2, PlayCircle, History, X, Palette, Calendar, Power, PowerOff, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePrograms } from "@/hooks/usePrograms";
 import {
@@ -361,7 +361,7 @@ const Programs = () => {
                         className="text-muted-foreground hover:text-primary transition-colors p-1"
                         title="Editar nom"
                       >
-                        <Type className="w-4 h-4" />
+                        <Edit2 className="w-4 h-4" />
                       </button>
                     </div>
                     {hasSubprograms ? (
