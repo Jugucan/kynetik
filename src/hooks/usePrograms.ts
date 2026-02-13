@@ -258,6 +258,22 @@ export const usePrograms = () => {
     }
   };
 
+  // 🆕 Funció per actualitzar el NOM del programa
+  const updateProgramName = async (programId: string, name: string) => {
+    try {
+      const programRef = doc(db, 'programs', programId);
+      
+      await updateDoc(programRef, {
+        name: name,
+      });
+      
+      return { success: true };
+    } catch (error) {
+      console.error("Error updating program name:", error);
+      return { success: false, error };
+    }
+  };
+
   // Funció per actualitzar el color d'un programa
   const updateProgramColor = async (programId: string, color: string) => {
     try {
@@ -274,7 +290,7 @@ export const usePrograms = () => {
     }
   };
 
-  // 🆕 Funció per activar/desactivar un programa sencer (sense subprogrames)
+  // 🆕 Funció per activar/desactivar programa sencer (sense subprogrames)
   const toggleProgramActive = async (programId: string, isActive: boolean) => {
     try {
       const programRef = doc(db, 'programs', programId);
@@ -577,6 +593,7 @@ export const usePrograms = () => {
     programs,
     loading,
     addProgram,
+    updateProgramName, // 🆕 NOVA FUNCIÓ
     updateProgramColor,
     toggleProgramActive,
     addSubprogram,
