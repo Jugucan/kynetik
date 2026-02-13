@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSchedules, Schedule, ScheduleSession, CenterType } from "@/hooks/useSchedules";
-import { programColors } from "@/lib/programColors";
+import { useProgramColors } from "@/hooks/useProgramColors";
 
 const Schedules = () => {
   const { schedules, loading, saveSchedules, getActiveSchedule, createNewSchedule, deactivateSchedule } = useSchedules();
+  const { getProgramColor, getProgramName, getAllProgramColors } = useProgramColors();
   
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -122,6 +123,8 @@ const Schedules = () => {
     setEditingSchedule({ ...editingSchedule, sessions: updatedSessions });
   };
 
+  const allProgramColors = getAllProgramColors();
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -200,14 +203,18 @@ const Schedules = () => {
                   <div key={dayIndex} className="p-3 rounded-xl shadow-neo-inset min-w-0">
                     <p className="font-semibold mb-2 text-sm sm:text-base">{dayName}</p>
                     <div className="flex flex-wrap gap-2 w-full">
-                      {daySessions.map((session, sIdx) => (
-                        <div
-                          key={sIdx}
-                          className={`px-2 sm:px-3 py-1 rounded-lg ${programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'} text-white text-xs sm:text-sm font-medium break-all`}
-                        >
-                          <span className="truncate">{session.time} - {session.program} ({session.center})</span>
-                        </div>
-                      ))}
+                      {daySessions.map((session, sIdx) => {
+                        const programColor = getProgramColor(session.program);
+                        return (
+                          <div
+                            key={sIdx}
+                            className="px-2 sm:px-3 py-1 rounded-lg text-white text-xs sm:text-sm font-medium break-all"
+                            style={{ backgroundColor: programColor }}
+                          >
+                            <span className="truncate">{session.time} - {getProgramName(session.program)} ({session.center})</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -337,9 +344,9 @@ const Schedules = () => {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {Object.entries(programColors).map(([code, data]) => (
+                                {Object.entries(allProgramColors).map(([code, color]) => (
                                   <SelectItem key={code} value={code}>
-                                    {code} - {data.name}
+                                    {code} - {getProgramName(code)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
