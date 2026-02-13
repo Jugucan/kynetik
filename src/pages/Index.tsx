@@ -1,36 +1,17 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { doc, onSnapshot } from "firebase/firestore";
-import { 
-  Calendar, 
-  Users, 
-  TrendingUp, 
-  Cake, 
-  PartyPopper, 
-  ChevronLeft, 
-  ChevronRight, 
-  Dumbbell, 
-  Clock 
-} from "lucide-react";
-
-// Components
 import { NeoCard } from "@/components/NeoCard";
 import { DayInfoModalReadOnly } from "@/components/DayInfoModalReadOnly";
-
-// Hooks
+import { Calendar, Users, TrendingUp, Cake, PartyPopper, ChevronLeft, ChevronRight, Dumbbell, Clock } from "lucide-react";
+import { programColors } from "@/lib/programColors";
 import { useSettings } from "@/hooks/useSettings";
 import { useSchedules } from "@/hooks/useSchedules";
 import { useUsers } from "@/hooks/useUsers";
 import { usePrograms } from "@/hooks/usePrograms";
-import { useProgramColors } from "@/hooks/useProgramColors";
-
-// Firebase
 import { db } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
-// ============================================================================
-// INTERFACES
-// ============================================================================
-
+// Definició de Session
 interface Session {
   time: string;
   program: string;
@@ -41,6 +22,7 @@ interface Session {
   addReason?: string;
 }
 
+// Interfície per als aniversaris
 interface Birthday {
   name: string;
   date: string;
@@ -48,31 +30,8 @@ interface Birthday {
   age: number;
   center: string;
   photo: string;
-  daysUntil: number;
+  daysUntil: number; // Per ordenar cronològicament
 }
-
-interface NextClass {
-  time: string;
-  program: string;
-  center?: string;
-  hoursLeft: number;
-  minutesLeft: number;
-  isToday: boolean;
-  daysUntil?: number;
-}
-
-interface CalendarDay {
-  day: number | null;
-  date: Date | null;
-  sessions: Session[];
-  holiday: boolean;
-  vacation: boolean;
-  closure: boolean;
-}
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
 
 const dateToKey = (date: Date): string => {
   const year = date.getFullYear();
@@ -81,48 +40,21 @@ const dateToKey = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-const getMonthName = (monthIndex: number): string => {
-  const months = [
-    "Gen", "Feb", "Mar", "Abr", "Mai", "Jun",
-    "Jul", "Ago", "Set", "Oct", "Nov", "Des"
-  ];
-  return months[monthIndex];
-};
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 const Index = () => {
   const navigate = useNavigate();
-
-  // ============================================================================
-  // STATE
-  // ============================================================================
-
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentViewDate, setCurrentViewDate] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-  );
+  const [currentViewDate, setCurrentViewDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // ============================================================================
-  // HOOKS
-  // ============================================================================
-
+  // 🎉 Carregar dades des de Firebase
   const { vacations, closuresArbucies, closuresSantHilari, officialHolidays } = useSettings();
   const { schedules } = useSchedules();
   const { users } = useUsers();
   const { getAllActivePrograms, loading: programsLoading } = usePrograms();
-  const { getProgramColor, getProgramName } = useProgramColors();
 
-  // ============================================================================
-  // EFFECTS
-  // ============================================================================
-
-  // Actualitzar el rellotge cada segon
+  // 🆕 Actualitzar el rellotge cada segon per al temporitzador
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -155,15 +87,8 @@ const Index = () => {
     return () => unsubscribe();
   }, []);
 
-  // ============================================================================
-  // COMPUTED VALUES
-  // ============================================================================
-
+  // 🆕 Obtenir programes actius reals
   const activePrograms = getAllActivePrograms();
-
-  // ============================================================================
-  // CALLBACK FUNCTIONS
-  // ============================================================================
 
   const getScheduleForDate = useCallback((date: Date) => {
     const dateStr = dateToKey(date);
@@ -183,28 +108,26 @@ const Index = () => {
     const dateKey = dateToKey(date);
     return vacations && vacations.hasOwnProperty(dateKey);
   }, [vacations]);
-
+  
   const isClosure = useCallback((date: Date) => {
     const dateKey = dateToKey(date);
-    return (closuresArbucies && closuresArbucies.hasOwnProperty(dateKey)) ||
+    return (closuresArbucies && closuresArbucies.hasOwnProperty(dateKey)) || 
            (closuresSantHilari && closuresSantHilari.hasOwnProperty(dateKey));
   }, [closuresArbucies, closuresSantHilari]);
 
   const getSessionsForDate = useCallback((date: Date): Session[] => {
     const dateKey = dateToKey(date);
     
-    // Si hi ha sessions personalitzades, retornar-les
     if (customSessions[dateKey]) {
       return customSessions[dateKey];
     }
-
-    // Si és festiu, vacances o tancament, no hi ha sessions
+    
     if (isHoliday(date) || isVacation(date) || isClosure(date)) {
       return [];
     }
-
-    // Obtenir sessions de l'horari
+    
     const scheduleForDate = getScheduleForDate(date);
+    
     if (scheduleForDate) {
       const dayOfWeek = date.getDay();
       const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
@@ -218,11 +141,12 @@ const Index = () => {
         isDeleted: false,
       }));
     }
-
+    
     return [];
   }, [customSessions, getScheduleForDate, isHoliday, isVacation, isClosure]);
 
-  const getNextClass = useCallback((): NextClass | null => {
+  // 🆕 FUNCIÓ PER CALCULAR TEMPS FINS A LA SEGÜENT CLASSE
+  const getNextClass = () => {
     const now = currentTime;
     const todayKey = dateToKey(now);
     const currentHour = now.getHours();
@@ -231,7 +155,7 @@ const Index = () => {
 
     // Obtenir sessions d'avui
     const todaySessions = getSessionsForDate(now).filter(s => !s.isDeleted);
-
+    
     // Buscar la següent classe d'avui
     for (const session of todaySessions) {
       const [hours, minutes] = session.time.split(':').map(Number);
@@ -256,9 +180,10 @@ const Index = () => {
     // Si no hi ha més classes avui, buscar la primera de demà
     let searchDate = new Date(now);
     searchDate.setDate(searchDate.getDate() + 1);
-
+    
     // Buscar fins a 7 dies endavant
     for (let i = 0; i < 7; i++) {
+      const searchKey = dateToKey(searchDate);
       const sessions = getSessionsForDate(searchDate).filter(s => !s.isDeleted);
       
       if (sessions.length > 0) {
@@ -296,9 +221,12 @@ const Index = () => {
     }
 
     return null;
-  }, [currentTime, getSessionsForDate]);
+  };
 
-  const getUpcomingBirthdays = useCallback((): Birthday[] => {
+  const nextClass = getNextClass();
+
+  // 🆕 FUNCIÓ PER CALCULAR ELS ANIVERSARIS (3 DIES ABANS/DESPRÉS, ORDENATS CRONOLÒGICAMENT)
+  const getUpcomingBirthdays = (): Birthday[] => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const currentYear = today.getFullYear();
@@ -317,7 +245,7 @@ const Index = () => {
       const diffTime = birthdayThisYear.getTime() - today.getTime();
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-      // Només mostrar aniversaris 3 dies abans i després
+      // 🆕 Canviat de -7/+7 a -3/+3
       if (diffDays >= -3 && diffDays <= 3) {
         let status: "past" | "today" | "upcoming";
         
@@ -337,30 +265,44 @@ const Index = () => {
           status: status,
           age: user.age,
           center: user.center,
-          photo: user.profileImageUrl || user.avatar || 
-                 `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`,
-          daysUntil: diffDays
+          photo: user.profileImageUrl || user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`,
+          daysUntil: diffDays // Per ordenar cronològicament
         });
       }
     });
 
-    // Ordenar cronològicament
+    // 🆕 Ordenar cronològicament: del més antic al més recent
     birthdays.sort((a, b) => a.daysUntil - b.daysUntil);
 
     return birthdays;
-  }, [users]);
+  };
 
-  const getHolidayName = useCallback((date: Date) => {
+  const getMonthName = (monthIndex: number): string => {
+    const months = [
+      "Gen", "Feb", "Mar", "Abr", "Mai", "Jun",
+      "Jul", "Ago", "Set", "Oct", "Nov", "Des"
+    ];
+    return months[monthIndex];
+  };
+
+  const upcomingBirthdays = getUpcomingBirthdays();
+
+  const handleDayClick = (date: Date) => {
+    setSelectedDate(date);
+    setIsModalOpen(true);
+  };
+
+  const getHolidayName = (date: Date) => {
     const dateKey = dateToKey(date);
     return officialHolidays && officialHolidays[dateKey] ? officialHolidays[dateKey] : "";
-  }, [officialHolidays]);
+  };
 
-  const getVacationReason = useCallback((date: Date) => {
+  const getVacationReason = (date: Date) => {
     const dateKey = dateToKey(date);
     return vacations && vacations[dateKey] ? vacations[dateKey] : "";
-  }, [vacations]);
+  };
 
-  const getClosureReason = useCallback((date: Date) => {
+  const getClosureReason = (date: Date) => {
     const dateKey = dateToKey(date);
     if (closuresArbucies && closuresArbucies[dateKey]) {
       return `Arbúcies: ${closuresArbucies[dateKey]}`;
@@ -369,57 +311,45 @@ const Index = () => {
       return `Sant Hilari: ${closuresSantHilari[dateKey]}`;
     }
     return "";
-  }, [closuresArbucies, closuresSantHilari]);
+  };
 
   const goToPreviousMonth = useCallback(() => {
-    setCurrentViewDate(prevDate => 
-      new Date(prevDate.getFullYear(), prevDate.getMonth() - 1, 1)
-    );
+    setCurrentViewDate(prevDate => new Date(prevDate.getFullYear(), prevDate.getMonth() - 1, 1));
   }, []);
 
   const goToNextMonth = useCallback(() => {
-    setCurrentViewDate(prevDate => 
-      new Date(prevDate.getFullYear(), prevDate.getMonth() + 1, 1)
-    );
+    setCurrentViewDate(prevDate => new Date(prevDate.getFullYear(), prevDate.getMonth() + 1, 1));
   }, []);
-
-  const handleDayClick = useCallback((date: Date) => {
-    setSelectedDate(date);
-    setIsModalOpen(true);
-  }, []);
-
-  // ============================================================================
-  // MEMOIZED VALUES
-  // ============================================================================
-
-  const nextClass = useMemo(() => getNextClass(), [getNextClass]);
-  
-  const upcomingBirthdays = useMemo(() => getUpcomingBirthdays(), [getUpcomingBirthdays]);
 
   const currentMonthText = useMemo(() => {
-    return currentViewDate.toLocaleDateString("ca-ES", { 
-      month: "long", 
-      year: "numeric" 
-    });
+    return currentViewDate.toLocaleDateString("ca-ES", { month: "long", year: "numeric" });
   }, [currentViewDate]);
 
+  // GENERAR CALENDARI AMB DIES LABORABLES CORRECTAMENT POSICIONATS
   const calendarData = useMemo(() => {
     const year = currentViewDate.getFullYear();
     const month = currentViewDate.getMonth();
+    
     const firstDayOfMonth = new Date(year, month, 1);
     const lastDayOfMonth = new Date(year, month + 1, 0);
     const daysInCurrentMonth = lastDayOfMonth.getDate();
-
-    const weeks: CalendarDay[][] = [];
-    let currentWeek: CalendarDay[] = [];
-
+    
+    const weeks: Array<Array<{
+      day: number | null;
+      date: Date | null;
+      sessions: Session[];
+      holiday: boolean;
+      vacation: boolean;
+      closure: boolean;
+    }>> = [];
+    
+    let currentWeek: Array<any> = [];
+    
     for (let day = 1; day <= daysInCurrentMonth; day++) {
       const date = new Date(year, month, day);
       const dayOfWeek = date.getDay();
       
-      // Només dies laborables (dilluns a divendres)
       if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-        // Si és dilluns i ja hi ha una setmana, afegir-la
         if (dayOfWeek === 1 && currentWeek.length > 0) {
           while (currentWeek.length < 5) {
             currentWeek.push({
@@ -435,25 +365,25 @@ const Index = () => {
           currentWeek = [];
         }
         
-        // Afegir espais buits al principi si cal
         if (day === 1 || (day > 1 && currentWeek.length === 0 && dayOfWeek > 1)) {
           const firstDayWeekday = new Date(year, month, 1).getDay();
           
           if (firstDayWeekday >= 1 && firstDayWeekday <= 5) {
             for (let i = 1; i < dayOfWeek; i++) {
-              currentWeek.push({
-                day: null,
-                date: null,
-                sessions: [],
-                holiday: false,
-                vacation: false,
-                closure: false
-              });
+              if (i < dayOfWeek) {
+                currentWeek.push({
+                  day: null,
+                  date: null,
+                  sessions: [],
+                  holiday: false,
+                  vacation: false,
+                  closure: false
+                });
+              }
             }
           }
         }
         
-        // Afegir el dia actual
         const sessions = getSessionsForDate(date);
         const holiday = isHoliday(date);
         const vacation = isVacation(date);
@@ -468,7 +398,6 @@ const Index = () => {
           closure
         });
         
-        // Si és divendres, completar la setmana
         if (dayOfWeek === 5) {
           while (currentWeek.length < 5) {
             currentWeek.push({
@@ -485,8 +414,7 @@ const Index = () => {
         }
       }
     }
-
-    // Afegir l'última setmana si cal
+    
     if (currentWeek.length > 0) {
       while (currentWeek.length < 5) {
         currentWeek.push({
@@ -500,35 +428,22 @@ const Index = () => {
       }
       weeks.push(currentWeek);
     }
-
+    
     return weeks.flat();
   }, [currentViewDate, getSessionsForDate, isHoliday, isVacation, isClosure]);
 
-  const totalSessionsThisMonth = useMemo(() => {
-    return calendarData
-      .filter(day => day.date !== null)
-      .reduce((total, day) => 
-        total + day.sessions.filter(s => !s.isDeleted).length, 0
-      );
-  }, [calendarData]);
-
-  // ============================================================================
-  // RENDER
-  // ============================================================================
+  const totalSessionsThisMonth = calendarData
+    .filter(day => day.date !== null)
+    .reduce((total, day) => total + day.sessions.filter(s => !s.isDeleted).length, 0);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold text-foreground mb-2">
-          Benvinguda! 👋
-        </h1>
-        <p className="text-muted-foreground">
-          Aquí tens un resum de l'activitat actual
-        </p>
+        <h1 className="text-4xl font-bold text-foreground mb-2">Benvinguda! 👋</h1>
+        <p className="text-muted-foreground">Aquí tens un resum de l'activitat actual</p>
       </div>
 
-      {/* Temporitzador següent classe */}
+      {/* 🆕 TEMPORITZADOR SEGÜENT CLASSE */}
       {nextClass && (
         <NeoCard className="bg-gradient-to-r from-primary/10 to-accent/10 border-2 border-primary/30">
           <div className="flex items-center gap-4">
@@ -536,25 +451,19 @@ const Index = () => {
               <Clock className="w-8 h-8 text-primary animate-pulse" />
             </div>
             <div className="flex-1">
-              <p className="text-sm text-muted-foreground mb-1">
-                Propera classe
-              </p>
+              <p className="text-sm text-muted-foreground mb-1">Propera classe</p>
               <p className="text-2xl font-bold text-primary mb-1">
-                {nextClass.time} - {getProgramName(nextClass.program)}
+                {nextClass.time} - {nextClass.program}
               </p>
               <p className="text-sm text-muted-foreground">
                 {nextClass.center && `${nextClass.center} · `}
                 {nextClass.isToday ? (
                   <span className="text-primary font-semibold">
-                    Comença en {nextClass.hoursLeft > 0 && `${nextClass.hoursLeft}h `}
-                    {nextClass.minutesLeft}min
+                    Comença en {nextClass.hoursLeft > 0 && `${nextClass.hoursLeft}h `}{nextClass.minutesLeft}min
                   </span>
                 ) : (
                   <span className="text-accent font-semibold">
-                    {nextClass.daysUntil === 1 
-                      ? 'Demà' 
-                      : `D'aquí ${nextClass.daysUntil} dies`
-                    } a les {nextClass.time}
+                    {nextClass.daysUntil === 1 ? 'Demà' : `D'aquí ${nextClass.daysUntil} dies`} a les {nextClass.time}
                   </span>
                 )}
               </p>
@@ -571,12 +480,8 @@ const Index = () => {
               <Calendar className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">
-                Sessions aquest mes
-              </p>
-              <p className="text-2xl font-bold text-primary">
-                {totalSessionsThisMonth}
-              </p>
+              <p className="text-sm text-muted-foreground">Sessions aquest mes</p>
+              <p className="text-2xl font-bold text-primary">{totalSessionsThisMonth}</p>
             </div>
           </div>
         </NeoCard>
@@ -587,12 +492,8 @@ const Index = () => {
               <Users className="w-6 h-6 text-accent" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">
-                Usuaris actius
-              </p>
-              <p className="text-2xl font-bold text-accent">
-                {users.length}
-              </p>
+              <p className="text-sm text-muted-foreground">Usuaris actius</p>
+              <p className="text-2xl font-bold text-accent">{users.length}</p>
             </div>
           </div>
         </NeoCard>
@@ -603,23 +504,17 @@ const Index = () => {
               <TrendingUp className="w-6 h-6 text-destructive" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">
-                Programes actius
-              </p>
-              <p className="text-2xl font-bold text-destructive">
-                {activePrograms.length}
-              </p>
+              <p className="text-sm text-muted-foreground">Programes actius</p>
+              <p className="text-2xl font-bold text-destructive">{activePrograms.length}</p>
             </div>
           </div>
         </NeoCard>
       </div>
 
-      {/* Programes actius */}
+      {/* 🆕 Programes actius REALS */}
       <NeoCard>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">
-            Programes i subprogrames actius
-          </h2>
+          <h2 className="text-xl font-semibold">Programes i subprogrames actius</h2>
           <button
             onClick={() => navigate('/programs')}
             className="text-sm text-primary hover:underline flex items-center gap-1"
@@ -637,9 +532,7 @@ const Index = () => {
         ) : activePrograms.length === 0 ? (
           <div className="text-center py-8">
             <Dumbbell className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-            <p className="text-muted-foreground mb-2">
-              No hi ha cap programa o subprograma actiu
-            </p>
+            <p className="text-muted-foreground mb-2">No hi ha cap programa o subprograma actiu</p>
             <button
               onClick={() => navigate('/programs')}
               className="text-sm text-primary hover:underline"
@@ -667,27 +560,21 @@ const Index = () => {
                       {program.subprogramName || program.programName}
                     </p>
                     {program.subprogramName && (
-                      <p className="text-xs text-muted-foreground">
-                        {program.programName}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{program.programName}</p>
                     )}
                     {program.isWholeProgram && (
-                      <p className="text-xs text-primary">
-                        Programa complet
-                      </p>
+                      <p className="text-xs text-primary">Programa complet</p>
                     )}
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {program.days} dies actiu
-                </p>
+                <p className="text-sm text-muted-foreground">{program.days} dies actiu</p>
               </div>
             ))}
           </div>
         )}
       </NeoCard>
 
-      {/* Aniversaris propers */}
+      {/* 🆕 Aniversaris (3 dies, ordenats cronològicament) */}
       <NeoCard>
         <div className="flex items-center gap-2 mb-4">
           <Cake className="w-5 h-5 text-primary" />
@@ -718,9 +605,7 @@ const Index = () => {
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className={`font-medium ${
-                      birthday.status === "past" ? "text-muted-foreground" : ""
-                    }`}>
+                    <span className={`font-medium ${birthday.status === "past" ? "text-muted-foreground" : ""}`}>
                       {birthday.name}
                     </span>
                     {birthday.status === "today" && (
@@ -733,24 +618,18 @@ const Index = () => {
                 </div>
                 <div className="text-right">
                   <span className={`text-sm ${
-                    birthday.status === "today" 
-                      ? "text-primary font-bold" 
-                      : "text-muted-foreground"
+                    birthday.status === "today" ? "text-primary font-bold" : "text-muted-foreground"
                   }`}>
                     {birthday.date}
                   </span>
                   {birthday.status === "past" && birthday.daysUntil < 0 && (
                     <p className="text-xs text-muted-foreground">
-                      Fa {Math.abs(birthday.daysUntil)} {
-                        Math.abs(birthday.daysUntil) === 1 ? 'dia' : 'dies'
-                      }
+                      Fa {Math.abs(birthday.daysUntil)} {Math.abs(birthday.daysUntil) === 1 ? 'dia' : 'dies'}
                     </p>
                   )}
                   {birthday.status === "upcoming" && birthday.daysUntil > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      En {birthday.daysUntil} {
-                        birthday.daysUntil === 1 ? 'dia' : 'dies'
-                      }
+                      En {birthday.daysUntil} {birthday.daysUntil === 1 ? 'dia' : 'dies'}
                     </p>
                   )}
                 </div>
@@ -760,15 +639,12 @@ const Index = () => {
         )}
       </NeoCard>
 
-      {/* Calendari de dies laborables */}
+      {/* CALENDARI NOMÉS DIES LABORABLES */}
       <NeoCard>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold capitalize">
-            Dies laborables - {currentMonthText}
-          </h2>
+          <h2 className="text-xl font-semibold capitalize">Dies laborables - {currentMonthText}</h2>
           <div className="flex space-x-2">
-            <button 
-              onClick={goToPreviousMonth} 
+            <button onClick={goToPreviousMonth} 
               className="p-2 rounded-full shadow-neo hover:shadow-neo-sm transition-all" 
               title="Mes anterior"
             >
@@ -784,19 +660,14 @@ const Index = () => {
           </div>
         </div>
         
-        {/* Dies de la setmana */}
         <div className="grid grid-cols-5 gap-3 mb-4">
           {["Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres"].map((day) => (
-            <div 
-              key={day} 
-              className="text-center font-semibold text-sm text-muted-foreground py-2"
-            >
+            <div key={day} className="text-center font-semibold text-sm text-muted-foreground py-2">
               {day}
             </div>
           ))}
         </div>
 
-        {/* Dies del mes */}
         <div className="grid grid-cols-5 gap-3">
           {calendarData.map((dayInfo, idx) => {
             if (!dayInfo.day || !dayInfo.date) {
@@ -808,8 +679,7 @@ const Index = () => {
             const isToday = dayInfo.date.getTime() === today.getTime();
             
             const dateKey = dateToKey(dayInfo.date);
-            const hasModifications = customSessions[dateKey] && 
-                                     customSessions[dateKey].length > 0;
+            const hasModifications = customSessions[dateKey] && customSessions[dateKey].length > 0;
             
             return (
               <button
@@ -842,59 +712,27 @@ const Index = () => {
                     : ""
                 }
               >
-                <span className={`text-sm mb-1 ${
-                  isToday ? 'font-bold text-primary' : ''
-                }`}>
-                  {dayInfo.day}
-                </span>
-                
-                {isToday && (
-                  <span className="text-[8px] text-primary font-bold mb-1">
-                    AVUI
-                  </span>
-                )}
-                {dayInfo.holiday && (
-                  <span className="text-[8px] text-yellow-700 font-bold mb-1">
-                    FESTIU
-                  </span>
-                )}
-                {dayInfo.vacation && (
-                  <span className="text-[8px] text-blue-700 font-bold mb-1">
-                    VAC
-                  </span>
-                )}
-                {dayInfo.closure && (
-                  <span className="text-[8px] text-gray-700 font-bold mb-1">
-                    TANCAT
-                  </span>
-                )}
+                <span className={`text-sm mb-1 ${isToday ? 'font-bold text-primary' : ''}`}>{dayInfo.day}</span>
+                {isToday && <span className="text-[8px] text-primary font-bold mb-1">AVUI</span>}
+                {dayInfo.holiday && <span className="text-[8px] text-yellow-700 font-bold mb-1">FESTIU</span>}
+                {dayInfo.vacation && <span className="text-[8px] text-blue-700 font-bold mb-1">VAC</span>}
+                {dayInfo.closure && <span className="text-[8px] text-gray-700 font-bold mb-1">TANCAT</span>}
                 
                 {dayInfo.sessions.length > 0 && (
                   <div className="flex gap-0.5 flex-wrap justify-center w-full">
-                    {dayInfo.sessions.map((session, sessionIdx) => {
-                      const programColor = getProgramColor(session.program);
-                      return (
-                        <div
-                          key={sessionIdx}
-                          className={`w-7 h-7 rounded ${
-                            session.isDeleted ? 
-                            'bg-gray-300 opacity-50' : 
-                            ''
-                          } text-white text-[10px] flex items-center justify-center font-bold shadow-sm`}
-                          style={!session.isDeleted ? 
-                            { backgroundColor: programColor } : 
-                            {}
-                          }
-                          title={
-                            session.isDeleted 
-                              ? `CANCEL·LADA: ${session.time} - ${getProgramName(session.program)}` 
-                              : `${session.time} - ${getProgramName(session.program)}`
-                          }
-                        >
-                          {session.program}
-                        </div>
-                      );
-                    })}
+                    {dayInfo.sessions.map((session, idx) => (
+                      <div
+                        key={idx}
+                        className={`w-7 h-7 rounded ${
+                          session.isDeleted ? 
+                          'bg-gray-300 opacity-50' : 
+                          programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'
+                        } text-white text-[10px] flex items-center justify-center font-bold shadow-sm`}
+                        title={session.isDeleted ? `CANCEL·LADA: ${session.time} - ${session.program}` : `${session.time} - ${session.program}`}
+                      >
+                        {session.program}
+                      </div>
+                    ))}
                   </div>
                 )}
               </button>
@@ -904,39 +742,17 @@ const Index = () => {
 
         {/* Llegenda */}
         <div className="flex flex-wrap gap-4 text-xs text-muted-foreground border-t pt-3 mt-4">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-primary/50 ring-2 ring-primary/30" />
-            <span>Dia actual</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded border-2 border-green-500" />
-            <span>Modificat</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-yellow-500/50" />
-            <span>Festiu</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-blue-500/50" />
-            <span>Vacances</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-gray-500/50" />
-            <span>Tancament</span>
-          </div>
-          {activePrograms.map((program) => (
-            <div key={program.programCode} className="flex items-center gap-1">
-              <div 
-                className="w-3 h-3 rounded" 
-                style={{ backgroundColor: program.programColor }}
-              />
-              <span>{program.programCode}</span>
-            </div>
+          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-primary/50 ring-2 ring-primary/30"></div><span>Dia actual</span></div>
+          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded border-2 border-green-500"></div><span>Modificat</span></div>
+          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-yellow-500/50"></div><span>Festiu</span></div>
+          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-500/50"></div><span>Vacances</span></div>
+          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-gray-500/50"></div><span>Tancament</span></div>
+          {Object.entries(programColors).map(([code, data]) => (
+            <div key={code} className="flex items-center gap-1"><div className={`w-3 h-3 rounded ${data.color}`}></div><span>{code}</span></div>
           ))}
         </div>
       </NeoCard>
 
-      {/* Modal d'informació del dia */}
       <DayInfoModalReadOnly
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
