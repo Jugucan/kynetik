@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { DaySessionsModal } from "@/components/DaySessionsModal";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2, Building2 } from "lucide-react";
-import { programColors } from "@/lib/programColors";
+import { useProgramColors } from "@/hooks/useProgramColors";
 import { useSettings } from "@/hooks/useSettings";
 import { useSchedules } from "@/hooks/useSchedules";
 import { useCenters } from "@/hooks/useCenters";
@@ -72,6 +72,7 @@ const Calendar = () => {
   const { vacations, closuresArbucies, closuresSantHilari, officialHolidays, loading: settingsLoading } = useSettings();
   const { schedules, loading: schedulesLoading } = useSchedules();
   const { activeCenters, loading: centersLoading, getCenterByLegacyId } = useCenters();
+  const { getProgramColor, getProgramName, getAllProgramColors } = useProgramColors();
   
   const [currentViewDate, setCurrentViewDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
@@ -516,17 +517,21 @@ const Calendar = () => {
                       {dayInfo.closure && <span className="text-[8px] text-gray-700 font-bold mb-1">TANCAT</span>}
                       {dayInfo.sessions.length > 0 && (
                         <div className="flex gap-0.5 flex-wrap justify-center w-full">
-                          {dayInfo.sessions.map((session, idx) => (
-                            <div
-                              key={idx}
-                              className={`w-7 h-7 rounded ${
-                                session.isDeleted ? 'bg-gray-300 dark:bg-gray-600 opacity-50' : programColors[session.program as keyof typeof programColors]?.color || 'bg-gray-500'
-                              } text-white text-[10px] flex items-center justify-center font-bold shadow-sm ${session.isDeleted ? 'line-through' : ''}`}
-                              title={session.isDeleted ? `ELIMINADA: ${session.time} - ${session.program} - ${session.deleteReason || 'Sense motiu'}` : `${session.time} - ${programColors[session.program as keyof typeof programColors]?.name || session.program} - ${session.center || 'N/A'}`}
-                            >
-                              {session.program}
-                            </div>
-                          ))}
+                          {dayInfo.sessions.map((session, idx) => {
+                            const programColor = getProgramColor(session.program);
+                            return (
+                              <div
+                                key={idx}
+                                className={`w-7 h-7 rounded ${
+                                  session.isDeleted ? 'bg-gray-300 dark:bg-gray-600 opacity-50' : ''
+                                } text-white text-[10px] flex items-center justify-center font-bold shadow-sm ${session.isDeleted ? 'line-through' : ''}`}
+                                style={!session.isDeleted ? { backgroundColor: programColor } : {}}
+                                title={session.isDeleted ? `ELIMINADA: ${session.time} - ${getProgramName(session.program)} - ${session.deleteReason || 'Sense motiu'}` : `${session.time} - ${getProgramName(session.program)} - ${session.center || 'N/A'}`}
+                              >
+                                {session.program}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </>
@@ -542,8 +547,8 @@ const Calendar = () => {
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-yellow-500/50"></div><span>Festiu</span></div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-500/50"></div><span>Vacances</span></div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-gray-500/50"></div><span>Tancament</span></div>
-            {Object.entries(programColors).map(([code, data]) => (
-              <div key={code} className="flex items-center gap-1"><div className={`w-3 h-3 rounded ${data.color}`}></div><span>{code}</span></div>
+            {Object.entries(getAllProgramColors()).map(([code, color]) => (
+              <div key={code} className="flex items-center gap-1"><div className="w-3 h-3 rounded" style={{ backgroundColor: color }}></div><span>{code}</span></div>
             ))}
           </div>
         </NeoCard>
