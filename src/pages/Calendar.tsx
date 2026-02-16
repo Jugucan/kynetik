@@ -414,37 +414,40 @@ const Calendar = () => {
       </div>
 
       {/* 🆕 SELECTOR DE CENTRES */}
-      <NeoCard>
-        <div className="flex items-center gap-3">
-          <Building2 className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold">Filtrar per centre</h3>
-        </div>
-        <div className="flex gap-2 mt-3 flex-wrap">
-          <button
-            onClick={() => setSelectedCenterFilter("all")}
-            className={`px-4 py-2 rounded-lg shadow-neo hover:shadow-neo-sm transition-all font-medium ${
-              selectedCenterFilter === "all" 
-                ? "bg-primary text-white" 
-                : "bg-white text-foreground"
-            }`}
-          >
-            Tots els centres
-          </button>
-          {activeCenters.map(center => (
+      {/* Selector de centres - NOMÉS vista instructora */}
+      {viewMode === 'instructor' && (
+        <NeoCard>
+          <div className="flex items-center gap-3">
+            <Building2 className="w-5 h-5 text-primary" />
+            <h3 className="font-semibold">Filtrar per centre</h3>
+          </div>
+          <div className="flex gap-2 mt-3 flex-wrap">
             <button
-              key={center.id}
-              onClick={() => setSelectedCenterFilter(center.id)}
+              onClick={() => setSelectedCenterFilter("all")}
               className={`px-4 py-2 rounded-lg shadow-neo hover:shadow-neo-sm transition-all font-medium ${
-                selectedCenterFilter === center.id 
+                selectedCenterFilter === "all" 
                   ? "bg-primary text-white" 
                   : "bg-white text-foreground"
               }`}
             >
-              {center.name}
+              Tots els centres
             </button>
-          ))}
-        </div>
-      </NeoCard>
+            {activeCenters.map(center => (
+              <button
+                key={center.id}
+                onClick={() => setSelectedCenterFilter(center.id)}
+                className={`px-4 py-2 rounded-lg shadow-neo hover:shadow-neo-sm transition-all font-medium ${
+                  selectedCenterFilter === center.id 
+                    ? "bg-primary text-white" 
+                    : "bg-white text-foreground"
+                }`}
+              >
+                {center.name}
+              </button>
+            ))}
+          </div>
+        </NeoCard>
+      )}
 
       <div className="grid gap-6">
         <NeoCard>
@@ -555,21 +558,23 @@ const Calendar = () => {
           </div>
         </NeoCard>
 
-        {/* 🆕 ESTADÍSTIQUES DINÀMIQUES PER CENTRE */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {(selectedCenterFilter === "all" ? activeCenters : activeCenters.filter(c => c.id === selectedCenterFilter)).map(center => (
-            <NeoCard key={center.id}>
-              <h3 className="font-semibold mb-3">{center.name}</h3>
-              <p className="text-xs text-muted-foreground mb-3">
-                Període: {viewBillingPeriod.start.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })} - {viewBillingPeriod.end.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
-              </p>
-              <div className="space-y-2">
-                <div className="flex justify-between"><span className="text-muted-foreground">Sessions realitzades:</span><span className="font-bold text-primary">{sessionStats[center.id]?.sessions || 0}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Dies treballats:</span><span className="font-bold">{sessionStats[center.id]?.days || 0}</span></div>
-              </div>
-            </NeoCard>
-          ))}
-        </div>
+        {/* Estadístiques per centre - NOMÉS vista instructora */}
+        {viewMode === 'instructor' && (
+          <div className="grid md:grid-cols-2 gap-6">
+            {(selectedCenterFilter === "all" ? activeCenters : activeCenters.filter(c => c.id === selectedCenterFilter)).map(center => (
+              <NeoCard key={center.id}>
+                <h3 className="font-semibold mb-3">{center.name}</h3>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Període: {viewBillingPeriod.start.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })} - {viewBillingPeriod.end.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
+                </p>
+                <div className="space-y-2">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Sessions realitzades:</span><span className="font-bold text-primary">{sessionStats[center.id]?.sessions || 0}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Dies treballats:</span><span className="font-bold">{sessionStats[center.id]?.days || 0}</span></div>
+                </div>
+              </NeoCard>
+            ))}
+          </div>
+        )}
 
         <NeoCard>
           <h3 className="font-semibold mb-4">Properes festes i tancaments</h3>
