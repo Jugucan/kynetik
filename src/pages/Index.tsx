@@ -1,3 +1,5 @@
+import { useAuth } from "@/contexts/AuthContext";
+import UserIndex from "./UserIndex";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -94,6 +96,14 @@ const getMonthName = (monthIndex: number): string => {
 // ============================================================================
 
 const Index = () => {
+  const { viewMode } = useAuth();
+
+  // Si estem en mode usuària, mostrar la vista d'usuària
+  if (viewMode === 'user') {
+    return <UserIndex />;
+  }
+
+  // AQUÍ CONTINUA EL CODI ACTUAL DE LA PÀGINA D'INSTRUCTORA...
   const navigate = useNavigate();
 
   // ============================================================================
