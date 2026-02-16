@@ -263,8 +263,7 @@ export const DaySessionsModal = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {readOnly && <Eye className="w-5 h-5 text-muted-foreground" />}
+          <DialogTitle>
             Sessions del {date.toLocaleDateString("ca-ES", { 
               weekday: 'long',
               day: "numeric", 
@@ -272,11 +271,6 @@ export const DaySessionsModal = ({
               year: "numeric"
             })}
           </DialogTitle>
-          {readOnly && (
-            <p className="text-sm text-muted-foreground mt-2">
-              📋 Vista de només lectura - Consulta les classes programades
-            </p>
-          )}
         </DialogHeader>
 
         {/* Modal d'eliminació - NOMÉS si NO és readOnly */}
@@ -502,16 +496,16 @@ export const DaySessionsModal = ({
                       ) : (
                         /* Vista de lectura - MÉS GRAN I VISUAL per gent gran */
                         <div className="space-y-3">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="p-3 bg-muted/30 rounded-lg">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="p-2 bg-muted/30 rounded-lg">
                               <span className="text-xs text-muted-foreground block mb-1">Programa</span>
-                              <p className={`font-bold text-xl ${session.isDeleted ? 'line-through' : ''}`}>
+                              <p className={`font-medium ${session.isDeleted ? 'line-through' : ''}`}>
                                 {getProgramName(session.program)}
                               </p>
                             </div>
-                            <div className="p-3 bg-muted/30 rounded-lg">
+                            <div className="p-2 bg-muted/30 rounded-lg">
                               <span className="text-xs text-muted-foreground block mb-1">Centre</span>
-                              <p className={`font-bold text-xl ${session.isDeleted ? 'line-through' : ''}`}>
+                              <p className={`font-medium ${session.isDeleted ? 'line-through' : ''}`}>
                                 {session.center || 'N/A'}
                               </p>
                             </div>
