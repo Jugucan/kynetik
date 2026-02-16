@@ -16,6 +16,7 @@ import Mixtos from "./pages/Mixtos";
 import Schedules from "./pages/Schedules";
 import Stats from "./pages/Stats";
 import Settings from "./pages/Settings";
+import Notes from "./pages/Notes";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -80,6 +81,14 @@ const App = () => (
                             element={
                               <ViewProtectedRoute allowedViews={['instructor']}>
                                 <Schedules />
+                              </ViewProtectedRoute>
+                            } 
+                          />
+                          <Route 
+                            path="/notes" 
+                            element={
+                              <ViewProtectedRoute allowedViews={['instructor']}>
+                                <Notes />
                               </ViewProtectedRoute>
                             } 
                           />
