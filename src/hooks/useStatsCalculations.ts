@@ -8,8 +8,7 @@ interface UseStatsCalculationsProps {
   centerFilter: string;
   inactiveSortOrder: 'asc' | 'desc';
   vacations: any;
-  closuresArbucies: any;
-  closuresSantHilari: any;
+  closuresByCenter: Record<string, Record<string, string>>;  // ✅ Afegir
   officialHolidays: any;
 }
 
@@ -20,8 +19,7 @@ export const useStatsCalculations = ({
   centerFilter,
   inactiveSortOrder,
   vacations,
-  closuresArbucies,
-  closuresSantHilari,
+  closuresByCenter,          // ✅ Afegir
   officialHolidays
 }: UseStatsCalculationsProps) => {
 
@@ -51,9 +49,11 @@ export const useStatsCalculations = ({
 
   const isClosure = useCallback((date: Date) => {
     const dateKey = dateToKey(date);
-    return (closuresArbucies && closuresArbucies.hasOwnProperty(dateKey)) ||
-           (closuresSantHilari && closuresSantHilari.hasOwnProperty(dateKey));
-  }, [closuresArbucies, closuresSantHilari]);
+    // Comprovar si la data està tancada a QUALSEVOL centre
+    return Object.values(closuresByCenter).some(closures => 
+      closures && closures.hasOwnProperty(dateKey)
+    );
+  }, [closuresByCenter]);
 
   const getSessionsForDate = useCallback((date: Date): Session[] => {
     const dateKey = dateToKey(date);
