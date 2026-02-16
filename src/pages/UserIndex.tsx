@@ -16,31 +16,53 @@ const UserIndex = () => {
   const { users, loading } = useUsers();
   const [isMonthlyFrequencyOpen, setIsMonthlyFrequencyOpen] = useState(false);
 
-  if (loading) {
-    return (
-      <div className="space-y-6 px-4 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold">Benvinguda!</h1>
-        <div className="text-center py-8 text-muted-foreground">Carregant...</div>
-      </div>
-    );
-  }
-
+  // Trobar l'usuari actual
   const currentUserData = users.find(u => u.email === userProfile?.email);
-
-  if (!currentUserData) {
-    return (
-      <div className="space-y-6 px-4 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold">Benvinguda, {userProfile?.displayName}!</h1>
-        <div className="p-8 rounded-xl shadow-neo bg-background text-center">
-          <p className="text-muted-foreground">Encara no tens sessions registrades.</p>
-          <p className="text-sm text-muted-foreground mt-2">Quan assisteixis a la teva primera classe, les teves estadístiques apareixeran aquí!</p>
-        </div>
-      </div>
-    );
-  }
 
   // Calcular estadístiques completes
   const stats = useMemo(() => {
+    // Si no hi ha usuari o sessions, retornar valors per defecte
+    if (!currentUserData || !currentUserData.sessions) {
+      return {
+        programStats: [],
+        centerCount: {},
+        yearlyStats: [],
+        trend: 'stable' as const,
+        bestYear: null,
+        worstYear: null,
+        totalSessions: 0,
+        advancedStats: {
+          monthlyFrequency: [],
+          daysBetweenSessions: 0,
+          autodiscipline: 0,
+          autodisciplineLevel: {
+            label: 'N/A',
+            emoji: '📊',
+            color: 'text-gray-500',
+            bgColor: 'bg-gray-50',
+            barColor: 'bg-gray-400',
+            percentage: 0
+          },
+          autodisciplineDetails: {
+            lastMonthSessions: 0,
+            monthlyAverage: 0,
+            bestYearSessions: 0,
+            currentYearProjection: 0,
+            recentScore: 0,
+            historicScore: 0
+          },
+          improvementRecent: {
+            lastMonth: 0,
+            previousQuarterAverage: 0,
+            trend: 'stable' as const,
+            percentageChange: '0'
+          }
+        },
+        generalRanking: { rank: 0, total: 0, percentile: 0 },
+        programRankings: {}
+      };
+    }
+
     const sessions = currentUserData.sessions || [];
     
     // Comptador per programa
@@ -111,6 +133,28 @@ const UserIndex = () => {
       programRankings
     };
   }, [currentUserData, users]);
+
+  // Comprovacions DESPRÉS del useMemo
+  if (loading) {
+    return (
+      <div className="space-y-6 px-4 max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold">Benvinguda!</h1>
+        <div className="text-center py-8 text-muted-foreground">Carregant...</div>
+      </div>
+    );
+  }
+
+  if (!currentUserData) {
+    return (
+      <div className="space-y-6 px-4 max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold">Benvinguda, {userProfile?.displayName}!</h1>
+        <div className="p-8 rounded-xl shadow-neo bg-background text-center">
+          <p className="text-muted-foreground">Encara no tens sessions registrades.</p>
+          <p className="text-sm text-muted-foreground mt-2">Quan assisteixis a la teva primera classe, les teves estadístiques apareixeran aquí!</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 px-4 max-w-7xl mx-auto pb-8">
