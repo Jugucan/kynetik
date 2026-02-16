@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from "react";
 import { dateToKey, centersMatch, Session } from "@/utils/statsHelpers";
+import type { Center } from '@/hooks/useCenters';
 
 interface UseStatsCalculationsProps {
   users: any[];
@@ -10,6 +11,7 @@ interface UseStatsCalculationsProps {
   vacations: any;
   closuresByCenter: Record<string, Record<string, string>>;  // ✅ Afegir
   officialHolidays: any;
+  centers: Center[];  // ✅ AFEGIR AQUESTA LÍNIA
 }
 
 export const useStatsCalculations = ({
@@ -20,7 +22,8 @@ export const useStatsCalculations = ({
   inactiveSortOrder,
   vacations,
   closuresByCenter,          // ✅ Afegir
-  officialHolidays
+  officialHolidays,
+  centers  // ✅ AFEGIR AQUESTA LÍNIA
 }: UseStatsCalculationsProps) => {
 
   const getScheduleForDate = useCallback((date: Date) => {
@@ -109,7 +112,7 @@ export const useStatsCalculations = ({
     const matchingSession = sessions.find(session => {
       const sessionStartTime = cleanTime(session.time);
       const timeMatches = sessionStartTime === attendanceStartTime;
-      const centerMatches = !center || !session.center || centersMatch(session.center, center);
+      const centerMatches = !center || !session.center || centersMatch(session.center, center, centers);
       
       return timeMatches && centerMatches;
     });
@@ -178,16 +181,16 @@ export const useStatsCalculations = ({
 
     const filteredClasses = centerFilter === "all"
       ? allRealClasses
-      : allRealClasses.filter(c => centersMatch(c.center, centerFilter));
+      : allRealClasses.filter(c => centersMatch(c.center, centerFilter, centers));
 
     const filteredAttendances = centerFilter === "all"
       ? allUserAttendances
-      : allUserAttendances.filter(a => centersMatch(a.center, centerFilter));
+      : allUserAttendances.filter(a => centersMatch(a.center, centerFilter, centers));
 
     const totalUsers = centerFilter === "all"
       ? users.length
       : users.filter(user =>
-          (user.sessions || []).some(s => centersMatch(s.center, centerFilter))
+          (user.sessions || []).some(s => centersMatch(s.center, centerFilter, centers))
         ).length;
 
     const totalSessions = filteredClasses.length;
@@ -251,7 +254,7 @@ export const useStatsCalculations = ({
       ? users
       : users.map(user => ({
           ...user,
-          totalSessions: (user.sessions || []).filter(s => centersMatch(s.center, centerFilter)).length
+          totalSessions: (user.sessions || []).filter(s => centersMatch(s.center, centerFilter, centers)).length
         }));
 
     const thirtyDaysAgo = new Date();
@@ -266,7 +269,7 @@ export const useStatsCalculations = ({
 
       if (centerFilter === "all") return true;
 
-      return recentSessions.some(s => centersMatch(s.center, centerFilter));
+      return recentSessions.some(s => centersMatch(s.center, centerFilter, centers));
     }).length;
 
     const recurrentUsersFiltered = filteredUsers.filter(u => (u.totalSessions || 0) > 1).length;
@@ -327,7 +330,7 @@ export const useStatsCalculations = ({
       .filter(user => {
         if ((user.daysSinceLastSession || 0) <= 60) return false;
         if (centerFilter === "all") return true;
-        return (user.sessions || []).some(s => centersMatch(s.center, centerFilter));
+        return (user.sessions || []).some(s => centersMatch(s.center, centerFilter, centers));
       })
       .sort((a, b) => {
         const diffA = a.daysSinceLastSession || 0;
