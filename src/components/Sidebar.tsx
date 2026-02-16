@@ -33,16 +33,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const menuItems = [
-  { title: "Inici", icon: Home, path: "/" },
-  { title: "Calendari", icon: Calendar, path: "/calendar" },
-  { title: "Usuaris", icon: Users, path: "/users" },
-  { title: "Programes", icon: Dumbbell, path: "/programs" },
-  { title: "Mixtos", icon: Shuffle, path: "/mixtos" },
-  { title: "Horaris", icon: Clock, path: "/schedules" },
-  { title: "Les Meves Estadístiques", icon: BarChart3, path: "/stats" },
-  { title: "Configuració", icon: Settings, path: "/settings" },
-];
+// Definim quines pàgines són visibles segons el mode de vista
+const getMenuItems = (viewMode: 'instructor' | 'user') => {
+  const allItems = [
+    { title: "Inici", icon: Home, path: "/", visibleFor: ['instructor', 'user'] },
+    { title: "Calendari", icon: Calendar, path: "/calendar", visibleFor: ['instructor', 'user'] },
+    { title: "Usuaris", icon: Users, path: "/users", visibleFor: ['instructor'] },
+    { title: "Programes", icon: Dumbbell, path: "/programs", visibleFor: ['instructor'] },
+    { title: "Mixtos", icon: Shuffle, path: "/mixtos", visibleFor: ['instructor'] },
+    { title: "Horaris", icon: Clock, path: "/schedules", visibleFor: ['instructor'] },
+    { title: "Les Meves Estadístiques", icon: BarChart3, path: "/stats", visibleFor: ['instructor', 'user'] },
+    { title: "Configuració", icon: Settings, path: "/settings", visibleFor: ['instructor'] },
+  ];
+
+  return allItems.filter(item => item.visibleFor.includes(viewMode));
+};
 
 export const AppSidebar = () => {
   const { state } = useSidebar();
@@ -50,6 +55,8 @@ export const AppSidebar = () => {
   const { currentUser, logout, viewMode, setViewMode } = useAuth();
   const { userProfile } = useUserProfile();
   const navigate = useNavigate();
+
+  const menuItems = getMenuItems(viewMode);
 
   const handleLogout = async () => {
     try {
