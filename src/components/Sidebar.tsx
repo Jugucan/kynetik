@@ -65,7 +65,6 @@ export const AppSidebar = () => {
   const handleViewModeChange = (newMode: 'instructor' | 'user') => {
     setViewMode(newMode);
     toast.success(`Vista canviada a ${newMode === 'instructor' ? 'Instructora' : 'Usuària'}`);
-    // Redirigir a la pàgina d'estadístiques corresponent
     navigate('/stats');
   };
 
@@ -116,33 +115,9 @@ export const AppSidebar = () => {
       <SidebarFooter>
         {!isCollapsed ? (
           <div className="p-4 space-y-3">
-            {/* Selector de vista (Instructora / Usuària) */}
-            <div className="p-3 rounded-xl shadow-neo bg-gradient-to-br from-primary/10 to-primary/5">
-              <p className="text-xs font-semibold text-muted-foreground mb-2">Vista actual:</p>
-              <Select value={viewMode} onValueChange={handleViewModeChange}>
-                <SelectTrigger className="w-full shadow-neo-sm border-0 bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="instructor">
-                    <div className="flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4" />
-                      <span>Instructora</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="user">
-                    <div className="flex items-center gap-2">
-                      <UserCircle className="w-4 h-4" />
-                      <span>Usuària</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Informació de l'usuari */}
+            {/* Informació de l'usuari amb selector de vista integrat */}
             <div className="p-3 rounded-xl shadow-neo-inset bg-primary/5">
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shadow-neo">
                   <User className="w-5 h-5 text-primary" />
                 </div>
@@ -157,7 +132,7 @@ export const AppSidebar = () => {
               </div>
               
               {userProfile && (
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Rol:</span>
                     <span className="font-medium text-primary">
@@ -170,6 +145,30 @@ export const AppSidebar = () => {
                       <span className="font-medium">{userProfile.center}</span>
                     </div>
                   )}
+                  
+                  {/* Selector de vista integrat */}
+                  <div className="pt-2 border-t border-primary/10">
+                    <p className="text-xs text-muted-foreground mb-1.5">Vista:</p>
+                    <Select value={viewMode} onValueChange={handleViewModeChange}>
+                      <SelectTrigger className="w-full h-8 shadow-neo-sm border-0 bg-background text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="instructor">
+                          <div className="flex items-center gap-2">
+                            <GraduationCap className="w-3.5 h-3.5" />
+                            <span>Instructora</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="user">
+                          <div className="flex items-center gap-2">
+                            <UserCircle className="w-3.5 h-3.5" />
+                            <span>Usuària</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               )}
             </div>
@@ -185,7 +184,7 @@ export const AppSidebar = () => {
             </Button>
           </div>
         ) : (
-          // Vista col·lapsada: Menú dropdown
+          // Vista col·lapsada: Menús dropdown
           <div className="p-2 space-y-2">
             {/* Selector de vista compacte */}
             <DropdownMenu>
@@ -194,6 +193,7 @@ export const AppSidebar = () => {
                   variant="outline"
                   size="icon"
                   className="w-full shadow-neo hover:shadow-neo-sm"
+                  title={viewMode === 'instructor' ? 'Vista Instructora' : 'Vista Usuària'}
                 >
                   {viewMode === 'instructor' ? (
                     <GraduationCap className="w-5 h-5" />
