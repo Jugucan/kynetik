@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Home, Calendar, Users, Dumbbell, Shuffle, Clock, Settings, LogOut, User, BarChart3 } from "lucide-react";
+import { Home, Calendar, Users, Dumbbell, Shuffle, Clock, Settings, LogOut, User, BarChart3, GraduationCap, UserCircle } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +25,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const menuItems = [
   { title: "Inici", icon: Home, path: "/" },
@@ -40,7 +47,7 @@ const menuItems = [
 export const AppSidebar = () => {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, viewMode, setViewMode } = useAuth();
   const { userProfile } = useUserProfile();
   const navigate = useNavigate();
 
@@ -53,6 +60,13 @@ export const AppSidebar = () => {
       console.error('Error al tancar sessió:', error);
       toast.error('Error al tancar sessió');
     }
+  };
+
+  const handleViewModeChange = (newMode: 'instructor' | 'user') => {
+    setViewMode(newMode);
+    toast.success(`Vista canviada a ${newMode === 'instructor' ? 'Instructora' : 'Usuària'}`);
+    // Redirigir a la pàgina d'estadístiques corresponent
+    navigate('/stats');
   };
 
   return (
@@ -102,6 +116,30 @@ export const AppSidebar = () => {
       <SidebarFooter>
         {!isCollapsed ? (
           <div className="p-4 space-y-3">
+            {/* Selector de vista (Instructora / Usuària) */}
+            <div className="p-3 rounded-xl shadow-neo bg-gradient-to-br from-primary/10 to-primary/5">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Vista actual:</p>
+              <Select value={viewMode} onValueChange={handleViewModeChange}>
+                <SelectTrigger className="w-full shadow-neo-sm border-0 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="instructor">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4" />
+                      <span>Instructora</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="user">
+                    <div className="flex items-center gap-2">
+                      <UserCircle className="w-4 h-4" />
+                      <span>Usuària</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Informació de l'usuari */}
             <div className="p-3 rounded-xl shadow-neo-inset bg-primary/5">
               <div className="flex items-center gap-3 mb-2">
@@ -148,7 +186,37 @@ export const AppSidebar = () => {
           </div>
         ) : (
           // Vista col·lapsada: Menú dropdown
-          <div className="p-2">
+          <div className="p-2 space-y-2">
+            {/* Selector de vista compacte */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="w-full shadow-neo hover:shadow-neo-sm"
+                >
+                  {viewMode === 'instructor' ? (
+                    <GraduationCap className="w-5 h-5" />
+                  ) : (
+                    <UserCircle className="w-5 h-5" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Canviar vista</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleViewModeChange('instructor')}>
+                  <GraduationCap className="w-4 h-4 mr-2" />
+                  Instructora
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleViewModeChange('user')}>
+                  <UserCircle className="w-4 h-4 mr-2" />
+                  Usuària
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Perfil d'usuari */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
