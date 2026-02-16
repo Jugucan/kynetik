@@ -2,9 +2,13 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
+type ViewMode = 'instructor' | 'user';
+
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -23,6 +27,11 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    // Recuperar el mode guardat a localStorage
+    const saved = localStorage.getItem('viewMode');
+    return (saved === 'user' || saved === 'instructor') ? saved : 'instructor';
+  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -31,6 +40,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
     return unsubscribe;
   }, []);
+
+  // Guardar el mode a localStorage quan canvia
+  useEffect(() => {
+    localStorage.setItem('viewMode', viewMode);
+  }, [viewMode]);
 
   const login = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
@@ -47,6 +61,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const value = {
     currentUser,
     loading,
+    viewMode,
+    setViewMode,
     login,
     signup,
     logout,
