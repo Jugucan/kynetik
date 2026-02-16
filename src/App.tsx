@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./components/Sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ViewProtectedRoute } from "@/components/ViewProtectedRoute";
 import Index from "./pages/Index";
 import Calendar from "./pages/Calendar";
 import Users from "./pages/Users";
@@ -44,21 +45,55 @@ const App = () => (
                           <SidebarTrigger className="shadow-neo hover:shadow-neo-sm" />
                         </div>
                         <Routes>
+                          {/* Rutes accessibles per tothom */}
                           <Route path="/" element={<Index />} />
                           <Route path="/calendar" element={<Calendar />} />
-                          <Route path="/users" element={<Users />} />
-                          <Route path="/programs" element={<Programs />} />
-                          <Route path="/mixtos" element={<Mixtos />} />
-                          <Route path="/schedules" element={<Schedules />} />
-                          <Route path="/stats" element={<Stats />} />                          
+                          <Route path="/stats" element={<Stats />} />
+                          
+                          {/* Rutes només per vista instructora */}
+                          <Route 
+                            path="/users" 
+                            element={
+                              <ViewProtectedRoute allowedViews={['instructor']}>
+                                <Users />
+                              </ViewProtectedRoute>
+                            } 
+                          />
+                          <Route 
+                            path="/programs" 
+                            element={
+                              <ViewProtectedRoute allowedViews={['instructor']}>
+                                <Programs />
+                              </ViewProtectedRoute>
+                            } 
+                          />
+                          <Route 
+                            path="/mixtos" 
+                            element={
+                              <ViewProtectedRoute allowedViews={['instructor']}>
+                                <Mixtos />
+                              </ViewProtectedRoute>
+                            } 
+                          />
+                          <Route 
+                            path="/schedules" 
+                            element={
+                              <ViewProtectedRoute allowedViews={['instructor']}>
+                                <Schedules />
+                              </ViewProtectedRoute>
+                            } 
+                          />
                           <Route 
                             path="/settings" 
                             element={
-                              <ProtectedRoute allowedRoles={['superadmin', 'admin', 'monitor']}>
-                                <Settings />
-                              </ProtectedRoute>
+                              <ViewProtectedRoute allowedViews={['instructor']}>
+                                <ProtectedRoute allowedRoles={['superadmin', 'admin', 'monitor']}>
+                                  <Settings />
+                                </ProtectedRoute>
+                              </ViewProtectedRoute>
                             } 
                           />
+                          
                           <Route path="/404" element={<NotFound />} />
                           <Route path="*" element={<Navigate to="/404" replace />} />
                         </Routes>
