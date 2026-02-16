@@ -1,3 +1,4 @@
+import { useAuth } from "@/contexts/AuthContext";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { DaySessionsModal } from "@/components/DaySessionsModal";
@@ -69,6 +70,7 @@ const getBillingPeriod = (referenceDate: Date): { start: Date; end: Date } => {
 };
 
 const Calendar = () => {
+  const { viewMode } = useAuth(); // ✅ AFEGIR AQUESTA LÍNIA
   const { vacations, closuresArbucies, closuresSantHilari, officialHolidays, loading: settingsLoading } = useSettings();
   const { schedules, loading: schedulesLoading } = useSchedules();
   const { activeCenters, loading: centersLoading, getCenterByLegacyId } = useCenters();
@@ -608,6 +610,7 @@ const Calendar = () => {
         sessions={selectedDate ? getSessionsForDate(selectedDate) : []}
         onUpdateSessions={handleUpdateSessions}
         onDeleteSession={handleDeleteSession}
+        readOnly={viewMode === 'user'} // ✅ AFEGIR AQUESTA LÍNIA
       />
     </div>
   );
