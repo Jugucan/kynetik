@@ -548,11 +548,12 @@ const Calendar = () => {
 
           <div className="flex flex-wrap gap-4 text-xs text-muted-foreground border-t pt-3">
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-primary/50 ring-2 ring-primary/30"></div><span>Dia actual</span></div>
-            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded border-2 border-green-500"></div><span>Modificat</span></div>
+            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded border-2 border-green-500"></div><span>Activitats modificades</span></div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-yellow-500/50"></div><span>Festiu</span></div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-500/50"></div><span>Vacances</span></div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-gray-500/50"></div><span>Tancament</span></div>
-            {Object.entries(getAllProgramColors()).map(([code, color]) => (
+            {/* Programes - NOMÉS vista instructora */}
+            {viewMode === 'instructor' && Object.entries(getAllProgramColors()).map(([code, color]) => (
               <div key={code} className="flex items-center gap-1"><div className="w-3 h-3 rounded" style={{ backgroundColor: color }}></div><span>{code}</span></div>
             ))}
           </div>
