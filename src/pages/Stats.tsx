@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { BarChart3, MapPin } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
 import { useSettings } from "@/hooks/useSettings";
 import { useSchedules } from "@/hooks/useSchedules";
+import { useCenters } from "@/hooks/useCenters";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,14 +25,16 @@ import UserStats from "./UserStats";
 const StatsNew = () => {
   const { viewMode } = useAuth();
   const { users, loading: usersLoading } = useUsers();
-  const { vacations, closuresArbucies, closuresSantHilari, officialHolidays, loading: settingsLoading } = useSettings();
+  const { vacations, closuresByCenter, officialHolidays, loading: settingsLoading } = useSettings();
   const { schedules, loading: schedulesLoading } = useSchedules();
+  const { activeCenters, loading: centersLoading } = useCenters();
+  
   const [centerFilter, setCenterFilter] = useState<string>("all");
   const [inactiveSortOrder, setInactiveSortOrder] = useState<'asc' | 'desc'>('desc');
   const [viewingUser, setViewingUser] = useState<any>(null);
   const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
 
-  const loading = usersLoading || settingsLoading || schedulesLoading;
+  const loading = usersLoading || settingsLoading || schedulesLoading || centersLoading;
 
   useEffect(() => {
     const customSessionsDocRef = doc(db, 'settings', 'customSessions');
@@ -63,8 +66,7 @@ const StatsNew = () => {
     centerFilter,
     inactiveSortOrder,
     vacations,
-    closuresArbucies,
-    closuresSantHilari,
+    closuresByCenter,
     officialHolidays
   });
 
@@ -104,14 +106,17 @@ const StatsNew = () => {
           <Select value={centerFilter} onValueChange={setCenterFilter}>
             <SelectTrigger className="w-full sm:w-56 shadow-neo-inset border-0 min-w-0">
               <div className="flex items-center">
-                <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
+                <BarChart3 className="w-4 h-4 mr-2 flex-shrink-0" />
                 <SelectValue />
               </div>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tots els Centres</SelectItem>
-              <SelectItem value="arbucies">Arbúcies</SelectItem>
-              <SelectItem value="santhilari">Sant Hilari</SelectItem>
+              {activeCenters.map(center => (
+                <SelectItem key={center.id} value={center.id}>
+                  {center.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
