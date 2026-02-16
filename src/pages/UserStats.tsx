@@ -1,227 +1,536 @@
-import { UserCircle, BarChart3, TrendingUp, Calendar, Award } from "lucide-react";
+import { Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { Card } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { calculateAdvancedStats, calculateProgramRanking } from '@/utils/advancedStats';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const UserStats = () => {
   const { userProfile } = useUserProfile();
   const { users, loading } = useUsers();
-
-  if (loading) {
-    return (
-      <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 max-w-7xl mx-auto overflow-x-hidden">
-        <div className="flex items-center gap-3">
-          <UserCircle className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">Les Meves Estadístiques</h1>
-            <p className="text-sm text-muted-foreground">Vista d'usuària</p>
-          </div>
-        </div>
-        <div className="text-center py-8 text-muted-foreground">Carregant estadístiques...</div>
-      </div>
-    );
-  }
+  const [isMonthlyFrequencyOpen, setIsMonthlyFrequencyOpen] = useState(false);
 
   const currentUserData = users.find(u => u.email === userProfile?.email);
 
+  // Calcular estadístiques avançades
+  const stats = useMemo(() => {
+    if (!currentUserData || !currentUserData.sessions) {
+      return {
+        programStats: [],
+        centerCount: {},
+        yearlyStats: [],
+        trend: 'stable' as const,
+        bestYear: null,
+        worstYear: null,
+        totalSessions: 0,
+        advancedStats: {
+          monthlyFrequency: [],
+          daysBetweenSessions: 0,
+          autodiscipline: 0,
+          autodisciplineLevel: {
+            label: 'N/A',
+            emoji: '📊',
+            color: 'text-gray-500',
+            bgColor: 'bg-gray-50',
+            barColor: 'bg-gray-400',
+            percentage: 0
+          },
+          autodisciplineDetails: {
+            lastMonthSessions: 0,
+            monthlyAverage: 0,
+            bestYearSessions: 0,
+            currentYearProjection: 0,
+            recentScore: 0,
+            historicScore: 0
+          },
+          improvementRecent: {
+            lastMonth: 0,
+            previousQuarterAverage: 0,
+            trend: 'stable' as const,
+            percentageChange: '0'
+          }
+        },
+        programRankings: {}
+      };
+    }
+
+    const sessions = currentUserData.sessions || [];
+    
+    // Comptador per programa
+    const programCount: { [key: string]: number } = {};
+    sessions.forEach(session => {
+      programCount[session.activity] = (programCount[session.activity] || 0) + 1;
+    });
+    
+    const programStats = Object.entries(programCount)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count }));
+    
+    // Comptador per centre
+    const centerCount: { [key: string]: number } = {};
+    sessions.forEach(session => {
+      if (session.center) {
+        centerCount[session.center] = (centerCount[session.center] || 0) + 1;
+      }
+    });
+    
+    // Sessions per any
+    const yearlyCount: { [key: string]: number } = {};
+    sessions.forEach(session => {
+      const year = new Date(session.date).getFullYear().toString();
+      yearlyCount[year] = (yearlyCount[year] || 0) + 1;
+    });
+    
+    const yearlyStats = Object.entries(yearlyCount)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([year, count]) => ({ year, count }));
+    
+    // Tendència
+    let trend: 'up' | 'down' | 'stable' = 'stable';
+    if (yearlyStats.length >= 2) {
+      const lastYear = yearlyStats[yearlyStats.length - 1].count;
+      const previousYear = yearlyStats[yearlyStats.length - 2].count;
+      const difference = lastYear - previousYear;
+      
+      if (difference > 0) trend = 'up';
+      else if (difference < 0) trend = 'down';
+    }
+    
+    const bestYear = yearlyStats.length > 0 
+      ? yearlyStats.reduce((max, curr) => curr.count > max.count ? curr : max)
+      : null;
+    const worstYear = yearlyStats.length > 0
+      ? yearlyStats.reduce((min, curr) => curr.count < min.count ? curr : min)
+      : null;
+    
+    const advancedStats = calculateAdvancedStats(currentUserData);
+
+    const programRankings: { [key: string]: any } = {};
+    programStats.forEach(prog => {
+      programRankings[prog.name] = calculateProgramRanking(users, currentUserData, prog.name);
+    });
+
+    return {
+      programStats,
+      centerCount,
+      yearlyStats,
+      trend,
+      bestYear,
+      worstYear,
+      totalSessions: sessions.length,
+      advancedStats,
+      programRankings
+    };
+  }, [currentUserData, users]);
+
+  // Agrupem sessions per data per l'historial
+  const sessionsByDate = useMemo(() => {
+    if (!currentUserData || !currentUserData.sessions) return [];
+    
+    const sessions = currentUserData.sessions || [];
+    const grouped: { [key: string]: typeof sessions } = {};
+    
+    sessions.forEach(session => {
+      if (!grouped[session.date]) {
+        grouped[session.date] = [];
+      }
+      grouped[session.date].push(session);
+    });
+    
+    return Object.entries(grouped).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [currentUserData]);
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return 'N/A';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ca-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 px-4 max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold">Les meves Estadístiques</h1>
+        <div className="text-center py-8 text-muted-foreground">Carregant...</div>
+      </div>
+    );
+  }
+
   if (!currentUserData) {
     return (
-      <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 max-w-7xl mx-auto overflow-x-hidden">
-        <div className="flex items-center gap-3">
-          <UserCircle className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">Les Meves Estadístiques</h1>
-            <p className="text-sm text-muted-foreground">Vista d'usuària</p>
-          </div>
-        </div>
+      <div className="space-y-6 px-4 max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold">Les meves Estadístiques</h1>
         <div className="p-8 rounded-xl shadow-neo bg-background text-center">
-          <p className="text-muted-foreground mb-4">No s'han trobat dades del teu perfil com a usuària.</p>
-          <p className="text-sm text-muted-foreground">Assegura't que el teu email ({userProfile?.email}) està registrat a la llista d'usuaris.</p>
+          <p className="text-muted-foreground">Encara no tens sessions registrades.</p>
         </div>
       </div>
     );
   }
 
-  const userSessions = currentUserData.sessions || [];
-  const totalSessions = userSessions.length;
-  
-  // Sessions recents (últims 30 dies)
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const recentSessions = userSessions.filter(s => {
-    const sessionDate = new Date(s.date);
-    return sessionDate >= thirtyDaysAgo;
-  }).length;
-
-  // Programes únics
-  const programsSet = new Set(userSessions.map(s => s.activity));
-  const uniquePrograms = Array.from(programsSet);
-
-  // Sessions per mes (últims 12 mesos)
-  const monthlyData: { month: string; sessions: number }[] = [];
-  const now = new Date();
-  for (let i = 11; i >= 0; i--) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const monthName = date.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
-    const yearMonth = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-    
-    const sessionsCount = userSessions.filter(s => s.date.startsWith(yearMonth)).length;
-    monthlyData.push({ month: monthName, sessions: sessionsCount });
-  }
-
-  // Mitjana mensual
-  const avgMonthly = monthlyData.length > 0 ? (totalSessions / 12).toFixed(1) : '0';
-
-  // Sessions per programa
-  const programCount: { [program: string]: number } = {};
-  userSessions.forEach(s => {
-    programCount[s.activity] = (programCount[s.activity] || 0) + 1;
-  });
-  const programData = Object.entries(programCount)
-    .sort((a, b) => b[1] - a[1])
-    .map(([name, count]) => ({ name, count }));
-
   return (
-    <div className="w-full max-w-full overflow-x-hidden">
-      <div className="space-y-6 px-4 max-w-7xl mx-auto overflow-x-hidden pb-8">
-        {/* Header */}
-        <div className="flex items-center gap-3 min-w-0">
-          <UserCircle className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">Les Meves Estadístiques</h1>
-            <p className="text-sm text-muted-foreground">La teva assistència i progressió</p>
+    <div className="space-y-6 px-4 max-w-7xl mx-auto pb-8">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <BarChart3 className="w-8 h-8 text-primary" />
+        <div>
+          <h1 className="text-3xl font-bold">Les meves Estadístiques</h1>
+          <p className="text-muted-foreground">Anàlisi detallada de la teva activitat</p>
+        </div>
+      </div>
+
+      {/* Anàlisi Detallada */}
+      <div className="p-6 rounded-xl shadow-neo bg-background">
+        <h3 className="font-semibold text-lg mb-4 flex items-center">
+          <BarChart3 className="w-5 h-5 mr-2 text-primary" />
+          Anàlisi Detallada
+        </h3>
+
+        <div className="space-y-4">
+          {/* Freqüència Mensual */}
+          <Collapsible 
+            open={isMonthlyFrequencyOpen} 
+            onOpenChange={setIsMonthlyFrequencyOpen}
+            className="p-4 bg-muted/30 rounded-lg shadow-neo-inset"
+          >
+            <CollapsibleTrigger className="flex items-center justify-between w-full">
+              <h4 className="font-medium">Freqüència Mensual</h4>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  {stats.advancedStats.monthlyFrequency.length} mesos
+                </Badge>
+                {isMonthlyFrequencyOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </div>
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent className="mt-3">
+              {stats.advancedStats.monthlyFrequency.length > 0 ? (
+                <div className="space-y-2">
+                  {stats.advancedStats.monthlyFrequency.map((month, idx) => (
+                    <div key={idx} className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">{month.month}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-24 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-blue-500 transition-all"
+                            style={{ width: `${Math.min(month.count * 20, 100)}%` }}
+                          />
+                        </div>
+                        <Badge variant="outline" className="text-xs">{month.count}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No hi ha dades mensuals disponibles</p>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Dies Entre Sessions */}
+          <div className="p-4 bg-muted/30 rounded-lg shadow-neo-inset">
+            <h4 className="font-medium mb-2">Dies entre Sessions</h4>
+            <div className="flex items-baseline gap-2">
+              <div className="text-3xl font-bold text-green-600">
+                {stats.advancedStats.daysBetweenSessions}
+              </div>
+              <span className="text-sm text-muted-foreground">dies de mitja</span>
+            </div>
+          </div>
+
+          {/* Autodisciplina */}
+          <div className={`p-5 rounded-lg shadow-neo ${stats.advancedStats.autodisciplineLevel.bgColor}`}>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium flex items-center gap-2">
+                Autodisciplina
+                <span className="text-2xl">{stats.advancedStats.autodisciplineLevel.emoji}</span>
+              </h4>
+              <button
+                onClick={() => alert(`COM ES CALCULA L'AUTODISCIPLINA?\n\n` +
+                  `Es calcula combinant dos factors:\n\n` +
+                  `🔹 Consistència Recent (70%): Compara les sessions de l'últim mes amb la teva mitjana dels últims 5 mesos.\n\n` +
+                  `🔹 Context Històric (30%): Compara el teu ritme actual amb el teu millor any.\n\n` +
+                  `Detalls del càlcul:\n` +
+                  `• Últim mes: ${stats.advancedStats.autodisciplineDetails.lastMonthSessions} sessions\n` +
+                  `• Mitjana mensual: ${stats.advancedStats.autodisciplineDetails.monthlyAverage} sessions\n` +
+                  `• Millor any: ${stats.advancedStats.autodisciplineDetails.bestYearSessions} sessions\n` +
+                  `• Projecció any actual: ${stats.advancedStats.autodisciplineDetails.currentYearProjection} sessions\n\n` +
+                  `Puntuació Recent: ${stats.advancedStats.autodisciplineDetails.recentScore}%\n` +
+                  `Puntuació Històrica: ${stats.advancedStats.autodisciplineDetails.historicScore}%\n` +
+                  `TOTAL: ${stats.advancedStats.autodiscipline}%`
+                )}
+                className="p-1.5 rounded-full hover:bg-white/50 transition-colors"
+              >
+                <Info className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Mesura la regularitat amb què assisteixes al gimnàs
+            </p>
+            
+            <div className="flex items-center justify-between mb-3">
+              <span className={`font-bold text-lg ${stats.advancedStats.autodisciplineLevel.color}`}>
+                {stats.advancedStats.autodisciplineLevel.label}
+              </span>
+              <span className="text-2xl font-bold">
+                {stats.advancedStats.autodiscipline}%
+              </span>
+            </div>
+            
+            <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all ${stats.advancedStats.autodisciplineLevel.barColor}`}
+                style={{ width: `${stats.advancedStats.autodisciplineLevel.percentage}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Evolució Recent */}
+          <div className="p-4 bg-muted/30 rounded-lg shadow-neo-inset">
+            <h4 className="font-medium mb-3">Evolució Recent</h4>
+            <p className="text-xs text-muted-foreground mb-3">
+              Comparació del darrer mes amb la mitjana dels 3 mesos anteriors
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center p-3 bg-blue-50 rounded-lg shadow-neo">
+                <div className="text-2xl font-bold text-blue-700">{stats.advancedStats.improvementRecent.lastMonth}</div>
+                <div className="text-sm text-blue-600">Darrer mes</div>
+              </div>
+              <div className="text-center p-3 bg-purple-50 rounded-lg shadow-neo">
+                <div className="text-2xl font-bold text-purple-700">{stats.advancedStats.improvementRecent.previousQuarterAverage}</div>
+                <div className="text-sm text-purple-600">Mitjana 3 mesos ant.</div>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Tendència:</span>
+                <div className="flex items-center gap-2">
+                  {stats.advancedStats.improvementRecent.trend === 'up' && (
+                    <Badge className="bg-green-500">
+                      <TrendingUp className="w-3 h-3 mr-1" />
+                      +{stats.advancedStats.improvementRecent.percentageChange}%
+                    </Badge>
+                  )}
+                  {stats.advancedStats.improvementRecent.trend === 'down' && (
+                    <Badge className="bg-red-500">
+                      <TrendingDown className="w-3 h-3 mr-1" />
+                      {stats.advancedStats.improvementRecent.percentageChange}%
+                    </Badge>
+                  )}
+                  {stats.advancedStats.improvementRecent.trend === 'stable' && (
+                    <Badge variant="outline">
+                      <Minus className="w-3 h-3 mr-1" />
+                      Estable
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Targetes principals */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-6 shadow-neo border-0">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-muted-foreground">Classes totals</p>
-              <BarChart3 className="w-5 h-5 text-blue-500" />
-            </div>
-            <p className="text-3xl font-bold text-foreground">{totalSessions}</p>
-          </Card>
+      <Separator />
 
-          <Card className="p-6 shadow-neo border-0">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-muted-foreground">Últims 30 dies</p>
-              <TrendingUp className="w-5 h-5 text-green-500" />
-            </div>
-            <p className="text-3xl font-bold text-foreground">{recentSessions}</p>
-          </Card>
-
-          <Card className="p-6 shadow-neo border-0">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-muted-foreground">Programes diferents</p>
-              <Award className="w-5 h-5 text-purple-500" />
-            </div>
-            <p className="text-3xl font-bold text-foreground">{uniquePrograms.length}</p>
-          </Card>
-
-          <Card className="p-6 shadow-neo border-0">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-muted-foreground">Mitjana mensual</p>
-              <Calendar className="w-5 h-5 text-orange-500" />
-            </div>
-            <p className="text-3xl font-bold text-foreground">{avgMonthly}</p>
-          </Card>
-        </div>
-
-        {/* Gràfica d'evolució - mateixa estètica que instructora */}
-        <Card className="p-6 shadow-neo border-0">
-          <h3 className="text-lg font-semibold mb-6">Evolució d'assistència</h3>
-          <div className="space-y-2">
-            {monthlyData.map((item, idx) => {
-              const maxSessions = Math.max(...monthlyData.map(d => d.sessions), 1);
-              const percentage = (item.sessions / maxSessions) * 100;
+      {/* Sessions i Posició per Programa */}
+      {stats.programStats.length > 0 && (
+        <div className="p-6 rounded-xl shadow-neo bg-background">
+          <h3 className="font-semibold text-lg mb-4 flex items-center">
+            <Award className="w-5 h-5 mr-2 text-primary" />
+            Sessions i Posició per Programa
+          </h3>
+          <div className="space-y-3">
+            {stats.programStats.map((prog, idx) => {
+              const ranking = stats.programRankings[prog.name];
+              const percentage = (prog.count / stats.totalSessions) * 100;
               
               return (
-                <div key={idx} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium min-w-[100px]">{item.month}</span>
-                    <span className="text-muted-foreground">{item.sessions} classes</span>
+                <div key={idx} className="p-4 bg-muted/30 rounded-lg shadow-neo-inset">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium">{prog.name}</span>
+                    {ranking && ranking.total > 0 ? (
+                      <Badge className="text-xs">
+                        #{ranking.rank} de {ranking.total}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">N/A</Badge>
+                    )}
                   </div>
-                  <div className="w-full h-8 bg-primary/10 rounded-lg overflow-hidden relative group">
-                    <div 
-                      className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-lg transition-all duration-700 ease-out flex items-center justify-end pr-3"
-                      style={{ width: `${percentage}%` }}
-                    >
-                      {item.sessions > 0 && (
-                        <span className="text-xs font-semibold text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                          {item.sessions}
-                        </span>
-                      )}
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all"
+                        style={{ width: `${percentage}%` }}
+                      />
                     </div>
+                    <Badge variant="outline" className="text-xs">{prog.count} sessions</Badge>
                   </div>
                 </div>
               );
             })}
           </div>
-        </Card>
+        </div>
+      )}
 
-        {/* Programes */}
-        <Card className="p-6 shadow-neo border-0">
-          <h3 className="text-lg font-semibold mb-4">Classes per programa</h3>
+      <Separator />
+
+      {/* Evolució per Any */}
+      <div className="p-6 rounded-xl shadow-neo bg-background">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-lg flex items-center">
+            <Calendar className="w-5 h-5 mr-2 text-primary" />
+            Evolució per Any
+          </h3>
+          {stats.trend === 'up' && (
+            <Badge className="bg-green-500">
+              <TrendingUp className="w-3 h-3 mr-1" />
+              A l'alça
+            </Badge>
+          )}
+          {stats.trend === 'down' && (
+            <Badge className="bg-red-500">
+              <TrendingDown className="w-3 h-3 mr-1" />
+              A la baixa
+            </Badge>
+          )}
+          {stats.trend === 'stable' && (
+            <Badge variant="outline">
+              <Minus className="w-3 h-3 mr-1" />
+              Estable
+            </Badge>
+          )}
+        </div>
+        
+        {stats.yearlyStats.length > 0 ? (
           <div className="space-y-3">
-            {programData.map((program, idx) => {
-              const maxCount = programData[0]?.count || 1;
-              const percentage = (program.count / maxCount) * 100;
+            {/* Millor i pitjor any */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {stats.bestYear && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center shadow-neo">
+                  <div className="text-xs text-green-600 mb-1">🏆 Millor any</div>
+                  <div className="text-xl font-bold text-green-700">{stats.bestYear.year}</div>
+                  <div className="text-xs text-green-600">{stats.bestYear.count} sessions</div>
+                </div>
+              )}
+              {stats.worstYear && stats.yearlyStats.length > 1 && (
+                <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg text-center shadow-neo">
+                  <div className="text-xs text-orange-600 mb-1">📉 Mínim</div>
+                  <div className="text-xl font-bold text-orange-700">{stats.worstYear.year}</div>
+                  <div className="text-xs text-orange-600">{stats.worstYear.count} sessions</div>
+                </div>
+              )}
+            </div>
+            
+            {/* Gràfic per any */}
+            {stats.yearlyStats.map((yearData) => {
+              const maxCount = Math.max(...stats.yearlyStats.map(y => y.count));
+              const percentage = (yearData.count / maxCount) * 100;
+              const isBest = stats.bestYear?.year === yearData.year;
+              const isWorst = stats.worstYear?.year === yearData.year;
+              
               return (
-                <div key={idx}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">{program.name}</span>
-                    <span className="text-sm text-muted-foreground">{program.count} classes</span>
-                  </div>
-                  <div className="w-full h-2 bg-primary/10 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary rounded-full transition-all duration-500"
-                      style={{ width: `${percentage}%` }}
-                    />
+                <div key={yearData.year} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg shadow-neo-inset">
+                  <span className={`font-medium min-w-[60px] ${isBest ? 'text-green-700' : isWorst ? 'text-orange-700' : ''}`}>
+                    {yearData.year}
+                  </span>
+                  <div className="flex items-center gap-3 flex-1 ml-3">
+                    <div className="h-8 flex-1 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full transition-all ${isBest ? 'bg-green-500' : isWorst ? 'bg-orange-400' : 'bg-primary'}`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                    <Badge variant="outline" className="min-w-[50px] justify-center">
+                      {yearData.count}
+                    </Badge>
                   </div>
                 </div>
               );
             })}
           </div>
-        </Card>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            No hi ha dades d'assistència per any
+          </p>
+        )}
+      </div>
 
-        {/* Informació adicional */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="p-6 shadow-neo border-0">
-            <h3 className="text-lg font-semibold mb-3">Informació general</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Primera classe:</span>
-                <span className="text-sm font-medium">
-                  {currentUserData.firstSession ? new Date(currentUserData.firstSession).toLocaleDateString('ca-ES') : 'N/A'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Última classe:</span>
-                <span className="text-sm font-medium">
-                  {currentUserData.lastSession ? new Date(currentUserData.lastSession).toLocaleDateString('ca-ES') : 'N/A'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Dies des de última:</span>
-                <span className="text-sm font-medium">
-                  {currentUserData.daysSinceLastSession || 0} dies
-                </span>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6 shadow-neo border-0">
-            <h3 className="text-lg font-semibold mb-3">Els teus programes</h3>
-            <div className="flex flex-wrap gap-2">
-              {uniquePrograms.map((program, idx) => (
-                <span key={idx} className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium shadow-neo-sm">
-                  {program}
-                </span>
+      {/* Sessions per Centre */}
+      {Object.keys(stats.centerCount).length > 0 && (
+        <>
+          <Separator />
+          <div className="p-6 rounded-xl shadow-neo bg-background">
+            <h3 className="font-semibold text-lg mb-4 flex items-center">
+              <MapPin className="w-5 h-5 mr-2 text-primary" />
+              Sessions per Centre
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {Object.entries(stats.centerCount).map(([center, count]) => (
+                <div key={center} className="p-4 bg-muted/30 rounded-lg text-center shadow-neo-inset">
+                  <div className="text-2xl font-bold">{count}</div>
+                  <div className="text-sm text-muted-foreground">{center}</div>
+                </div>
               ))}
             </div>
-          </Card>
-        </div>
+          </div>
+        </>
+      )}
+
+      <Separator />
+
+      {/* Historial Complet de Sessions */}
+      <div className="p-6 rounded-xl shadow-neo bg-background">
+        <h3 className="font-semibold text-lg mb-4 flex items-center">
+          <Clock className="w-5 h-5 mr-2 text-primary" />
+          Historial Complet de Sessions
+        </h3>
+        <ScrollArea className="h-[600px] pr-4">
+          {sessionsByDate.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No hi ha historial de sessions disponible
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sessionsByDate.map(([date, sessions]) => (
+                <div key={date} className="border rounded-xl p-4 bg-muted/20 shadow-neo-inset">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar className="w-4 h-4 text-primary" />
+                    <h4 className="font-semibold">{formatDate(date)}</h4>
+                    <Badge variant="outline" className="ml-auto">{sessions.length} {sessions.length === 1 ? 'sessió' : 'sessions'}</Badge>
+                  </div>
+                  <div className="space-y-2">
+                    {sessions.map((session, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-background rounded-lg text-sm">
+                        <div className="flex items-center gap-2">
+                          <Badge className="text-xs">{session.activity}</Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          {session.time && (
+                            <>
+                              <Clock className="w-3 h-3" />
+                              <span>{session.time}</span>
+                            </>
+                          )}
+                          {session.center && (
+                            <Badge variant="outline" className={`text-xs ${session.center === 'Arbúcies' ? 'bg-blue-50' : 'bg-green-50'}`}>
+                              {session.center}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
       </div>
     </div>
   );
