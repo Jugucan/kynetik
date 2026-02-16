@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Home, Calendar, Users, Dumbbell, Shuffle, Clock, Settings, LogOut, User, BarChart3, GraduationCap, UserCircle } from "lucide-react";
+import { Home, Calendar, Users, Dumbbell, Shuffle, Clock, Settings, LogOut, User, BarChart3, GraduationCap, UserCircle, StickyNote } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -42,6 +42,7 @@ const getMenuItems = (viewMode: 'instructor' | 'user') => {
     { title: "Programes", icon: Dumbbell, path: "/programs", visibleFor: ['instructor'] },
     { title: "Mixtos", icon: Shuffle, path: "/mixtos", visibleFor: ['instructor'] },
     { title: "Horaris", icon: Clock, path: "/schedules", visibleFor: ['instructor'] },
+    { title: "Les Meves Notes", icon: StickyNote, path: "/notes", visibleFor: ['instructor'] },
     { title: "Les Meves Estadístiques", icon: BarChart3, path: "/stats", visibleFor: ['instructor', 'user'] },
     { title: "Configuració", icon: Settings, path: "/settings", visibleFor: ['instructor'] },
   ];
