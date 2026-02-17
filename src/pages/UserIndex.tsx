@@ -82,7 +82,7 @@ const UserIndex = () => {
     };
   }, [currentUserData, userProfile, basicStats.activePrograms]);
 
-  const { phrase, isLoading: phraseLoading } = useMotivationalPhrase(phraseStats);
+  const { title, phrase, isLoading: phraseLoading } = useMotivationalPhrase(phraseStats);
   
   if (loading) {
     return (
