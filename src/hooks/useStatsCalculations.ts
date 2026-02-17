@@ -338,50 +338,47 @@ export const useStatsCalculations = ({
         return inactiveSortOrder === 'desc' ? diffB - diffA : diffA - diffB;
       });
 
-    // ✅ TENDÈNCIA BASADA EN MITJANES MENSUALS
+    // ✅ TENDÈNCIA BASADA EN MITJANES MENSUALS (any actual vs any anterior complet)
     let trend: 'up' | 'down' | 'stable' = 'stable';
     if (yearlyData.length >= 2) {
       const now = new Date();
       const currentYear = now.getFullYear().toString();
 
-      const getMonthlyAverage = (yearEntry: { year: string; count: number }) => {
-        if (yearEntry.year === currentYear) {
-          // Any actual: mesos transcorreguts fins avui (fracció inclosa)
-          const monthsElapsed = Math.max(0.5,
-            now.getMonth() +
-            (now.getDate() / new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())
-          );
-          return yearEntry.count / monthsElapsed;
-        } else {
-          // Anys passats: mesos reals amb activitat al calendari
-          const monthsWithActivity = new Set(
-            filteredClasses
-              .filter(c => c.date.startsWith(yearEntry.year))
-              .map(c => c.date.slice(5, 7))
-          ).size;
-          return yearEntry.count / Math.max(1, monthsWithActivity);
-        }
-      };
-
-      // Sempre comparar any actual vs any anterior
       const currentYearEntry = yearlyData.find(y => y.year === currentYear);
       const previousYearEntry = yearlyData
         .filter(y => y.year !== currentYear)
         .sort((a, b) => b.year.localeCompare(a.year))[0];
 
       if (currentYearEntry && previousYearEntry) {
-        const currentAvg = getMonthlyAverage(currentYearEntry);
-        const previousAvg = getMonthlyAverage(previousYearEntry);
-        const diff = currentAvg - previousAvg;
-        if (diff > 0.2) trend = 'up';
-        else if (diff < -0.2) trend = 'down';
-      } else {
-        // Si no hi ha any actual, comparar els dos últims anys
-        const lastAvg = getMonthlyAverage(yearlyData[yearlyData.length - 1]);
-        const prevAvg = getMonthlyAverage(yearlyData[yearlyData.length - 2]);
-        const diff = lastAvg - prevAvg;
-        if (diff > 0.2) trend = 'up';
-        else if (diff < -0.2) trend = 'down';
+        // Any actual: dividir per mesos transcorreguts (amb precisió de dies)
+        const daysInCurrentMonth = new Date(
+          now.getFullYear(), now.getMonth() + 1, 0
+        ).getDate();
+        const monthsElapsed = now.getMonth() + (now.getDate() / daysInCurrentMonth);
+        const currentAvg = currentYearEntry.count / Math.max(0.1, monthsElapsed);
+
+        // Any anterior: sempre dividir per 12 (any complet)
+        const previousAvg = previousYearEntry.count / 12;
+
+        console.log('📊 Tendència instructora:', {
+          anyActual: currentYear,
+          sessionsActual: currentYearEntry.count,
+          mesosTranscorreguts: monthsElapsed.toFixed(2),
+          mitjanaActual: currentAvg.toFixed(2),
+          anyAnterior: previousYearEntry.year,
+          sessionsAnterior: previousYearEntry.count,
+          mitjanaAnterior: previousAvg.toFixed(2),
+          diferencia: (currentAvg - previousAvg).toFixed(2)
+        });
+
+        if (currentAvg > previousAvg) trend = 'up';
+        else if (currentAvg < previousAvg) trend = 'down';
+      } else if (yearlyData.length >= 2) {
+        // Si no hi ha any actual, comparar els dos últims anys per total
+        const last = yearlyData[yearlyData.length - 1];
+        const prev = yearlyData[yearlyData.length - 2];
+        if (last.count > prev.count) trend = 'up';
+        else if (last.count < prev.count) trend = 'down';
       }
     }
 
