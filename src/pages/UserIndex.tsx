@@ -4,7 +4,8 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { calculateUserRanking } from '@/utils/advancedStats';
+import { calculateUserRanking, calculateAdvancedStats, calculateYearlyTrend } from '@/utils/advancedStats';
+import { useMotivationalPhrase } from '@/hooks/useMotivationalPhrase';
 
 const UserIndex = () => {
   const { userProfile } = useUserProfile();
@@ -57,6 +58,32 @@ const UserIndex = () => {
     };
   }, [currentUserData, users]);
 
+// Preparar dades per la frase motivacional
+  const phraseStats = useMemo(() => {
+    if (!currentUserData || !currentUserData.sessions) return null;
+
+    const sessions = currentUserData.sessions || [];
+    const advancedStats = calculateAdvancedStats(currentUserData);
+    const { trend: yearlyTrend } = calculateYearlyTrend(sessions);
+
+    return {
+      name: currentUserData.name || userProfile?.displayName || '',
+      totalSessions: sessions.length,
+      autodiscipline: advancedStats.autodiscipline,
+      autodisciplineLabel: advancedStats.autodisciplineLevel.label,
+      daysSinceLastSession: currentUserData.daysSinceLastSession || 0,
+      improvementTrend: advancedStats.improvementRecent.trend,
+      activePrograms: basicStats.activePrograms,
+      yearlyTrend,
+      daysBetweenSessions: advancedStats.daysBetweenSessions,
+      memberSinceYear: currentUserData.firstSession
+        ? new Date(currentUserData.firstSession).getFullYear()
+        : null
+    };
+  }, [currentUserData, userProfile, basicStats.activePrograms]);
+
+  const { phrase, isLoading: phraseLoading } = useMotivationalPhrase(phraseStats);
+  
   if (loading) {
     return (
       <div className="space-y-6 px-4 max-w-7xl mx-auto">
@@ -80,6 +107,28 @@ const UserIndex = () => {
 
   return (
     <div className="space-y-4 px-4 max-w-7xl mx-auto pb-8">
+      
+     {/* Missatge Motivacional IA — destacat a dalt */}
+      {(phrase || phraseLoading) && (
+        <div className="p-4 rounded-xl shadow-neo bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20">
+          <div className="flex items-start gap-3">
+            <div className="text-2xl">💪</div>
+            <div className="flex-1">
+              <h3 className="font-bold text-sm mb-1 text-primary">El teu missatge d'avui</h3>
+              {phraseLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              ) : (
+                <p className="text-xs text-foreground leading-relaxed">{phrase}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header amb foto */}
       <div className="flex items-center gap-3">
         <img 
@@ -213,23 +262,7 @@ const UserIndex = () => {
           </div>
         )}
       </div>
-
-      {/* Missatge Motivacional */}
-      <div className="p-4 rounded-xl shadow-neo bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20">
-        <div className="flex items-start gap-3">
-          <div className="text-2xl">💪</div>
-          <div>
-            <h3 className="font-bold text-sm mb-1 text-primary">Segueix així!</h3>
-            <p className="text-xs text-foreground">
-              {basicStats.totalSessions >= 100 
-                ? `Increïble! Ja portes ${basicStats.totalSessions} sessions! Ets una màquina! 🔥`
-                : basicStats.totalSessions >= 50
-                ? `Genial! ${basicStats.totalSessions} sessions i sumant. La constància és clau! ⚡`
-                : `Vas per bon camí amb ${basicStats.totalSessions} sessions. Cada dia compta! 🎯`}
-            </p>
-          </div>
-        </div>
-      </div>
+     
     </div>
   );
 };
