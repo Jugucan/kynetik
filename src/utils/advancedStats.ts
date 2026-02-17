@@ -290,6 +290,79 @@ export const getAutodisciplineLevel = (score: number): AutodisciplineLevel => {
   }
 };
 
+// ✅ CÀLCUL DE TENDÈNCIA ANUAL BASADA EN MITJANES MENSUALS
+export const calculateYearlyTrend = (sessions: UserSession[]): {
+  yearlyStats: Array<{ year: string; count: number; monthlyAverage: number }>;
+  trend: 'up' | 'down' | 'stable';
+  bestYear: { year: string; count: number; monthlyAverage: number } | null;
+  worstYear: { year: string; count: number; monthlyAverage: number } | null;
+} => {
+  if (!sessions || sessions.length === 0) {
+    return { yearlyStats: [], trend: 'stable', bestYear: null, worstYear: null };
+  }
+
+  const now = new Date();
+  const currentYear = now.getFullYear().toString();
+
+  // Agrupar sessions per any
+  const yearlyCount: { [key: string]: number } = {};
+  sessions.forEach(session => {
+    const year = new Date(session.date).getFullYear().toString();
+    yearlyCount[year] = (yearlyCount[year] || 0) + 1;
+  });
+
+  // Calcular mitjana mensual per cada any
+  const yearlyStats = Object.entries(yearlyCount)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([year, count]) => {
+      let monthsActive: number;
+
+      if (year === currentYear) {
+        // Any actual: mesos transcorreguts fins avui (mínim 1)
+        monthsActive = Math.max(1, now.getMonth() + 1 +
+          (now.getDate() / new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()));
+      } else {
+        // Anys passats: comptar mesos reals amb activitat
+        const monthsWithActivity = new Set(
+          sessions
+            .filter(s => new Date(s.date).getFullYear().toString() === year)
+            .map(s => new Date(s.date).getMonth())
+        ).size;
+        monthsActive = Math.max(1, monthsWithActivity);
+      }
+
+      return {
+        year,
+        count,
+        monthlyAverage: Math.round((count / monthsActive) * 10) / 10
+      };
+    });
+
+  // Calcular tendència comparant MITJANES MENSUALS dels dos últims anys
+  let trend: 'up' | 'down' | 'stable' = 'stable';
+  if (yearlyStats.length >= 2) {
+    const lastYearData = yearlyStats[yearlyStats.length - 1];
+    const previousYearData = yearlyStats[yearlyStats.length - 2];
+    const difference = lastYearData.monthlyAverage - previousYearData.monthlyAverage;
+
+    if (difference > 0.5) trend = 'up';
+    else if (difference < -0.5) trend = 'down';
+  }
+
+  // Millor i pitjor any per MITJANA MENSUAL
+  const bestYear = yearlyStats.length > 0
+    ? yearlyStats.reduce((max, curr) =>
+        curr.monthlyAverage > max.monthlyAverage ? curr : max)
+    : null;
+
+  const worstYear = yearlyStats.length > 0
+    ? yearlyStats.reduce((min, curr) =>
+        curr.monthlyAverage < min.monthlyAverage ? curr : min)
+    : null;
+
+  return { yearlyStats, trend, bestYear, worstYear };
+};
+
 // ✅ Càlcul de "Millorada recent"
 export const calculateImprovementRecent = (sessions: UserSession[]): AdvancedStats['improvementRecent'] => {
   if (!sessions || sessions.length === 0) {
