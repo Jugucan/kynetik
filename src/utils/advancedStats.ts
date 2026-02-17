@@ -370,22 +370,23 @@ export const calculateYearlyTrend = (sessions: UserSession[]): {
     .filter(y => y.year !== currentYear)
     .sort((a, b) => b.year.localeCompare(a.year))[0];
 
-  if (currentYearData && previousYearData) {
-    // Comparar mitjana mensual any actual vs any anterior
+if (currentYearData && previousYearData) {
     const currentAvg = currentYearData.monthlyAverage;
-    const previousAvg = previousYearData.count / 12; // Any complet = 12 mesos
-    const diff = currentAvg - previousAvg;
+    const previousAvg = previousYearData.count / 12;
+    const percentDiff = ((currentAvg - previousAvg) / previousAvg) * 100;
 
-    if (diff > 0) trend = 'up';      // Qualsevol millora = a l'alça
-    else if (diff < 0) trend = 'down'; // Qualsevol baixada = a la baixa
-    // Si diff === 0 exacte = estable (molt rar)
+    // Si portem menys de 2 mesos d'any, necessitem >5% de diferència per marcar tendència
+    const daysInCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const monthsElapsed = now.getMonth() + (now.getDate() / daysInCurrentMonth);
+    const threshold = monthsElapsed < 2 ? 5 : 0;
+
+    if (percentDiff > threshold) trend = 'up';
+    else if (percentDiff < -threshold) trend = 'down';
   } else if (completedYears.length >= 2) {
-    // Si no hi ha any actual, comparar els dos últims anys complets per total
     const last = completedYears[completedYears.length - 1];
     const prev = completedYears[completedYears.length - 2];
-    const diff = last.count - prev.count;
-    if (diff > 0) trend = 'up';
-    else if (diff < 0) trend = 'down';
+    if (last.count > prev.count) trend = 'up';
+    else if (last.count < prev.count) trend = 'down';
   }
 
   return { yearlyStats, trend, bestYear, worstYear };
