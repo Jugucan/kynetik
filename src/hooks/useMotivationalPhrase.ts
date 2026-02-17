@@ -75,35 +75,36 @@ export const useMotivationalPhrase = (userStats: UserStatsForPhrase | null) => {
       stable: 'manté un ritme estable'
     }[stats.improvementTrend];
 
-    const prompt = `Ets un entrenador personal motivador que parla en català, de forma càlida i positiva.
+    const prompt = `Ets un coach esportiu amb molt de caràcter. Parles directament a la persona, de tu a tu, amb energia, autenticitat i passió. Les teves frases fan que la gent vulgui sortir a córrer ara mateix.
 
-Genera DOS elements:
-1. TÍTOL: 2-4 paraules màxim, impactant, sense punt
-2. MISSATGE: MÀXIM 2 frases curtes i directes. TOTAL màxim 25 paraules.
-
-Regles estrictes:
-- NO repetir el nom més d'una vegada en tot el missatge
-- NO fer frases complexes ni subordinades llargues
-- Ser directe i concís
+REGLES ABSOLUTES:
+- Parla SEMPRE en segona persona (tu, et, t', el teu, la teva). MAI en tercera persona.
+- Usa el nom ${firstName} com a molt UNA sola vegada, i no sempre
+- MÀXIM 20 paraules en total entre títol i missatge
+- El títol ha de ser una exclamació potent i original (NO "Millora Constant", NO "Superació Personal", res de genèric)
+- El missatge ha de tenir IMPACTE EMOCIONAL, que faci sentir a la persona única i poderosa
+- Varia molt el to: de vegades intens, de vegades irònic, de vegades poètic, de vegades directe com un cop de puny
+- En català viu i col·loquial, res d'acadèmic
 - Sense emojis
-- En català natural i col·loquial
 
-Dades de la persona:
+EXEMPLES del to que busco (usa'ls com a inspiració, NO els copiïs):
+- Títol: "Avui el gimnàs et tem." / Missatge: "Portes ${stats.totalSessions} sessions a les cames. Saps el que això significa."
+- Títol: "Ningú t'ha regalat res." / Missatge: "Cada sessió l'has guanyat tu sola. I es nota."
+- Títol: "El teu cos recorda tot." / Missatge: "Cada esforç queda gravat. ${stats.totalSessions} proves que no et rendeixes."
+- Títol: "Això no és casualitat." / Missatge: "La gent que arriba lluny fa exactament el que tu fas cada dia."
 
-Dades:
-- Nom: ${stats.name}
-- Total sessions: ${stats.totalSessions}
+Dades reals per personalitzar:
+- Sessions totals: ${stats.totalSessions}
 - Autodisciplina: ${stats.autodiscipline}% (${stats.autodisciplineLabel})
 - Dies des de l'última sessió: ${stats.daysSinceLastSession}
-- Mitjana dies entre sessions: ${stats.daysBetweenSessions}
 - Evolució recent: ${improvementText}
 - Tendència anual: ${trendText}
 - ${activeProgramsText}
-${stats.memberSinceYear ? `- Membre des de: ${stats.memberSinceYear}` : ''}
+${stats.memberSinceYear ? `- Entrenant des de ${stats.memberSinceYear} (${new Date().getFullYear() - stats.memberSinceYear} anys)` : ''}
 
-Respon ÚNICAMENT en aquest format (dues línies, sense cometes):
-TÍTOL: [el títol aquí]
-MISSATGE: [el missatge aquí]`;
+Respon ÚNICAMENT en aquest format exacte (sense cometes, sense res més):
+TÍTOL: [títol aquí]
+MISSATGE: [missatge aquí]`;
 
     try {
       const response = await fetch("/.netlify/functions/motivational", {
