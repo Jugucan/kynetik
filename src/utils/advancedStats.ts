@@ -318,19 +318,28 @@ export const calculateYearlyTrend = (sessions: UserSession[]): {
       let monthsActive: number;
 
       if (year === currentYear) {
-        // Any actual: mesos transcorreguts fins avui (incloent fracció del mes actual)
-        monthsActive = Math.max(0.5,
-          now.getMonth() +
-          (now.getDate() / new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())
-        );
+        // Any actual: mesos transcorreguts fins avui amb precisió de dies
+        // Exemple: 17 de febrer = 1 mes (gener) + 17/28 dies de febrer = 1.607 mesos
+        const daysInCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        monthsActive = Math.max(0.1, now.getMonth() + (now.getDate() / daysInCurrentMonth));
       } else {
-        // Anys passats: comptar mesos reals amb activitat
-        const monthsWithActivity = new Set(
-          sessions
-            .filter(s => new Date(s.date).getFullYear().toString() === year)
-            .map(s => new Date(s.date).getMonth())
-        ).size;
-        monthsActive = Math.max(1, monthsWithActivity);
+        // Anys passats COMPLETS: sempre 12 mesos
+        // Excepció: si és el primer any i té poques sessions, usar mesos reals
+        const firstSessionDate = sessions
+          .filter(s => new Date(s.date).getFullYear().toString() === year)
+          .map(s => new Date(s.date))
+          .sort((a, b) => a.getTime() - b.getTime())[0];
+        
+        const isFirstYear = firstSessionDate && 
+          firstSessionDate.getMonth() > 2 && // Va començar després de març
+          year === Object.keys(yearlyCount).sort()[0]; // És el primer any registrat
+        
+        if (isFirstYear) {
+          // Si va començar tard al primer any, usar mesos des que va començar
+          monthsActive = Math.max(1, 12 - firstSessionDate.getMonth());
+        } else {
+          monthsActive = 12;
+        }
       }
 
       return {
@@ -345,35 +354,38 @@ export const calculateYearlyTrend = (sessions: UserSession[]): {
 
   const bestYear = completedYears.length > 0
     ? completedYears.reduce((max, curr) =>
-        curr.monthlyAverage > max.monthlyAverage ? curr : max)
+        curr.count > max.count ? curr : max) // ✅ Usem COUNT total per anys complets
     : null;
 
   const worstYear = completedYears.length > 1
     ? completedYears.reduce((min, curr) =>
-        curr.monthlyAverage < min.monthlyAverage ? curr : min)
+        curr.count < min.count ? curr : min) // ✅ Usem COUNT total per anys complets
     : null;
 
-  // ✅ Tendència: comparar mitjana mensual any actual vs any anterior
+  // ✅ Tendència: comparar any actual (mitjana mensual) vs any anterior (mitjana mensual)
   let trend: 'up' | 'down' | 'stable' = 'stable';
-  if (yearlyStats.length >= 2) {
-    const currentYearData = yearlyStats.find(y => y.year === currentYear);
-    const previousYearData = yearlyStats
-      .filter(y => y.year !== currentYear)
-      .sort((a, b) => b.year.localeCompare(a.year))[0];
+  
+  const currentYearData = yearlyStats.find(y => y.year === currentYear);
+  const previousYearData = yearlyStats
+    .filter(y => y.year !== currentYear)
+    .sort((a, b) => b.year.localeCompare(a.year))[0];
 
-    if (currentYearData && previousYearData) {
-      const diff = currentYearData.monthlyAverage - previousYearData.monthlyAverage;
-      // Llindar petit: qualsevol diferència >0.2 sessions/mes ja és tendència
-      if (diff > 0.2) trend = 'up';
-      else if (diff < -0.2) trend = 'down';
-    } else if (yearlyStats.length >= 2) {
-      // Si no hi ha any actual, comparar els dos últims anys complets
-      const last = yearlyStats[yearlyStats.length - 1];
-      const prev = yearlyStats[yearlyStats.length - 2];
-      const diff = last.monthlyAverage - prev.monthlyAverage;
-      if (diff > 0.2) trend = 'up';
-      else if (diff < -0.2) trend = 'down';
-    }
+  if (currentYearData && previousYearData) {
+    // Comparar mitjana mensual any actual vs any anterior
+    const currentAvg = currentYearData.monthlyAverage;
+    const previousAvg = previousYearData.count / 12; // Any complet = 12 mesos
+    const diff = currentAvg - previousAvg;
+
+    if (diff > 0) trend = 'up';      // Qualsevol millora = a l'alça
+    else if (diff < 0) trend = 'down'; // Qualsevol baixada = a la baixa
+    // Si diff === 0 exacte = estable (molt rar)
+  } else if (completedYears.length >= 2) {
+    // Si no hi ha any actual, comparar els dos últims anys complets per total
+    const last = completedYears[completedYears.length - 1];
+    const prev = completedYears[completedYears.length - 2];
+    const diff = last.count - prev.count;
+    if (diff > 0) trend = 'up';
+    else if (diff < 0) trend = 'down';
   }
 
   return { yearlyStats, trend, bestYear, worstYear };
@@ -412,8 +424,8 @@ export const calculateImprovementRecent = (sessions: UserSession[]): AdvancedSta
     : (lastMonthSessions > 0 ? 100 : 0);
 
   let trend: 'up' | 'down' | 'stable' = 'stable';
-  if (percentageChange > 10) trend = 'up';
-  else if (percentageChange < -10) trend = 'down';
+  if (percentageChange > 0) trend = 'up';      // Qualsevol millora = a l'alça
+  else if (percentageChange < 0) trend = 'down'; // Qualsevol baixada = a la baixa
 
   return {
     lastMonth: lastMonthSessions,
