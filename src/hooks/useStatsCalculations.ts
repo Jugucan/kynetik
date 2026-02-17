@@ -338,13 +338,35 @@ export const useStatsCalculations = ({
         return inactiveSortOrder === 'desc' ? diffB - diffA : diffA - diffB;
       });
 
+    // ✅ TENDÈNCIA BASADA EN MITJANES MENSUALS
     let trend: 'up' | 'down' | 'stable' = 'stable';
     if (yearlyData.length >= 2) {
-      const lastYear = yearlyData[yearlyData.length - 1].count;
-      const previousYear = yearlyData[yearlyData.length - 2].count;
-      const diff = lastYear - previousYear;
-      if (diff > 0) trend = 'up';
-      else if (diff < 0) trend = 'down';
+      const now = new Date();
+      const currentYear = now.getFullYear().toString();
+
+      const getMonthlyAverage = (yearEntry: { year: string; count: number }) => {
+        if (yearEntry.year === currentYear) {
+          // Any actual: mesos transcorreguts fins avui
+          const monthsElapsed = Math.max(1, now.getMonth() + 1 +
+            (now.getDate() / new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()));
+          return yearEntry.count / monthsElapsed;
+        } else {
+          // Anys passats: comptar mesos reals amb activitat al calendari
+          const monthsWithActivity = new Set(
+            filteredClasses
+              .filter(c => c.date.startsWith(yearEntry.year))
+              .map(c => c.date.slice(5, 7))
+          ).size;
+          return yearEntry.count / Math.max(1, monthsWithActivity);
+        }
+      };
+
+      const lastYearAvg = getMonthlyAverage(yearlyData[yearlyData.length - 1]);
+      const previousYearAvg = getMonthlyAverage(yearlyData[yearlyData.length - 2]);
+      const diff = lastYearAvg - previousYearAvg;
+
+      if (diff > 0.5) trend = 'up';
+      else if (diff < -0.5) trend = 'down';
     }
 
     const attendancesByYearMonth: { [ym: string]: number } = {};
