@@ -158,8 +158,8 @@ const UserStats = () => {
         </div>
       </div>
 
-      {/* ── AUTODISCIPLINA ── targeta única, número protagonista */}
-      <div className="rounded-2xl shadow-neo bg-background p-5">
+      {/* ── AUTODISCIPLINA ── fons de color dinàmic */}
+      <div className={`rounded-2xl shadow-neo p-5 ${stats.advancedStats.autodisciplineLevel.bgColor}`}>
         <div className="flex items-start justify-between mb-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">Autodisciplina</p>
@@ -188,14 +188,14 @@ const UserStats = () => {
               `Puntuació Històrica: ${stats.advancedStats.autodisciplineDetails.historicScore}%\n` +
               `TOTAL: ${stats.advancedStats.autodiscipline}%`
             )}
-            className="p-1.5 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5 rounded-full hover:bg-white/50 transition-colors"
           >
             <Info className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Barra de progrés inset */}
-        <div className="h-3 rounded-full shadow-neo-inset overflow-hidden">
+        {/* Barra de progrés */}
+        <div className="h-3 rounded-full bg-gray-200 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-700 ${stats.advancedStats.autodisciplineLevel.barColor}`}
             style={{ width: `${stats.advancedStats.autodisciplineLevel.percentage}%` }}
@@ -210,18 +210,18 @@ const UserStats = () => {
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-2xl shadow-neo bg-background p-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Evolució Recent</p>
-          <div className="space-y-3">
-            <div>
-              <div className="text-3xl font-bold">{stats.advancedStats.improvementRecent.lastMonth}</div>
-              <div className="text-xs text-muted-foreground">Darrer mes</div>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="p-3 bg-blue-50 rounded-xl text-center">
+              <div className="text-3xl font-bold text-blue-700">{stats.advancedStats.improvementRecent.lastMonth}</div>
+              <div className="text-xs text-blue-600 mt-1">Darrer mes</div>
             </div>
-            <div className="h-px bg-muted" />
-            <div>
-              <div className="text-2xl font-bold text-muted-foreground">{stats.advancedStats.improvementRecent.previousQuarterAverage}</div>
-              <div className="text-xs text-muted-foreground">Mitjana 3 mesos ant.</div>
+            <div className="p-3 bg-purple-50 rounded-xl text-center">
+              <div className="text-3xl font-bold text-purple-700">{stats.advancedStats.improvementRecent.previousQuarterAverage}</div>
+              <div className="text-xs text-purple-600 mt-1">Mitjana 3 mesos ant.</div>
             </div>
           </div>
-          <div className="mt-3">
+          <div className="flex items-center justify-between pt-2 border-t">
+            <span className="text-xs text-muted-foreground">Tendència</span>
             {stats.advancedStats.improvementRecent.trend === 'up' && (
               <Badge className="bg-green-500 text-xs">
                 <TrendingUp className="w-3 h-3 mr-1" />+{stats.advancedStats.improvementRecent.percentageChange}%
@@ -339,12 +339,20 @@ const UserStats = () => {
         {stats.yearlyStats.length > 0 ? (
           <div className="space-y-3">
             {stats.yearlyStats.length > 1 && (stats.bestYear || stats.worstYear) && (
-              <div className="flex flex-wrap gap-3 mb-2 text-xs text-muted-foreground">
+              <div className="grid grid-cols-2 gap-2 mb-2">
                 {stats.bestYear && (
-                  <span>🏆 <strong className="text-green-700">{stats.bestYear.year}</strong> · {stats.bestYear.count} sessions</span>
+                  <div className="p-2 bg-green-50 border border-green-200 rounded-xl text-center">
+                    <div className="text-xs text-green-600 mb-1">🏆 Millor any</div>
+                    <div className="text-lg font-bold text-green-700">{stats.bestYear.year}</div>
+                    <div className="text-xs text-green-600">{stats.bestYear.count} sessions</div>
+                  </div>
                 )}
                 {stats.worstYear && (
-                  <span>📉 <strong className="text-orange-700">{stats.worstYear.year}</strong> · {stats.worstYear.count} sessions</span>
+                  <div className="p-2 bg-orange-50 border border-orange-200 rounded-xl text-center">
+                    <div className="text-xs text-orange-600 mb-1">📉 Mínim</div>
+                    <div className="text-lg font-bold text-orange-700">{stats.worstYear.year}</div>
+                    <div className="text-xs text-orange-600">{stats.worstYear.count} sessions</div>
+                  </div>
                 )}
               </div>
             )}
