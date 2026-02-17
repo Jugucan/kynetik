@@ -129,6 +129,25 @@ const UserStats = () => {
 
   if (loading) {
     return (
+      <div className="space-y-6 px-4 max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold">Les meves Estadístiques</h1>
+        <div className="text-center py-8 text-muted-foreground">Carregant...</div>
+      </div>
+    );
+  }
+
+  if (!currentUserData) {
+    return (
+      <div className="space-y-6 px-4 max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold">Les meves Estadístiques</h1>
+        <div className="p-8 rounded-xl shadow-neo bg-background text-center">
+          <p className="text-muted-foreground">Encara no tens sessions registrades.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
     <div className="space-y-4 px-4 max-w-7xl mx-auto pb-8">
       {/* Header */}
       <div className="flex items-center gap-2">
