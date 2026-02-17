@@ -27,6 +27,7 @@ const today = new Date().toISOString().split('T')[0]; // "2026-02-17"
 export const useMotivationalPhrase = (userStats: UserStatsForPhrase | null) => {
   const [title, setTitle] = useState<string>('');
   const [phrase, setPhrase] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (!userStats || userStats.totalSessions === 0) return;
