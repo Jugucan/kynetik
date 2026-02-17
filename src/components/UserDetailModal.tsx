@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Mail, Phone, Cake, MapPin, Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { calculateAdvancedStats, calculateUserRanking, calculateProgramRanking } from '@/utils/advancedStats';
+import { calculateAdvancedStats, calculateUserRanking, calculateProgramRanking, calculateYearlyTrend } from '@/utils/advancedStats';
 import {
   Collapsible,
   CollapsibleContent,
@@ -67,35 +67,8 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
             }
         });
         
-        // 🆕 SESSIONS PER ANY
-        const yearlyCount: { [key: string]: number } = {};
-        sessions.forEach(session => {
-            const year = new Date(session.date).getFullYear().toString();
-            yearlyCount[year] = (yearlyCount[year] || 0) + 1;
-        });
-        
-        const yearlyStats = Object.entries(yearlyCount)
-            .sort((a, b) => a[0].localeCompare(b[0]))
-            .map(([year, count]) => ({ year, count }));
-        
-        // 🆕 CÀLCUL DE TENDÈNCIA
-        let trend: 'up' | 'down' | 'stable' = 'stable';
-        if (yearlyStats.length >= 2) {
-            const lastYear = yearlyStats[yearlyStats.length - 1].count;
-            const previousYear = yearlyStats[yearlyStats.length - 2].count;
-            const difference = lastYear - previousYear;
-            
-            if (difference > 0) trend = 'up';
-            else if (difference < 0) trend = 'down';
-        }
-        
-        // Millor i pitjor any
-        const bestYear = yearlyStats.length > 0 
-            ? yearlyStats.reduce((max, curr) => curr.count > max.count ? curr : max)
-            : null;
-        const worstYear = yearlyStats.length > 0
-            ? yearlyStats.reduce((min, curr) => curr.count < min.count ? curr : min)
-            : null;
+        // ✅ TENDÈNCIA ANUAL AMB MITJANES MENSUALS
+        const { yearlyStats, trend, bestYear, worstYear } = calculateYearlyTrend(sessions);
         
         const advancedStats = calculateAdvancedStats(user);
 
