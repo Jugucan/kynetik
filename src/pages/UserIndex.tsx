@@ -112,17 +112,21 @@ const UserIndex = () => {
       {(phrase || phraseLoading) && (
         <div className="p-4 rounded-xl shadow-neo bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20">
           <div className="flex items-start gap-3">
-            <div className="text-2xl">💪</div>
-            <div className="flex-1">
-              <h3 className="font-bold text-sm mb-1 text-primary">El teu missatge d'avui</h3>
+            <div className="text-2xl flex-shrink-0">💪</div>
+            <div className="flex-1 min-w-0">
               {phraseLoading ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 py-1">
                   <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                   <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
               ) : (
-                <p className="text-xs text-foreground leading-relaxed">{phrase}</p>
+                <>
+                  {title && (
+                    <h3 className="font-bold text-sm text-primary mb-1">{title}</h3>
+                  )}
+                  <p className="text-xs text-foreground leading-relaxed">{phrase}</p>
+                </>
               )}
             </div>
           </div>
