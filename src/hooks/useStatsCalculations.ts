@@ -346,12 +346,14 @@ export const useStatsCalculations = ({
 
       const getMonthlyAverage = (yearEntry: { year: string; count: number }) => {
         if (yearEntry.year === currentYear) {
-          // Any actual: mesos transcorreguts fins avui
-          const monthsElapsed = Math.max(1, now.getMonth() + 1 +
-            (now.getDate() / new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()));
+          // Any actual: mesos transcorreguts fins avui (fracció inclosa)
+          const monthsElapsed = Math.max(0.5,
+            now.getMonth() +
+            (now.getDate() / new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())
+          );
           return yearEntry.count / monthsElapsed;
         } else {
-          // Anys passats: comptar mesos reals amb activitat al calendari
+          // Anys passats: mesos reals amb activitat al calendari
           const monthsWithActivity = new Set(
             filteredClasses
               .filter(c => c.date.startsWith(yearEntry.year))
@@ -361,12 +363,26 @@ export const useStatsCalculations = ({
         }
       };
 
-      const lastYearAvg = getMonthlyAverage(yearlyData[yearlyData.length - 1]);
-      const previousYearAvg = getMonthlyAverage(yearlyData[yearlyData.length - 2]);
-      const diff = lastYearAvg - previousYearAvg;
+      // Sempre comparar any actual vs any anterior
+      const currentYearEntry = yearlyData.find(y => y.year === currentYear);
+      const previousYearEntry = yearlyData
+        .filter(y => y.year !== currentYear)
+        .sort((a, b) => b.year.localeCompare(a.year))[0];
 
-      if (diff > 0.5) trend = 'up';
-      else if (diff < -0.5) trend = 'down';
+      if (currentYearEntry && previousYearEntry) {
+        const currentAvg = getMonthlyAverage(currentYearEntry);
+        const previousAvg = getMonthlyAverage(previousYearEntry);
+        const diff = currentAvg - previousAvg;
+        if (diff > 0.2) trend = 'up';
+        else if (diff < -0.2) trend = 'down';
+      } else {
+        // Si no hi ha any actual, comparar els dos últims anys
+        const lastAvg = getMonthlyAverage(yearlyData[yearlyData.length - 1]);
+        const prevAvg = getMonthlyAverage(yearlyData[yearlyData.length - 2]);
+        const diff = lastAvg - prevAvg;
+        if (diff > 0.2) trend = 'up';
+        else if (diff < -0.2) trend = 'down';
+      }
     }
 
     const attendancesByYearMonth: { [ym: string]: number } = {};
