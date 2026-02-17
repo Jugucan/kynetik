@@ -108,7 +108,29 @@ const UserIndex = () => {
   return (
     <div className="space-y-4 px-4 max-w-7xl mx-auto pb-8">
       
-     {/* Missatge Motivacional IA — destacat a dalt */}
+     {/* Header amb foto */}
+      <div className="flex items-center gap-3">
+        <img 
+          src={currentUserData.profileImageUrl || currentUserData.avatar} 
+          alt={currentUserData.name}
+          className="w-12 h-12 rounded-full shadow-neo object-cover"
+        />
+        <div>
+          <h1 className="text-2xl font-bold">Benvinguda, {userProfile?.displayName}! 👋</h1>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <Badge variant="outline" className={currentUserData.center === "Arbúcies" ? "bg-blue-100" : "bg-green-100"}>
+              <MapPin className="w-3 h-3 mr-1" />
+              {currentUserData.center}
+            </Badge>
+            <Badge variant="outline">
+              <Cake className="w-3 h-3 mr-1" />
+              {currentUserData.age} anys
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      {/* Missatge Motivacional IA */}
       {(phrase || phraseLoading) && (
         <div className="p-4 rounded-xl shadow-neo bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20">
           <div className="flex items-start gap-3">
@@ -132,28 +154,6 @@ const UserIndex = () => {
           </div>
         </div>
       )}
-
-      {/* Header amb foto */}
-      <div className="flex items-center gap-3">
-        <img 
-          src={currentUserData.profileImageUrl || currentUserData.avatar} 
-          alt={currentUserData.name}
-          className="w-12 h-12 rounded-full shadow-neo object-cover"
-        />
-        <div>
-          <h1 className="text-2xl font-bold">Benvinguda, {userProfile?.displayName}! 👋</h1>
-          <div className="flex flex-wrap items-center gap-2 mt-1">
-            <Badge variant="outline" className={currentUserData.center === "Arbúcies" ? "bg-blue-100" : "bg-green-100"}>
-              <MapPin className="w-3 h-3 mr-1" />
-              {currentUserData.center}
-            </Badge>
-            <Badge variant="outline">
-              <Cake className="w-3 h-3 mr-1" />
-              {currentUserData.age} anys
-            </Badge>
-          </div>
-        </div>
-      </div>
 
       {/* Targetes principals - 4 mètriques clau */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
