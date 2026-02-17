@@ -14,6 +14,7 @@ const UserStats = () => {
   const { userProfile } = useUserProfile();
   const { users, loading } = useUsers();
   const [isMonthlyFrequencyOpen, setIsMonthlyFrequencyOpen] = useState(false);
+  const [isHistorialOpen, setIsHistorialOpen] = useState(false);
 
   const currentUserData = users.find(u => u.email === userProfile?.email);
 
@@ -206,8 +207,8 @@ const UserStats = () => {
         </p>
       </div>
 
-      {/* ── EVOLUCIÓ RECENT + REGULARITAT — dues mètriques en una fila ── */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* ── EVOLUCIÓ RECENT + REGULARITAT — columna en mòbil, fila en pc ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="rounded-2xl shadow-neo bg-background p-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Evolució Recent</p>
           <div className="grid grid-cols-2 gap-2 mb-3">
@@ -402,48 +403,59 @@ const UserStats = () => {
 
       {/* ── HISTORIAL ── */}
       <div className="rounded-2xl shadow-neo bg-background p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Clock className="w-4 h-4 text-primary" />
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Historial de Sessions</p>
-        </div>
-        {sessionsByDate.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No hi ha historial de sessions disponible</p>
-        ) : (
-          <div className="space-y-5">
-            {sessionsByDate.map(([date, sessions]) => (
-              <div key={date}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-semibold text-muted-foreground">{formatDate(date)}</span>
-                  {sessions.length > 1 && (
-                    <span className="text-xs text-muted-foreground">· {sessions.length}</span>
-                  )}
-                </div>
-                <div className="space-y-1.5 pl-3 border-l-2 border-muted">
-                  {sessions.map((session, idx) => (
-                    <div key={idx} className="flex items-center justify-between">
-                      <Badge variant="secondary" className="text-xs">{session.activity}</Badge>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {session.time && (
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />{session.time}
-                          </span>
-                        )}
-                        {session.center && (
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${session.center === 'Arbúcies' ? 'bg-blue-50' : 'bg-green-50'}`}
-                          >
-                            {session.center}
-                          </Badge>
-                        )}
-                      </div>
+        <Collapsible open={isHistorialOpen} onOpenChange={setIsHistorialOpen}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-primary" />
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Historial de Sessions</p>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <span className="text-xs">{sessionsByDate.length} dies</span>
+              {isHistorialOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+          </CollapsibleTrigger>
+
+          <CollapsibleContent className="mt-4">
+            {sessionsByDate.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hi ha historial de sessions disponible</p>
+            ) : (
+              <div className="space-y-5">
+                {sessionsByDate.map(([date, sessions]) => (
+                  <div key={date}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-semibold text-muted-foreground">{formatDate(date)}</span>
+                      {sessions.length > 1 && (
+                        <span className="text-xs text-muted-foreground">· {sessions.length}</span>
+                      )}
                     </div>
-                  ))}
-                </div>
+                    <div className="space-y-1.5 pl-3 border-l-2 border-muted">
+                      {sessions.map((session, idx) => (
+                        <div key={idx} className="flex items-center justify-between">
+                          <Badge variant="secondary" className="text-xs">{session.activity}</Badge>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {session.time && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />{session.time}
+                              </span>
+                            )}
+                            {session.center && (
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${session.center === 'Arbúcies' ? 'bg-blue-50' : 'bg-green-50'}`}
+                              >
+                                {session.center}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+            )}
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
     </div>
