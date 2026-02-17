@@ -129,51 +129,32 @@ const UserStats = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6 px-4 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold">Les meves Estadístiques</h1>
-        <div className="text-center py-8 text-muted-foreground">Carregant...</div>
-      </div>
-    );
-  }
-
-  if (!currentUserData) {
-    return (
-      <div className="space-y-6 px-4 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold">Les meves Estadístiques</h1>
-        <div className="p-8 rounded-xl shadow-neo bg-background text-center">
-          <p className="text-muted-foreground">Encara no tens sessions registrades.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6 px-4 max-w-7xl mx-auto pb-8">
+    <div className="space-y-4 px-4 max-w-7xl mx-auto pb-8">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <BarChart3 className="w-8 h-8 text-primary" />
+      <div className="flex items-center gap-2">
+        <BarChart3 className="w-5 h-5 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold">Les meves Estadístiques</h1>
-          <p className="text-muted-foreground">Anàlisi detallada de la teva activitat</p>
+          <h1 className="text-2xl font-bold">Les meves Estadístiques</h1>
+          <p className="text-sm text-muted-foreground">Anàlisi detallada de la teva activitat</p>
         </div>
       </div>
 
       {/* Anàlisi Detallada */}
-      <div className="p-6 rounded-xl shadow-neo bg-background">
-        <h3 className="font-semibold text-lg mb-4 flex items-center">
-          <BarChart3 className="w-5 h-5 mr-2 text-primary" />
+      <div className="p-4 rounded-xl shadow-neo bg-background">
+        <h3 className="font-semibold text-sm mb-3 flex items-center">
+          <BarChart3 className="w-4 h-4 mr-2 text-primary" />
           Anàlisi Detallada
         </h3>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Freqüència Mensual */}
           <Collapsible 
             open={isMonthlyFrequencyOpen} 
             onOpenChange={setIsMonthlyFrequencyOpen}
-            className="p-4 bg-muted/30 rounded-lg shadow-neo-inset"
+            className="p-3 bg-muted/30 rounded-lg shadow-neo-inset"
           >
             <CollapsibleTrigger className="flex items-center justify-between w-full">
-              <h4 className="font-medium">Freqüència Mensual</h4>
+              <h4 className="font-medium text-sm">Freqüència Mensual</h4>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs">
                   {stats.advancedStats.monthlyFrequency.length} mesos
@@ -187,7 +168,7 @@ const UserStats = () => {
                 <div className="space-y-2">
                   {stats.advancedStats.monthlyFrequency.map((month, idx) => (
                     <div key={idx} className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">{month.month}</span>
+                      <span className="text-xs text-muted-foreground">{month.month}</span>
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-24 bg-muted rounded-full overflow-hidden">
                           <div
@@ -207,22 +188,22 @@ const UserStats = () => {
           </Collapsible>
 
           {/* Dies Entre Sessions */}
-          <div className="p-4 bg-muted/30 rounded-lg shadow-neo-inset">
-            <h4 className="font-medium mb-2">Dies entre Sessions</h4>
+          <div className="p-3 bg-muted/30 rounded-lg shadow-neo-inset">
+            <h4 className="font-medium text-sm mb-2">Dies entre Sessions</h4>
             <div className="flex items-baseline gap-2">
-              <div className="text-3xl font-bold text-green-600">
+              <div className="text-2xl font-bold text-green-600">
                 {stats.advancedStats.daysBetweenSessions}
               </div>
-              <span className="text-sm text-muted-foreground">dies de mitja</span>
+              <span className="text-xs text-muted-foreground">dies de mitja</span>
             </div>
           </div>
 
           {/* Autodisciplina */}
-          <div className={`p-5 rounded-lg shadow-neo ${stats.advancedStats.autodisciplineLevel.bgColor}`}>
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium flex items-center gap-2">
+          <div className={`p-4 rounded-lg shadow-neo ${stats.advancedStats.autodisciplineLevel.bgColor}`}>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-medium text-sm flex items-center gap-2">
                 Autodisciplina
-                <span className="text-2xl">{stats.advancedStats.autodisciplineLevel.emoji}</span>
+                <span className="text-lg">{stats.advancedStats.autodisciplineLevel.emoji}</span>
               </h4>
               <button
                 onClick={() => alert(`COM ES CALCULA L'AUTODISCIPLINA?\n\n` +
@@ -238,25 +219,23 @@ const UserStats = () => {
                   `Puntuació Històrica: ${stats.advancedStats.autodisciplineDetails.historicScore}%\n` +
                   `TOTAL: ${stats.advancedStats.autodiscipline}%`
                 )}
-                className="p-1.5 rounded-full hover:bg-white/50 transition-colors"
+                className="p-1 rounded-full hover:bg-white/50 transition-colors"
               >
                 <Info className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-muted-foreground mb-3">
+            <p className="text-xs text-muted-foreground mb-2">
               Mesura la regularitat amb què assisteixes al gimnàs
             </p>
-            
-            <div className="flex items-center justify-between mb-3">
-              <span className={`font-bold text-lg ${stats.advancedStats.autodisciplineLevel.color}`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className={`font-bold text-sm ${stats.advancedStats.autodisciplineLevel.color}`}>
                 {stats.advancedStats.autodisciplineLevel.label}
               </span>
-              <span className="text-2xl font-bold">
+              <span className="text-lg font-bold">
                 {stats.advancedStats.autodiscipline}%
               </span>
             </div>
-            
-            <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all ${stats.advancedStats.autodisciplineLevel.barColor}`}
                 style={{ width: `${stats.advancedStats.autodisciplineLevel.percentage}%` }}
@@ -265,39 +244,39 @@ const UserStats = () => {
           </div>
 
           {/* Evolució Recent */}
-          <div className="p-4 bg-muted/30 rounded-lg shadow-neo-inset">
-            <h4 className="font-medium mb-3">Evolució Recent</h4>
-            <p className="text-xs text-muted-foreground mb-3">
+          <div className="p-3 bg-muted/30 rounded-lg shadow-neo-inset">
+            <h4 className="font-medium text-sm mb-2">Evolució Recent</h4>
+            <p className="text-xs text-muted-foreground mb-2">
               Comparació del darrer mes amb la mitjana dels 3 mesos anteriors
             </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="text-center p-3 bg-blue-50 rounded-lg shadow-neo">
-                <div className="text-2xl font-bold text-blue-700">{stats.advancedStats.improvementRecent.lastMonth}</div>
-                <div className="text-sm text-blue-600">Darrer mes</div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="text-center p-2 bg-blue-50 rounded-lg shadow-neo">
+                <div className="text-xl font-bold text-blue-700">{stats.advancedStats.improvementRecent.lastMonth}</div>
+                <div className="text-xs text-blue-600">Darrer mes</div>
               </div>
-              <div className="text-center p-3 bg-purple-50 rounded-lg shadow-neo">
-                <div className="text-2xl font-bold text-purple-700">{stats.advancedStats.improvementRecent.previousQuarterAverage}</div>
-                <div className="text-sm text-purple-600">Mitjana 3 mesos ant.</div>
+              <div className="text-center p-2 bg-purple-50 rounded-lg shadow-neo">
+                <div className="text-xl font-bold text-purple-700">{stats.advancedStats.improvementRecent.previousQuarterAverage}</div>
+                <div className="text-xs text-purple-600">Mitjana 3 mesos ant.</div>
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t">
+            <div className="mt-2 pt-2 border-t">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Tendència:</span>
+                <span className="text-xs text-muted-foreground">Tendència:</span>
                 <div className="flex items-center gap-2">
                   {stats.advancedStats.improvementRecent.trend === 'up' && (
-                    <Badge className="bg-green-500">
+                    <Badge className="bg-green-500 text-xs">
                       <TrendingUp className="w-3 h-3 mr-1" />
                       +{stats.advancedStats.improvementRecent.percentageChange}%
                     </Badge>
                   )}
                   {stats.advancedStats.improvementRecent.trend === 'down' && (
-                    <Badge className="bg-red-500">
+                    <Badge className="bg-red-500 text-xs">
                       <TrendingDown className="w-3 h-3 mr-1" />
                       {stats.advancedStats.improvementRecent.percentageChange}%
                     </Badge>
                   )}
                   {stats.advancedStats.improvementRecent.trend === 'stable' && (
-                    <Badge variant="outline">
+                    <Badge variant="outline" className="text-xs">
                       <Minus className="w-3 h-3 mr-1" />
                       Estable
                     </Badge>
@@ -313,20 +292,20 @@ const UserStats = () => {
 
       {/* Sessions i Posició per Programa */}
       {stats.programStats.length > 0 && (
-        <div className="p-6 rounded-xl shadow-neo bg-background">
-          <h3 className="font-semibold text-lg mb-4 flex items-center">
-            <Award className="w-5 h-5 mr-2 text-primary" />
+        <div className="p-4 rounded-xl shadow-neo bg-background">
+          <h3 className="font-semibold text-sm mb-3 flex items-center">
+            <Award className="w-4 h-4 mr-2 text-primary" />
             Sessions i Posició per Programa
           </h3>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {stats.programStats.map((prog, idx) => {
               const ranking = stats.programRankings[prog.name];
               const percentage = (prog.count / stats.totalSessions) * 100;
               
               return (
-                <div key={idx} className="p-4 bg-muted/30 rounded-lg shadow-neo-inset">
+                <div key={idx} className="p-3 bg-muted/30 rounded-lg shadow-neo-inset">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium">{prog.name}</span>
+                    <span className="font-medium text-sm">{prog.name}</span>
                     {ranking && ranking.total > 0 ? (
                       <Badge className="text-xs">
                         #{ranking.rank} de {ranking.total}
@@ -335,7 +314,6 @@ const UserStats = () => {
                       <Badge variant="outline" className="text-xs">N/A</Badge>
                     )}
                   </div>
-                  
                   <div className="flex items-center gap-3">
                     <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden">
                       <div 
@@ -355,26 +333,26 @@ const UserStats = () => {
       <Separator />
 
       {/* Evolució per Any */}
-      <div className="p-6 rounded-xl shadow-neo bg-background">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-lg flex items-center">
-            <Calendar className="w-5 h-5 mr-2 text-primary" />
+      <div className="p-4 rounded-xl shadow-neo bg-background">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-sm flex items-center">
+            <Calendar className="w-4 h-4 mr-2 text-primary" />
             Evolució per Any
           </h3>
           {stats.trend === 'up' && (
-            <Badge className="bg-green-500">
+            <Badge className="bg-green-500 text-xs">
               <TrendingUp className="w-3 h-3 mr-1" />
               A l'alça
             </Badge>
           )}
           {stats.trend === 'down' && (
-            <Badge className="bg-red-500">
+            <Badge className="bg-red-500 text-xs">
               <TrendingDown className="w-3 h-3 mr-1" />
               A la baixa
             </Badge>
           )}
           {stats.trend === 'stable' && (
-            <Badge variant="outline">
+            <Badge variant="outline" className="text-xs">
               <Minus className="w-3 h-3 mr-1" />
               Estable
             </Badge>
@@ -382,26 +360,24 @@ const UserStats = () => {
         </div>
         
         {stats.yearlyStats.length > 0 ? (
-          <div className="space-y-3">
-            {/* Millor i pitjor any */}
-            <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2 mb-2">
               {stats.bestYear && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center shadow-neo">
+                <div className="p-2 bg-green-50 border border-green-200 rounded-lg text-center shadow-neo">
                   <div className="text-xs text-green-600 mb-1">🏆 Millor any</div>
-                  <div className="text-xl font-bold text-green-700">{stats.bestYear.year}</div>
+                  <div className="text-lg font-bold text-green-700">{stats.bestYear.year}</div>
                   <div className="text-xs text-green-600">{stats.bestYear.count} sessions</div>
                 </div>
               )}
               {stats.worstYear && stats.yearlyStats.length > 1 && (
-                <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg text-center shadow-neo">
+                <div className="p-2 bg-orange-50 border border-orange-200 rounded-lg text-center shadow-neo">
                   <div className="text-xs text-orange-600 mb-1">📉 Mínim</div>
-                  <div className="text-xl font-bold text-orange-700">{stats.worstYear.year}</div>
+                  <div className="text-lg font-bold text-orange-700">{stats.worstYear.year}</div>
                   <div className="text-xs text-orange-600">{stats.worstYear.count} sessions</div>
                 </div>
               )}
             </div>
             
-            {/* Gràfic per any */}
             {stats.yearlyStats.map((yearData) => {
               const maxCount = Math.max(...stats.yearlyStats.map(y => y.count));
               const percentage = (yearData.count / maxCount) * 100;
@@ -409,18 +385,18 @@ const UserStats = () => {
               const isWorst = stats.worstYear?.year === yearData.year;
               
               return (
-                <div key={yearData.year} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg shadow-neo-inset">
-                  <span className={`font-medium min-w-[60px] ${isBest ? 'text-green-700' : isWorst ? 'text-orange-700' : ''}`}>
+                <div key={yearData.year} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg shadow-neo-inset">
+                  <span className={`font-medium text-sm min-w-[50px] ${isBest ? 'text-green-700' : isWorst ? 'text-orange-700' : ''}`}>
                     {yearData.year}
                   </span>
-                  <div className="flex items-center gap-3 flex-1 ml-3">
-                    <div className="h-8 flex-1 bg-muted rounded-full overflow-hidden">
+                  <div className="flex items-center gap-2 flex-1 ml-3">
+                    <div className="h-6 flex-1 bg-muted rounded-full overflow-hidden">
                       <div 
                         className={`h-full transition-all ${isBest ? 'bg-green-500' : isWorst ? 'bg-orange-400' : 'bg-primary'}`}
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
-                    <Badge variant="outline" className="min-w-[50px] justify-center">
+                    <Badge variant="outline" className="text-xs min-w-[45px] justify-center">
                       {yearData.count}
                     </Badge>
                   </div>
@@ -429,7 +405,7 @@ const UserStats = () => {
             })}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-4">
+          <p className="text-xs text-muted-foreground text-center py-4">
             No hi ha dades d'assistència per any
           </p>
         )}
@@ -439,16 +415,16 @@ const UserStats = () => {
       {Object.keys(stats.centerCount).length > 0 && (
         <>
           <Separator />
-          <div className="p-6 rounded-xl shadow-neo bg-background">
-            <h3 className="font-semibold text-lg mb-4 flex items-center">
-              <MapPin className="w-5 h-5 mr-2 text-primary" />
+          <div className="p-4 rounded-xl shadow-neo bg-background">
+            <h3 className="font-semibold text-sm mb-3 flex items-center">
+              <MapPin className="w-4 h-4 mr-2 text-primary" />
               Sessions per Centre
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {Object.entries(stats.centerCount).map(([center, count]) => (
-                <div key={center} className="p-4 bg-muted/30 rounded-lg text-center shadow-neo-inset">
-                  <div className="text-2xl font-bold">{count}</div>
-                  <div className="text-sm text-muted-foreground">{center}</div>
+                <div key={center} className="p-3 bg-muted/30 rounded-lg text-center shadow-neo-inset">
+                  <div className="text-xl font-bold">{count}</div>
+                  <div className="text-xs text-muted-foreground">{center}</div>
                 </div>
               ))}
             </div>
@@ -459,32 +435,32 @@ const UserStats = () => {
       <Separator />
 
       {/* Historial Complet de Sessions */}
-      <div className="p-6 rounded-xl shadow-neo bg-background">
-        <h3 className="font-semibold text-lg mb-4 flex items-center">
-          <Clock className="w-5 h-5 mr-2 text-primary" />
+      <div className="p-4 rounded-xl shadow-neo bg-background">
+        <h3 className="font-semibold text-sm mb-3 flex items-center">
+          <Clock className="w-4 h-4 mr-2 text-primary" />
           Historial Complet de Sessions
         </h3>
-        <ScrollArea className="h-[600px] pr-4">
+        <ScrollArea className="h-[500px] pr-4">
           {sessionsByDate.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground text-sm">
               No hi ha historial de sessions disponible
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {sessionsByDate.map(([date, sessions]) => (
-                <div key={date} className="border rounded-xl p-4 bg-muted/20 shadow-neo-inset">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Calendar className="w-4 h-4 text-primary" />
-                    <h4 className="font-semibold">{formatDate(date)}</h4>
-                    <Badge variant="outline" className="ml-auto">{sessions.length} {sessions.length === 1 ? 'sessió' : 'sessions'}</Badge>
+                <div key={date} className="border rounded-lg p-3 bg-muted/20 shadow-neo-inset">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar className="w-3 h-3 text-primary" />
+                    <h4 className="font-semibold text-sm">{formatDate(date)}</h4>
+                    <Badge variant="outline" className="ml-auto text-xs">{sessions.length} {sessions.length === 1 ? 'sessió' : 'sessions'}</Badge>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {sessions.map((session, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2 bg-background rounded-lg text-sm">
+                      <div key={idx} className="flex items-center justify-between p-2 bg-background rounded-lg text-xs">
                         <div className="flex items-center gap-2">
                           <Badge className="text-xs">{session.activity}</Badge>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                           {session.time && (
                             <>
                               <Clock className="w-3 h-3" />
