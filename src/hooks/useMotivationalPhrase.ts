@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 
 interface MotivationalPhraseData {
+  title: string;
   phrase: string;
   date: string;
   sessionsSnapshot: number;
@@ -24,8 +25,8 @@ const STORAGE_KEY_PREFIX = 'kynetik_motivation_';
 const today = new Date().toISOString().split('T')[0]; // "2026-02-17"
 
 export const useMotivationalPhrase = (userStats: UserStatsForPhrase | null) => {
+  const [title, setTitle] = useState<string>('');
   const [phrase, setPhrase] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!userStats || userStats.totalSessions === 0) return;
@@ -43,6 +44,7 @@ export const useMotivationalPhrase = (userStats: UserStatsForPhrase | null) => {
           data.autodisciplineSnapshot === userStats.autodiscipline;
 
         if (sameDay && sameStats) {
+          setTitle(data.title || '');
           setPhrase(data.phrase);
           return;
         }
@@ -76,13 +78,21 @@ export const useMotivationalPhrase = (userStats: UserStatsForPhrase | null) => {
 
     const prompt = `Ets un entrenador personal motivador que parla en català, de forma càlida, propera i positiva.
 
-Genera UNA SOLA frase motivacional personalitzada per a aquesta persona. La frase ha de:
+Genera DOS elements per a aquesta persona:
+1. Un TÍTOL curt i impactant (2-5 paraules màxim, sense punt final, que ressalti i sigui personal)
+2. Un MISSATGE motivacional (1-3 frases curtes)
+
+El títol ha de:
+- Ser variat i creatiu cada vegada (ex: "Quin nivell!", "Imparable!", "Vas a tope!", "Orgullosa de tu", "Constància de campiona"...)
+- Reflectir les dades reals de la persona
+- NO ser genèric ni sempre igual
+
+El missatge ha de:
 - Ser en català natural i col·loquial
-- Tenir entre 1 i 3 frases curtes
-- Ser específica a les seves dades, no genèrica
-- Variar el to: de vegades enèrgica, de vegades reflexiva, de vegades divertida
-- NO començar sempre igual (evita sempre "Avui", "Cada dia", etc.)
-- Usar el nom ${stats.name.split(' ')[0]} de forma natural (no a totes les frases)
+- Ser específic a les seves dades, no genèric
+- Variar el to: de vegades enèrgic, de vegades reflexiu, de vegades divertit
+- NO contenir emojis (ja hi ha un 💪 fix al disseny)
+- Usar el nom ${stats.name.split(' ')[0]} de forma natural (no sempre)
 
 Dades de la persona:
 - Nom: ${stats.name}
@@ -95,7 +105,9 @@ Dades de la persona:
 - ${activeProgramsText}
 ${stats.memberSinceYear ? `- Membre des de: ${stats.memberSinceYear}` : ''}
 
-Respon ÚNICAMENT amb la frase, sense cometes, sense explicacions, sense salutació inicial.`;
+Respon ÚNICAMENT en aquest format exacte (dues línies, sense cometes, sense res més):
+TÍTOL: [el títol aquí]
+MISSATGE: [el missatge aquí]`;
 
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -111,13 +123,22 @@ Respon ÚNICAMENT amb la frase, sense cometes, sense explicacions, sense salutac
       });
 
       const data = await response.json();
-      const generatedPhrase = data.content?.[0]?.text?.trim() || '';
+      const rawText = data.content?.[0]?.text?.trim() || '';
+
+      // Parsejar títol i missatge
+      const titleMatch = rawText.match(/TÍTOL:\s*(.+)/);
+      const messageMatch = rawText.match(/MISSATGE:\s*([\s\S]+)/);
+
+      const generatedTitle = titleMatch?.[1]?.trim() || '';
+      const generatedPhrase = messageMatch?.[1]?.trim() || rawText;
 
       if (generatedPhrase) {
+        setTitle(generatedTitle);
         setPhrase(generatedPhrase);
 
         // Guardar al localStorage
         const toStore: MotivationalPhraseData = {
+          title: generatedTitle,
           phrase: generatedPhrase,
           date: today,
           sessionsSnapshot: stats.totalSessions,
@@ -128,11 +149,12 @@ Respon ÚNICAMENT amb la frase, sense cometes, sense explicacions, sense salutac
     } catch (error) {
       console.error('Error generant frase motivacional:', error);
       // Frase de fallback si l'API falla
-      setPhrase(`${stats.totalSessions} sessions i comptant. Segueix així! 💪`);
+      setTitle('Segueix endavant!');
+      setPhrase(`${stats.totalSessions} sessions i comptant. La constància és la teva força.`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  return { phrase, isLoading };
+  return { title, phrase, isLoading };
 };
