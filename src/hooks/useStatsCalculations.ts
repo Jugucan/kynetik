@@ -371,8 +371,18 @@ export const useStatsCalculations = ({
           diferencia: (currentAvg - previousAvg).toFixed(2)
         });
 
-        if (currentAvg > previousAvg) trend = 'up';
-        else if (currentAvg < previousAvg) trend = 'down';
+        // Si portem menys de 2 mesos, la mostra és massa petita
+        // Usem un marge del 5% per evitar falsos positius
+        if (monthsElapsed < 2) {
+          // Amb tan poc temps, només marquem tendència si la diferència és >5%
+          const percentDiff = ((currentAvg - previousAvg) / previousAvg) * 100;
+          if (percentDiff > 5) trend = 'up';
+          else if (percentDiff < -5) trend = 'down';
+          // Si la diferència és menor del 5%, és "estable" (massa aviat per saber)
+        } else {
+          if (currentAvg > previousAvg) trend = 'up';
+          else if (currentAvg < previousAvg) trend = 'down';
+        }
       } else if (yearlyData.length >= 2) {
         // Si no hi ha any actual, comparar els dos últims anys per total
         const last = yearlyData[yearlyData.length - 1];
