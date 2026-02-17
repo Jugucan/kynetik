@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { calculateAdvancedStats, calculateProgramRanking } from '@/utils/advancedStats';
+import { calculateAdvancedStats, calculateProgramRanking, calculateYearlyTrend } from '@/utils/advancedStats';
 import {
   Collapsible,
   CollapsibleContent,
@@ -81,34 +81,8 @@ const UserStats = () => {
       }
     });
     
-    // Sessions per any
-    const yearlyCount: { [key: string]: number } = {};
-    sessions.forEach(session => {
-      const year = new Date(session.date).getFullYear().toString();
-      yearlyCount[year] = (yearlyCount[year] || 0) + 1;
-    });
-    
-    const yearlyStats = Object.entries(yearlyCount)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([year, count]) => ({ year, count }));
-    
-    // Tendència
-    let trend: 'up' | 'down' | 'stable' = 'stable';
-    if (yearlyStats.length >= 2) {
-      const lastYear = yearlyStats[yearlyStats.length - 1].count;
-      const previousYear = yearlyStats[yearlyStats.length - 2].count;
-      const difference = lastYear - previousYear;
-      
-      if (difference > 0) trend = 'up';
-      else if (difference < 0) trend = 'down';
-    }
-    
-    const bestYear = yearlyStats.length > 0 
-      ? yearlyStats.reduce((max, curr) => curr.count > max.count ? curr : max)
-      : null;
-    const worstYear = yearlyStats.length > 0
-      ? yearlyStats.reduce((min, curr) => curr.count < min.count ? curr : min)
-      : null;
+    // ✅ TENDÈNCIA ANUAL AMB MITJANES MENSUALS
+    const { yearlyStats, trend, bestYear, worstYear } = calculateYearlyTrend(sessions);
     
     const advancedStats = calculateAdvancedStats(currentUserData);
 
