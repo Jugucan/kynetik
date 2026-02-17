@@ -79,17 +79,17 @@ const UserIndex = () => {
   }
 
   return (
-    <div className="space-y-6 px-4 max-w-7xl mx-auto pb-8">
+    <div className="space-y-4 px-4 max-w-7xl mx-auto pb-8">
       {/* Header amb foto */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <img 
           src={currentUserData.profileImageUrl || currentUserData.avatar} 
           alt={currentUserData.name}
-          className="w-20 h-20 rounded-full shadow-neo object-cover"
+          className="w-12 h-12 rounded-full shadow-neo object-cover"
         />
         <div>
-          <h1 className="text-3xl font-bold">Benvinguda, {userProfile?.displayName}! 👋</h1>
-          <div className="flex flex-wrap items-center gap-2 mt-2">
+          <h1 className="text-2xl font-bold">Benvinguda, {userProfile?.displayName}! 👋</h1>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
             <Badge variant="outline" className={currentUserData.center === "Arbúcies" ? "bg-blue-100" : "bg-green-100"}>
               <MapPin className="w-3 h-3 mr-1" />
               {currentUserData.center}
@@ -103,54 +103,54 @@ const UserIndex = () => {
       </div>
 
       {/* Targetes principals - 4 mètriques clau */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-neo text-center hover:shadow-neo-lg transition-all">
-          <Calendar className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-          <div className="text-4xl font-bold text-blue-700 mb-1">{basicStats.totalSessions}</div>
-          <div className="text-sm text-blue-600 font-medium">Sessions Totals</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-neo text-center hover:shadow-neo-lg transition-all">
+          <Calendar className="w-5 h-5 text-blue-500 mx-auto mb-1" />
+          <div className="text-2xl font-bold text-blue-700 mb-1">{basicStats.totalSessions}</div>
+          <div className="text-xs text-blue-600 font-medium">Sessions Totals</div>
         </div>
 
-        <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-neo text-center hover:shadow-neo-lg transition-all">
-          <Award className="w-8 h-8 text-green-500 mx-auto mb-2" />
-          <div className="text-4xl font-bold text-green-700 mb-1">{basicStats.uniquePrograms}</div>
-          <div className="text-sm text-green-600 font-medium">Programes Diferents</div>
+        <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-neo text-center hover:shadow-neo-lg transition-all">
+          <Award className="w-5 h-5 text-green-500 mx-auto mb-1" />
+          <div className="text-2xl font-bold text-green-700 mb-1">{basicStats.uniquePrograms}</div>
+          <div className="text-xs text-green-600 font-medium">Programes Diferents</div>
         </div>
 
-        <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl shadow-neo text-center hover:shadow-neo-lg transition-all">
-          <TrendingUp className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-          <div className="text-4xl font-bold text-purple-700 mb-1">{currentUserData.daysSinceLastSession || 0}</div>
-          <div className="text-sm text-purple-600 font-medium">Dies sense venir</div>
+        <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl shadow-neo text-center hover:shadow-neo-lg transition-all">
+          <TrendingUp className="w-5 h-5 text-purple-500 mx-auto mb-1" />
+          <div className="text-2xl font-bold text-purple-700 mb-1">{currentUserData.daysSinceLastSession || 0}</div>
+          <div className="text-xs text-purple-600 font-medium">Dies sense venir</div>
         </div>
 
-        <div className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl shadow-neo text-center hover:shadow-neo-lg transition-all">
-          <Calendar className="w-8 h-8 text-orange-500 mx-auto mb-2" />
-          <div className="text-3xl font-bold text-orange-700 mb-1">
+        <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl shadow-neo text-center hover:shadow-neo-lg transition-all">
+          <Calendar className="w-5 h-5 text-orange-500 mx-auto mb-1" />
+          <div className="text-2xl font-bold text-orange-700 mb-1">
             {currentUserData.firstSession ? new Date(currentUserData.firstSession).getFullYear() : 'N/A'}
           </div>
-          <div className="text-sm text-orange-600 font-medium">Membre des de</div>
+          <div className="text-xs text-orange-600 font-medium">Membre des de</div>
         </div>
       </div>
 
       <Separator />
 
       {/* Informació de contacte */}
-      <div className="p-6 rounded-xl shadow-neo bg-background">
-        <h3 className="font-semibold text-lg mb-4 flex items-center">
-          <Mail className="w-5 h-5 mr-2 text-primary" />
+      <div className="p-4 rounded-xl shadow-neo bg-background">
+        <h3 className="font-semibold text-sm mb-3 flex items-center">
+          <Mail className="w-4 h-4 mr-2 text-primary" />
           La teva Informació
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
-            <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <span className="text-sm truncate">{currentUserData.email || 'No disponible'}</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="flex items-center space-x-2 p-2 bg-muted/30 rounded-lg">
+            <Mail className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+            <span className="text-xs truncate">{currentUserData.email || 'No disponible'}</span>
           </div>
-          <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
-            <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <span className="text-sm">{currentUserData.phone || 'No disponible'}</span>
+          <div className="flex items-center space-x-2 p-2 bg-muted/30 rounded-lg">
+            <Phone className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+            <span className="text-xs">{currentUserData.phone || 'No disponible'}</span>
           </div>
-          <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
-            <Cake className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <span className="text-sm">{currentUserData.birthday}</span>
+          <div className="flex items-center space-x-2 p-2 bg-muted/30 rounded-lg">
+            <Cake className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+            <span className="text-xs">{currentUserData.birthday}</span>
           </div>
         </div>
       </div>
@@ -158,22 +158,22 @@ const UserIndex = () => {
       <Separator />
 
       {/* Ranking General */}
-      <div className="p-6 rounded-xl shadow-neo bg-background">
-        <h3 className="font-semibold text-lg mb-4 flex items-center">
-          <Zap className="w-5 h-5 mr-2 text-primary" />
+      <div className="p-4 rounded-xl shadow-neo bg-background">
+        <h3 className="font-semibold text-sm mb-3 flex items-center">
+          <Zap className="w-4 h-4 mr-2 text-primary" />
           La teva Posició Global
         </h3>
-        <div className="p-6 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl shadow-neo">
+        <div className="p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl shadow-neo">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-indigo-600 mb-2 font-medium">Ranking General d'Assistència</div>
-              <div className="text-5xl font-bold text-indigo-700">
+              <div className="text-xs text-indigo-600 mb-1 font-medium">Ranking General d'Assistència</div>
+              <div className="text-3xl font-bold text-indigo-700">
                 #{basicStats.generalRanking.rank}
               </div>
             </div>
             {basicStats.generalRanking.total > 0 && (
               <div className="text-right">
-                <div className="text-sm text-indigo-600 mb-1">de {basicStats.generalRanking.total} usuaris</div>
+                <div className="text-xs text-indigo-600 mb-1">de {basicStats.generalRanking.total} usuaris</div>
                 <div className="text-xs text-indigo-500">Top {Math.round((basicStats.generalRanking.rank / basicStats.generalRanking.total) * 100)}%</div>
               </div>
             )}
@@ -184,30 +184,30 @@ const UserIndex = () => {
       <Separator />
 
       {/* Programes Actius */}
-      <div className="p-6 rounded-xl shadow-neo bg-background">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-lg shadow-neo-inset bg-purple-500/10">
-            <Award className="w-5 h-5 text-purple-500" />
+      <div className="p-4 rounded-xl shadow-neo bg-background">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="p-1.5 rounded-lg shadow-neo-inset bg-purple-500/10">
+            <Award className="w-4 h-4 text-purple-500" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">Els teus Programes Actius</h2>
-            <p className="text-sm text-muted-foreground">Últims 30 dies</p>
+            <h2 className="text-sm font-semibold">Els teus Programes Actius</h2>
+            <p className="text-xs text-muted-foreground">Últims 30 dies</p>
           </div>
         </div>
         {basicStats.activePrograms.length > 0 ? (
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             {basicStats.activePrograms.map((program, idx) => (
               <span 
                 key={idx} 
-                className="px-5 py-3 rounded-xl bg-primary/10 text-primary font-semibold shadow-neo hover:shadow-neo-sm transition-all cursor-default text-base"
+                className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary font-semibold shadow-neo hover:shadow-neo-sm transition-all cursor-default text-sm"
               >
                 {program}
               </span>
             ))}
           </div>
         ) : (
-          <div className="p-4 rounded-xl shadow-neo-inset bg-muted/30 text-center">
-            <p className="text-muted-foreground text-sm">
+          <div className="p-3 rounded-xl shadow-neo-inset bg-muted/30 text-center">
+            <p className="text-muted-foreground text-xs">
               No tens sessions recents. Apunta't a una classe!
             </p>
           </div>
@@ -215,12 +215,12 @@ const UserIndex = () => {
       </div>
 
       {/* Missatge Motivacional */}
-      <div className="p-6 rounded-xl shadow-neo bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20">
+      <div className="p-4 rounded-xl shadow-neo bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20">
         <div className="flex items-start gap-3">
-          <div className="text-4xl">💪</div>
+          <div className="text-2xl">💪</div>
           <div>
-            <h3 className="font-bold text-lg mb-2 text-primary">Segueix així!</h3>
-            <p className="text-sm text-foreground">
+            <h3 className="font-bold text-sm mb-1 text-primary">Segueix així!</h3>
+            <p className="text-xs text-foreground">
               {basicStats.totalSessions >= 100 
                 ? `Increïble! Ja portes ${basicStats.totalSessions} sessions! Ets una màquina! 🔥`
                 : basicStats.totalSessions >= 50
