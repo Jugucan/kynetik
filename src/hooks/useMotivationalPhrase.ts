@@ -75,15 +75,20 @@ export const useMotivationalPhrase = (userStats: UserStatsForPhrase | null) => {
       stable: 'manté un ritme estable'
     }[stats.improvementTrend];
 
-    const prompt = `Ets un entrenador personal motivador que parla en català, de forma càlida, propera i positiva.
+    const prompt = `Ets un entrenador personal motivador que parla en català, de forma càlida i positiva.
 
-Genera DOS elements per a aquesta persona:
-1. Un TÍTOL curt i impactant (2-5 paraules màxim, sense punt final, que ressalti i sigui personal)
-2. Un MISSATGE motivacional (1-3 frases curtes)
+Genera DOS elements:
+1. TÍTOL: 2-4 paraules màxim, impactant, sense punt
+2. MISSATGE: MÀXIM 2 frases curtes i directes. TOTAL màxim 25 paraules.
 
-El títol ha de ser variat i creatiu (ex: "Quin nivell!", "Imparable!", "Vas a tope!", "Orgullosa de tu"...)
-El missatge ha de ser en català natural, específic a les seves dades, sense emojis.
-Usa el nom ${firstName} de forma natural (no sempre).
+Regles estrictes:
+- NO repetir el nom més d'una vegada en tot el missatge
+- NO fer frases complexes ni subordinades llargues
+- Ser directe i concís
+- Sense emojis
+- En català natural i col·loquial
+
+Dades de la persona:
 
 Dades:
 - Nom: ${stats.name}
