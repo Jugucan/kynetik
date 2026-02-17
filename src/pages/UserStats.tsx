@@ -2,6 +2,12 @@ import { Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart
 import { useUsers } from "@/hooks/useUsers";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMemo, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { calculateAdvancedStats, calculateProgramRanking, calculateYearlyTrend, calculateUserRanking } from '@/utils/advancedStats';
 import {
@@ -15,7 +21,7 @@ const UserStats = () => {
   const { users, loading } = useUsers();
   const [isMonthlyFrequencyOpen, setIsMonthlyFrequencyOpen] = useState(false);
   const [isHistorialOpen, setIsHistorialOpen] = useState(false);
-
+  const [isAutodisciplinaInfoOpen, setIsAutodisciplinaInfoOpen] = useState(false);
   const currentUserData = users.find(u => u.email === userProfile?.email);
 
   const stats = useMemo(() => {
@@ -175,20 +181,7 @@ const UserStats = () => {
             </p>
           </div>
           <button
-            onClick={() => alert(
-              `COM ES CALCULA L'AUTODISCIPLINA?\n\n` +
-              `Es calcula combinant dos factors:\n\n` +
-              `🔹 Consistència Recent (70%): Compara les sessions de l'últim mes amb la teva mitjana dels últims 5 mesos.\n\n` +
-              `🔹 Context Històric (30%): Compara el teu ritme actual amb el teu millor any.\n\n` +
-              `Detalls del càlcul:\n` +
-              `• Últim mes: ${stats.advancedStats.autodisciplineDetails.lastMonthSessions} sessions\n` +
-              `• Mitjana mensual: ${stats.advancedStats.autodisciplineDetails.monthlyAverage} sessions\n` +
-              `• Millor any: ${stats.advancedStats.autodisciplineDetails.bestYearSessions} sessions\n` +
-              `• Projecció any actual: ${stats.advancedStats.autodisciplineDetails.currentYearProjection} sessions\n\n` +
-              `Puntuació Recent: ${stats.advancedStats.autodisciplineDetails.recentScore}%\n` +
-              `Puntuació Històrica: ${stats.advancedStats.autodisciplineDetails.historicScore}%\n` +
-              `TOTAL: ${stats.advancedStats.autodiscipline}%`
-            )}
+            onClick={() => setIsAutodisciplinaInfoOpen(true)}
             className="p-1.5 rounded-full hover:bg-white/50 transition-colors"
           >
             <Info className="w-4 h-4" />
@@ -457,6 +450,64 @@ const UserStats = () => {
           </CollapsibleContent>
         </Collapsible>
       </div>
+
+    {/* ── MODAL AUTODISCIPLINA ── */}
+      <Dialog open={isAutodisciplinaInfoOpen} onOpenChange={setIsAutodisciplinaInfoOpen}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base">Com es calcula l'Autodisciplina?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <p className="text-muted-foreground">Es calcula combinant dos factors:</p>
+
+            <div className="p-3 bg-blue-50 rounded-xl">
+              <p className="font-semibold text-blue-700 mb-1">🔹 Consistència Recent — 70%</p>
+              <p className="text-xs text-blue-600">Compara les sessions de l'últim mes amb la teva mitjana dels últims 5 mesos.</p>
+            </div>
+
+            <div className="p-3 bg-purple-50 rounded-xl">
+              <p className="font-semibold text-purple-700 mb-1">🔹 Context Històric — 30%</p>
+              <p className="text-xs text-purple-600">Compara el teu ritme actual amb el teu millor any.</p>
+            </div>
+
+            <div className="border-t pt-3 space-y-1.5">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Detalls del teu càlcul</p>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Últim mes:</span>
+                <span className="font-medium">{stats.advancedStats.autodisciplineDetails.lastMonthSessions} sessions</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Mitjana mensual:</span>
+                <span className="font-medium">{stats.advancedStats.autodisciplineDetails.monthlyAverage} sessions</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Millor any:</span>
+                <span className="font-medium">{stats.advancedStats.autodisciplineDetails.bestYearSessions} sessions</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Projecció any actual:</span>
+                <span className="font-medium">{stats.advancedStats.autodisciplineDetails.currentYearProjection} sessions</span>
+              </div>
+            </div>
+
+            <div className="border-t pt-3 space-y-1.5">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Puntuacions</p>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Pes Consistència Recent:</span>
+                <span className="font-medium text-blue-600">70%</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Pes Context Històric:</span>
+                <span className="font-medium text-purple-600">30%</span>
+              </div>
+              <div className="flex justify-between text-xs font-bold border-t pt-2 mt-1">
+                <span>Puntuació Total:</span>
+                <span className={stats.advancedStats.autodisciplineLevel.color}>{stats.advancedStats.autodiscipline}%</span>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
