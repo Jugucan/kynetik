@@ -1,9 +1,8 @@
-import { Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, ChevronDown, ChevronUp, MapPin, Zap } from "lucide-react";
+import { Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { calculateAdvancedStats, calculateProgramRanking, calculateYearlyTrend, calculateUserRanking } from '@/utils/advancedStats';
 import {
   Collapsible,
@@ -123,37 +122,57 @@ const UserStats = () => {
 
   if (loading) {
     return (
-      <div className="px-4 max-w-2xl mx-auto pt-6">
-        <h1 className="text-xl font-semibold mb-1">Les meves Estadístiques</h1>
-        <p className="text-sm text-muted-foreground">Carregant...</p>
+      <div className="px-4 max-w-2xl mx-auto pt-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <BarChart3 className="w-5 h-5 text-primary" />
+          <h1 className="text-xl font-bold">Les meves Estadístiques</h1>
+        </div>
+        <div className="text-center py-8 text-muted-foreground text-sm">Carregant...</div>
       </div>
     );
   }
 
   if (!currentUserData) {
     return (
-      <div className="px-4 max-w-2xl mx-auto pt-6">
-        <h1 className="text-xl font-semibold mb-1">Les meves Estadístiques</h1>
-        <p className="text-sm text-muted-foreground">Encara no tens sessions registrades.</p>
+      <div className="px-4 max-w-2xl mx-auto pt-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <BarChart3 className="w-5 h-5 text-primary" />
+          <h1 className="text-xl font-bold">Les meves Estadístiques</h1>
+        </div>
+        <div className="rounded-2xl shadow-neo p-6 text-center text-sm text-muted-foreground">
+          Encara no tens sessions registrades.
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="px-4 max-w-2xl mx-auto pb-12 space-y-8">
+    <div className="px-4 max-w-2xl mx-auto pb-12 space-y-4">
 
       {/* TÍTOL */}
-      <div className="pt-2">
-        <h1 className="text-xl font-semibold">Les meves Estadístiques</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Anàlisi detallada de la teva activitat</p>
+      <div className="flex items-center gap-3 pt-2">
+        <BarChart3 className="w-5 h-5 text-primary flex-shrink-0" />
+        <div>
+          <h1 className="text-xl font-bold">Les meves Estadístiques</h1>
+          <p className="text-xs text-muted-foreground">Anàlisi detallada de la teva activitat</p>
+        </div>
       </div>
 
-      {/* ── AUTODISCIPLINA — element destacat, únic, sense caixa ── */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            Autodisciplina
-          </h2>
+      {/* ── AUTODISCIPLINA ── targeta única, número protagonista */}
+      <div className="rounded-2xl shadow-neo bg-background p-5">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">Autodisciplina</p>
+            <div className="flex items-end gap-2">
+              <span className={`text-5xl font-bold leading-none ${stats.advancedStats.autodisciplineLevel.color}`}>
+                {stats.advancedStats.autodiscipline}%
+              </span>
+              <span className="text-xl mb-0.5">{stats.advancedStats.autodisciplineLevel.emoji}</span>
+            </div>
+            <p className={`text-sm font-semibold mt-1 ${stats.advancedStats.autodisciplineLevel.color}`}>
+              {stats.advancedStats.autodisciplineLevel.label}
+            </p>
+          </div>
           <button
             onClick={() => alert(
               `COM ES CALCULA L'AUTODISCIPLINA?\n\n` +
@@ -169,29 +188,16 @@ const UserStats = () => {
               `Puntuació Històrica: ${stats.advancedStats.autodisciplineDetails.historicScore}%\n` +
               `TOTAL: ${stats.advancedStats.autodiscipline}%`
             )}
-            className="p-1 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5 rounded-full text-muted-foreground hover:text-foreground transition-colors"
           >
             <Info className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Número gran + etiqueta — sense caixa, directe sobre el fons */}
-        <div className="flex items-end gap-3 mb-3">
-          <span className={`text-5xl font-bold ${stats.advancedStats.autodisciplineLevel.color}`}>
-            {stats.advancedStats.autodiscipline}%
-          </span>
-          <span className="text-lg mb-1">
-            {stats.advancedStats.autodisciplineLevel.emoji}
-            <span className={`ml-1 font-medium ${stats.advancedStats.autodisciplineLevel.color}`}>
-              {stats.advancedStats.autodisciplineLevel.label}
-            </span>
-          </span>
-        </div>
-
-        {/* Barra prima i elegant */}
-        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+        {/* Barra de progrés inset */}
+        <div className="h-3 rounded-full shadow-neo-inset overflow-hidden">
           <div
-            className={`h-full transition-all duration-700 ${stats.advancedStats.autodisciplineLevel.barColor}`}
+            className={`h-full rounded-full transition-all duration-700 ${stats.advancedStats.autodisciplineLevel.barColor}`}
             style={{ width: `${stats.advancedStats.autodisciplineLevel.percentage}%` }}
           />
         </div>
@@ -200,87 +206,72 @@ const UserStats = () => {
         </p>
       </div>
 
-      <Separator />
-
-      {/* ── EVOLUCIÓ RECENT — dos números, net ── */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            Evolució Recent
-          </h2>
-          {stats.advancedStats.improvementRecent.trend === 'up' && (
-            <Badge className="bg-green-500 text-xs">
-              <TrendingUp className="w-3 h-3 mr-1" />
-              +{stats.advancedStats.improvementRecent.percentageChange}%
-            </Badge>
-          )}
-          {stats.advancedStats.improvementRecent.trend === 'down' && (
-            <Badge className="bg-red-500 text-xs">
-              <TrendingDown className="w-3 h-3 mr-1" />
-              {stats.advancedStats.improvementRecent.percentageChange}%
-            </Badge>
-          )}
-          {stats.advancedStats.improvementRecent.trend === 'stable' && (
-            <Badge variant="outline" className="text-xs">
-              <Minus className="w-3 h-3 mr-1" />Estable
-            </Badge>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <div className="text-3xl font-bold">{stats.advancedStats.improvementRecent.lastMonth}</div>
-            <div className="text-xs text-muted-foreground mt-1">Darrer mes</div>
+      {/* ── EVOLUCIÓ RECENT + REGULARITAT — dues mètriques en una fila ── */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-2xl shadow-neo bg-background p-5">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Evolució Recent</p>
+          <div className="space-y-3">
+            <div>
+              <div className="text-3xl font-bold">{stats.advancedStats.improvementRecent.lastMonth}</div>
+              <div className="text-xs text-muted-foreground">Darrer mes</div>
+            </div>
+            <div className="h-px bg-muted" />
+            <div>
+              <div className="text-2xl font-bold text-muted-foreground">{stats.advancedStats.improvementRecent.previousQuarterAverage}</div>
+              <div className="text-xs text-muted-foreground">Mitjana 3 mesos ant.</div>
+            </div>
           </div>
-          <div>
-            <div className="text-3xl font-bold text-muted-foreground">{stats.advancedStats.improvementRecent.previousQuarterAverage}</div>
-            <div className="text-xs text-muted-foreground mt-1">Mitjana 3 mesos anteriors</div>
+          <div className="mt-3">
+            {stats.advancedStats.improvementRecent.trend === 'up' && (
+              <Badge className="bg-green-500 text-xs">
+                <TrendingUp className="w-3 h-3 mr-1" />+{stats.advancedStats.improvementRecent.percentageChange}%
+              </Badge>
+            )}
+            {stats.advancedStats.improvementRecent.trend === 'down' && (
+              <Badge className="bg-red-500 text-xs">
+                <TrendingDown className="w-3 h-3 mr-1" />{stats.advancedStats.improvementRecent.percentageChange}%
+              </Badge>
+            )}
+            {stats.advancedStats.improvementRecent.trend === 'stable' && (
+              <Badge variant="outline" className="text-xs">
+                <Minus className="w-3 h-3 mr-1" />Estable
+              </Badge>
+            )}
           </div>
         </div>
-      </div>
 
-      <Separator />
-
-      {/* ── DIES ENTRE SESSIONS ── */}
-      <div>
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-          Regularitat
-        </h2>
-        <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-bold text-green-600">
+        <div className="rounded-2xl shadow-neo bg-background p-5">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Regularitat</p>
+          <div className="text-4xl font-bold text-green-600 leading-none">
             {stats.advancedStats.daysBetweenSessions}
-          </span>
-          <span className="text-sm text-muted-foreground">dies de mitjana entre sessions</span>
+          </div>
+          <div className="text-xs text-muted-foreground mt-2">dies de mitjana entre sessions</div>
         </div>
       </div>
 
-      <Separator />
-
-      {/* ── FREQÜÈNCIA MENSUAL — desplegable lleuger ── */}
-      <div>
+      {/* ── FREQÜÈNCIA MENSUAL ── */}
+      <div className="rounded-2xl shadow-neo bg-background p-5">
         <Collapsible open={isMonthlyFrequencyOpen} onOpenChange={setIsMonthlyFrequencyOpen}>
-          <CollapsibleTrigger className="flex items-center justify-between w-full group">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-              Freqüència Mensual
-            </h2>
-            <div className="flex items-center gap-2 text-muted-foreground group-hover:text-foreground transition-colors">
+          <CollapsibleTrigger className="flex items-center justify-between w-full">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Freqüència Mensual</p>
+            <div className="flex items-center gap-2 text-muted-foreground">
               <span className="text-xs">{stats.advancedStats.monthlyFrequency.length} mesos</span>
               {isMonthlyFrequencyOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </div>
           </CollapsibleTrigger>
 
-          <CollapsibleContent className="mt-4 space-y-2">
+          <CollapsibleContent className="mt-4 space-y-2.5">
             {stats.advancedStats.monthlyFrequency.length > 0 ? (
               stats.advancedStats.monthlyFrequency.map((month, idx) => (
                 <div key={idx} className="flex items-center gap-3">
                   <span className="text-xs text-muted-foreground w-20 shrink-0">{month.month}</span>
-                  <div className="h-1.5 flex-1 bg-muted rounded-full overflow-hidden">
+                  <div className="h-2 flex-1 rounded-full shadow-neo-inset overflow-hidden">
                     <div
-                      className="h-full bg-primary transition-all"
+                      className="h-full bg-primary rounded-full transition-all"
                       style={{ width: `${Math.min(month.count * 20, 100)}%` }}
                     />
                   </div>
-                  <span className="text-xs font-medium w-4 text-right">{month.count}</span>
+                  <span className="text-xs font-semibold w-4 text-right">{month.count}</span>
                 </div>
               ))
             ) : (
@@ -290,14 +281,13 @@ const UserStats = () => {
         </Collapsible>
       </div>
 
-      <Separator />
-
-      {/* ── PROGRAMES — llista neta amb barra ── */}
+      {/* ── PROGRAMES ── */}
       {stats.programStats.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-            Programes
-          </h2>
+        <div className="rounded-2xl shadow-neo bg-background p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Award className="w-4 h-4 text-primary" />
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Programes</p>
+          </div>
           <div className="space-y-4">
             {stats.programStats.map((prog, idx) => {
               const ranking = stats.programRankings[prog.name];
@@ -307,17 +297,17 @@ const UserStats = () => {
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-sm font-medium">{prog.name}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{prog.count} sessions</span>
+                      <span className="text-xs text-muted-foreground">{prog.count} sess.</span>
                       {ranking && ranking.total > 0 && (
                         <Badge variant="outline" className="text-xs py-0">
-                          #{ranking.rank} de {ranking.total}
+                          #{ranking.rank}/{ranking.total}
                         </Badge>
                       )}
                     </div>
                   </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div className="h-2 rounded-full shadow-neo-inset overflow-hidden">
                     <div
-                      className="h-full bg-primary transition-all"
+                      className="h-full bg-primary rounded-full transition-all"
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
@@ -328,45 +318,36 @@ const UserStats = () => {
         </div>
       )}
 
-      <Separator />
-
       {/* ── EVOLUCIÓ PER ANY ── */}
-      <div>
+      <div className="rounded-2xl shadow-neo bg-background p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            Evolució per Any
-          </h2>
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-primary" />
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Evolució per Any</p>
+          </div>
           {stats.trend === 'up' && (
-            <Badge className="bg-green-500 text-xs">
-              <TrendingUp className="w-3 h-3 mr-1" />A l'alça
-            </Badge>
+            <Badge className="bg-green-500 text-xs"><TrendingUp className="w-3 h-3 mr-1" />A l'alça</Badge>
           )}
           {stats.trend === 'down' && (
-            <Badge className="bg-red-500 text-xs">
-              <TrendingDown className="w-3 h-3 mr-1" />A la baixa
-            </Badge>
+            <Badge className="bg-red-500 text-xs"><TrendingDown className="w-3 h-3 mr-1" />A la baixa</Badge>
           )}
           {stats.trend === 'stable' && (
-            <Badge variant="outline" className="text-xs">
-              <Minus className="w-3 h-3 mr-1" />Estable
-            </Badge>
+            <Badge variant="outline" className="text-xs"><Minus className="w-3 h-3 mr-1" />Estable</Badge>
           )}
         </div>
 
         {stats.yearlyStats.length > 0 ? (
           <div className="space-y-3">
-            {/* Millor / pitjor any — inline, sense caixes */}
-            {(stats.bestYear || stats.worstYear) && stats.yearlyStats.length > 1 && (
-              <div className="flex gap-4 mb-4 text-xs text-muted-foreground">
+            {stats.yearlyStats.length > 1 && (stats.bestYear || stats.worstYear) && (
+              <div className="flex flex-wrap gap-3 mb-2 text-xs text-muted-foreground">
                 {stats.bestYear && (
-                  <span>🏆 Millor: <strong className="text-green-700">{stats.bestYear.year}</strong> ({stats.bestYear.count} sessions)</span>
+                  <span>🏆 <strong className="text-green-700">{stats.bestYear.year}</strong> · {stats.bestYear.count} sessions</span>
                 )}
                 {stats.worstYear && (
-                  <span>📉 Mínim: <strong className="text-orange-700">{stats.worstYear.year}</strong> ({stats.worstYear.count} sessions)</span>
+                  <span>📉 <strong className="text-orange-700">{stats.worstYear.year}</strong> · {stats.worstYear.count} sessions</span>
                 )}
               </div>
             )}
-
             {stats.yearlyStats.map((yearData) => {
               const maxCount = Math.max(...stats.yearlyStats.map(y => y.count));
               const percentage = (yearData.count / maxCount) * 100;
@@ -374,16 +355,16 @@ const UserStats = () => {
               const isWorst = stats.worstYear?.year === yearData.year;
               return (
                 <div key={yearData.year} className="flex items-center gap-3">
-                  <span className={`text-sm font-medium w-12 shrink-0 ${isBest ? 'text-green-700' : isWorst ? 'text-orange-700' : ''}`}>
+                  <span className={`text-sm font-semibold w-12 shrink-0 ${isBest ? 'text-green-700' : isWorst ? 'text-orange-700' : ''}`}>
                     {yearData.year}
                   </span>
-                  <div className="h-1.5 flex-1 bg-muted rounded-full overflow-hidden">
+                  <div className="h-2 flex-1 rounded-full shadow-neo-inset overflow-hidden">
                     <div
-                      className={`h-full transition-all ${isBest ? 'bg-green-500' : isWorst ? 'bg-orange-400' : 'bg-primary'}`}
+                      className={`h-full rounded-full transition-all ${isBest ? 'bg-green-500' : isWorst ? 'bg-orange-400' : 'bg-primary'}`}
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
-                  <span className="text-xs text-muted-foreground w-8 text-right">{yearData.count}</span>
+                  <span className="text-xs text-muted-foreground w-6 text-right">{yearData.count}</span>
                 </div>
               );
             })}
@@ -395,47 +376,40 @@ const UserStats = () => {
 
       {/* ── CENTRES ── */}
       {Object.keys(stats.centerCount).length > 0 && (
-        <>
-          <Separator />
-          <div>
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-              Sessions per Centre
-            </h2>
-            <div className="flex gap-8">
-              {Object.entries(stats.centerCount).map(([center, count]) => (
-                <div key={center}>
-                  <div className="text-3xl font-bold">{count}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{center}</div>
-                </div>
-              ))}
-            </div>
+        <div className="rounded-2xl shadow-neo bg-background p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <MapPin className="w-4 h-4 text-primary" />
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Sessions per Centre</p>
           </div>
-        </>
+          <div className="flex gap-8">
+            {Object.entries(stats.centerCount).map(([center, count]) => (
+              <div key={center}>
+                <div className="text-3xl font-bold">{count}</div>
+                <div className="text-xs text-muted-foreground mt-1">{center}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
-      <Separator />
-
-      {/* ── HISTORIAL — llista sense caixes ── */}
-      <div>
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-          Historial de Sessions
-        </h2>
+      {/* ── HISTORIAL ── */}
+      <div className="rounded-2xl shadow-neo bg-background p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Clock className="w-4 h-4 text-primary" />
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Historial de Sessions</p>
+        </div>
         {sessionsByDate.length === 0 ? (
           <p className="text-sm text-muted-foreground">No hi ha historial de sessions disponible</p>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-5">
             {sessionsByDate.map(([date, sessions]) => (
               <div key={date}>
-                {/* Data com a titol de grup */}
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    {formatDate(date)}
-                  </span>
+                  <span className="text-xs font-semibold text-muted-foreground">{formatDate(date)}</span>
                   {sessions.length > 1 && (
-                    <span className="text-xs text-muted-foreground">· {sessions.length} sessions</span>
+                    <span className="text-xs text-muted-foreground">· {sessions.length}</span>
                   )}
                 </div>
-                {/* Sessions del dia — llista horitzontal minimalista */}
                 <div className="space-y-1.5 pl-3 border-l-2 border-muted">
                   {sessions.map((session, idx) => (
                     <div key={idx} className="flex items-center justify-between">
