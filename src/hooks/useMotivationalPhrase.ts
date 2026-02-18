@@ -90,7 +90,7 @@ const personalizePhrase = (phrase: Phrase, stats: UserStatsForPhrase): Phrase =>
     .replace('{anys}', yearsTraining.toString())
     .replace('{anyInici}', stats.memberSinceYear?.toString() || '');
 
-  return { title, phrase: text };
+  return { title, phrase: text, emoji: phrase.emoji };
 };
 
 export const useMotivationalPhrase = (userStats: UserStatsForPhrase | null) => {
@@ -112,6 +112,7 @@ export const useMotivationalPhrase = (userStats: UserStatsForPhrase | null) => {
             data.autodisciplineSnapshot === userStats.autodiscipline) {
           setTitle(data.title || '');
           setPhrase(data.phrase);
+          setEmoji(data.emoji || '💪');
           return;
         }
       }
@@ -121,11 +122,13 @@ export const useMotivationalPhrase = (userStats: UserStatsForPhrase | null) => {
     const result = selectPhrase(userStats);
     setTitle(result.title);
     setPhrase(result.phrase);
+    setEmoji(result.emoji);
 
     try {
       localStorage.setItem(storageKey, JSON.stringify({
         title: result.title,
         phrase: result.phrase,
+        emoji: result.emoji,
         date: today,
         sessionsSnapshot: userStats.totalSessions,
         autodisciplineSnapshot: userStats.autodiscipline
@@ -135,5 +138,5 @@ export const useMotivationalPhrase = (userStats: UserStatsForPhrase | null) => {
     setIsLoading(false);
   }, [userStats?.totalSessions, userStats?.autodiscipline, userStats?.name]);
 
-  return { title, phrase, isLoading };
+  const [emoji, setEmoji] = useState<string>('💪');
 };
