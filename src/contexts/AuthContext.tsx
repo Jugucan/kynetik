@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
@@ -12,7 +12,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  onViewModeChange: (callback: (mode: ViewMode) => void) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,11 +27,11 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewModeState] = useState<ViewMode>(() => {
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    // Recuperar el mode guardat a localStorage
     const saved = localStorage.getItem('viewMode');
     return (saved === 'user' || saved === 'instructor') ? saved : 'instructor';
   });
-  const [viewModeCallback, setViewModeCallback] = useState<((mode: ViewMode) => void) | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -42,20 +41,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return unsubscribe;
   }, []);
 
+  // Guardar el mode a localStorage quan canvia
   useEffect(() => {
     localStorage.setItem('viewMode', viewMode);
   }, [viewMode]);
-
-  const setViewMode = useCallback((mode: ViewMode) => {
-    setViewModeState(mode);
-    if (viewModeCallback) {
-      viewModeCallback(mode);
-    }
-  }, [viewModeCallback]);
-
-  const onViewModeChange = useCallback((callback: (mode: ViewMode) => void) => {
-    setViewModeCallback(() => callback);
-  }, []);
 
   const login = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
@@ -77,7 +66,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     login,
     signup,
     logout,
-    onViewModeChange,
   };
 
   return (
