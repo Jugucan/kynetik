@@ -384,33 +384,33 @@ export const CATEGORY_NAMES: Record<BadgeCategory, string> = {
 // Colors per tier
 export const TIER_COLORS: Record<BadgeTier, { bg: string; text: string; border: string; label: string }> = {
   bronze: {
-    bg: 'from-amber-100 to-orange-100',
-    text: 'text-amber-700',
-    border: 'border-amber-300',
+    bg: 'from-amber-700 via-amber-500 to-yellow-600',
+    text: 'text-amber-900',
+    border: 'border-amber-600',
     label: 'Bronze',
   },
   plata: {
-    bg: 'from-slate-100 to-gray-200',
-    text: 'text-slate-600',
-    border: 'border-slate-300',
+    bg: 'from-slate-400 via-gray-300 to-slate-500',
+    text: 'text-slate-800',
+    border: 'border-slate-400',
     label: 'Plata',
   },
   or: {
-    bg: 'from-yellow-100 to-amber-200',
-    text: 'text-yellow-700',
-    border: 'border-yellow-400',
+    bg: 'from-yellow-500 via-amber-400 to-yellow-600',
+    text: 'text-yellow-900',
+    border: 'border-yellow-500',
     label: 'Or',
   },
   diamant: {
-    bg: 'from-cyan-100 to-blue-200',
-    text: 'text-cyan-700',
+    bg: 'from-cyan-400 via-blue-300 to-indigo-400',
+    text: 'text-blue-900',
     border: 'border-cyan-400',
     label: 'Diamant',
   },
   llegenda: {
-    bg: 'from-purple-100 to-pink-200',
-    text: 'text-purple-700',
-    border: 'border-purple-400',
+    bg: 'from-purple-600 via-pink-500 to-rose-500',
+    text: 'text-white',
+    border: 'border-purple-500',
     label: 'Llegenda',
   },
 };
