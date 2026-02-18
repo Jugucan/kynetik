@@ -5,23 +5,45 @@
 import { useMemo } from 'react';
 import { useUsers } from '@/hooks/useUsers';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { usePrograms } from '@/hooks/usePrograms';
 import { calculateBadges } from '@/utils/badgeCalculations';
 import BadgeGrid from '@/components/badges/BadgeGrid';
 import { Trophy } from 'lucide-react';
 
 const Badges = () => {
   const { userProfile } = useUserProfile();
-  const { users, loading } = useUsers();
+  const { users, loading: loadingUsers } = useUsers();
+  const { programs, loading: loadingPrograms } = usePrograms();
 
   const currentUserData = users.find(u => u.email === userProfile?.email);
 
+  // Calculem quantes categories úniques hi ha disponibles al gym
+  const totalAvailableCategories = useMemo(() => {
+    const cats = new Set(programs.map((p: any) => p.category).filter(Boolean));
+    return cats.size;
+  }, [programs]);
+
+  // Preparem els programes en el format que necessita el càlcul
+  const programsForBadges = useMemo(() => {
+    return programs.map((p: any) => ({
+      name: p.name,
+      category: p.category || '',
+    }));
+  }, [programs]);
+
   const badges = useMemo(() => {
     if (!currentUserData) return [];
-    return calculateBadges({
-      sessions: currentUserData.sessions || [],
-      firstSession: currentUserData.firstSession,
-    });
-  }, [currentUserData]);
+    return calculateBadges(
+      {
+        sessions: currentUserData.sessions || [],
+        firstSession: currentUserData.firstSession,
+      },
+      programsForBadges,
+      totalAvailableCategories
+    );
+  }, [currentUserData, programsForBadges, totalAvailableCategories]);
+
+  const loading = loadingUsers || loadingPrograms;
 
   if (loading) {
     return (
