@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Home, Calendar, Users, Dumbbell, Shuffle, Clock, Settings, LogOut, User, BarChart3, GraduationCap, UserCircle, StickyNote, Pencil } from "lucide-react";
+import { Home, Calendar, Users, Dumbbell, Shuffle, Clock, Settings, LogOut, User, BarChart3, GraduationCap, UserCircle, StickyNote, Pencil, Trophy } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -53,6 +53,7 @@ const getMenuItems = (viewMode: 'instructor' | 'user') => {
     { title: "Horaris", icon: Clock, path: "/schedules", visibleFor: ['instructor'] },
     { title: "Les Meves Notes", icon: StickyNote, path: "/notes", visibleFor: ['instructor'] },
     { title: "Les Meves Estadístiques", icon: BarChart3, path: "/stats", visibleFor: ['instructor', 'user'] },
+    { title: "Insígnies", icon: Trophy, path: "/badges", visibleFor: ['user'] },
     { title: "Configuració", icon: Settings, path: "/settings", visibleFor: ['instructor'] },
   ];
 
@@ -68,7 +69,6 @@ export const AppSidebar = () => {
 
   const menuItems = getMenuItems(viewMode);
 
-  // Estat del modal d'edició de perfil
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [editName, setEditName] = useState('');
   const [editGender, setEditGender] = useState('');
@@ -112,7 +112,6 @@ export const AppSidebar = () => {
     }
   };
 
-  // ✅ CANVI PRINCIPAL: navigate('/') en lloc de navigate('/stats')
   const handleViewModeChange = (newMode: 'instructor' | 'user') => {
     setViewMode(newMode);
     toast.success(`Vista canviada a ${newMode === 'instructor' ? 'Instructora' : 'Usuària'}`);
@@ -180,7 +179,6 @@ export const AppSidebar = () => {
                       {currentUser?.email}
                     </p>
                   </div>
-                  {/* ✅ Botó d'editar perfil */}
                   <button
                     onClick={handleOpenEditProfile}
                     className="w-7 h-7 rounded-lg shadow-neo hover:shadow-neo-sm transition-all flex items-center justify-center text-muted-foreground hover:text-primary"
@@ -316,7 +314,6 @@ export const AppSidebar = () => {
                   )}
                   
                   <DropdownMenuSeparator />
-                  {/* ✅ Opció editar perfil en mode col·lapsat */}
                   <DropdownMenuItem onClick={handleOpenEditProfile}>
                     <Pencil className="w-4 h-4 mr-2" />
                     Editar perfil
@@ -333,7 +330,7 @@ export const AppSidebar = () => {
         </SidebarFooter>
       </Sidebar>
 
-      {/* ✅ Modal d'edició de perfil */}
+      {/* Modal d'edició de perfil */}
       <Dialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
