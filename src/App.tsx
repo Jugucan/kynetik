@@ -17,6 +17,7 @@ import Schedules from "./pages/Schedules";
 import Stats from "./pages/Stats";
 import Settings from "./pages/Settings";
 import Notes from "./pages/Notes";
+import Badges from "./pages/Badges";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -51,6 +52,16 @@ const App = () => (
                           <Route path="/calendar" element={<Calendar />} />
                           <Route path="/stats" element={<Stats />} />
                           
+                          {/* Ruta d'insígnies (només vista usuari) */}
+                          <Route
+                            path="/badges"
+                            element={
+                              <ViewProtectedRoute allowedViews={['user']}>
+                                <Badges />
+                              </ViewProtectedRoute>
+                            }
+                          />
+
                           {/* Rutes només per vista instructora */}
                           <Route 
                             path="/users" 
