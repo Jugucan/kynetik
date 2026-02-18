@@ -5,8 +5,9 @@ export interface UserProfile {
   email: string;
   role: UserRole;
   displayName: string;
-  center?: string; // 'Arbúcies' o 'Sant Hilari'
-  monitorId?: string; // Si és 'user', ID del seu monitor
+  gender?: string | null;
+  center?: string;
+  monitorId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
