@@ -17,19 +17,28 @@ const Badges = () => {
 
   const currentUserData = users.find(u => u.email === userProfile?.email);
 
+  // programs és un objecte { [key: string]: Program }, el convertim a array
+  const programsArray = useMemo(() => {
+    return Object.values(programs);
+  }, [programs]);
+
   // Calculem quantes categories úniques hi ha disponibles al gym
   const totalAvailableCategories = useMemo(() => {
-    const cats = new Set(programs.map((p: any) => p.category).filter(Boolean));
+    const cats = new Set(
+      programsArray
+        .map((p: any) => p.category)
+        .filter(Boolean)
+    );
     return cats.size;
-  }, [programs]);
+  }, [programsArray]);
 
   // Preparem els programes en el format que necessita el càlcul
   const programsForBadges = useMemo(() => {
-    return programs.map((p: any) => ({
+    return programsArray.map((p: any) => ({
       name: p.name,
       category: p.category || '',
     }));
-  }, [programs]);
+  }, [programsArray]);
 
   const badges = useMemo(() => {
     if (!currentUserData) return [];
@@ -52,7 +61,9 @@ const Badges = () => {
           <Trophy className="w-8 h-8 text-primary" />
           Insígnies
         </h1>
-        <div className="text-center py-12 text-muted-foreground">Carregant les teves insígnies...</div>
+        <div className="text-center py-12 text-muted-foreground">
+          Carregant les teves insígnies...
+        </div>
       </div>
     );
   }
