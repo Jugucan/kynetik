@@ -96,6 +96,7 @@ const personalizePhrase = (phrase: Phrase, stats: UserStatsForPhrase): Phrase =>
 export const useMotivationalPhrase = (userStats: UserStatsForPhrase | null) => {
   const [title, setTitle] = useState<string>('');
   const [phrase, setPhrase] = useState<string>('');
+  const [emoji, setEmoji] = useState<string>('💪');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
@@ -138,5 +139,5 @@ export const useMotivationalPhrase = (userStats: UserStatsForPhrase | null) => {
     setIsLoading(false);
   }, [userStats?.totalSessions, userStats?.autodiscipline, userStats?.name]);
 
-  const [emoji, setEmoji] = useState<string>('💪');
+  return { title, phrase, emoji, isLoading };
 };
