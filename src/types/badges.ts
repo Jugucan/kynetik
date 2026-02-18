@@ -3,12 +3,12 @@
 // ============================================================
 
 export type BadgeCategory =
-  | 'assistencia'    // Per nombre de classes
-  | 'ratxa'          // Per dies consecutius / constància
-  | 'antiguitat'     // Per temps com a membre
-  | 'programes'      // Per varietat de programes
-  | 'exploradora'    // Per provar coses noves
-  | 'especial';      // Insígnies úniques i especials
+  | 'assistencia'
+  | 'ratxa'
+  | 'antiguitat'
+  | 'programes'
+  | 'exploradora'
+  | 'especial';
 
 export type BadgeTier = 'bronze' | 'plata' | 'or' | 'diamant' | 'llegenda';
 
@@ -19,21 +19,15 @@ export interface BadgeDefinition {
   emoji: string;
   category: BadgeCategory;
   tier: BadgeTier;
-  // La condició es calcula a badgeCalculations.ts
-  // Aquí només guardem la definició visual i textual
-  requirement: string; // Text explicatiu del requisit
-}
-
-export interface EarnedBadge {
-  badgeId: string;
-  earnedAt: string; // data ISO
+  requirement: string;
 }
 
 export interface BadgeWithStatus extends BadgeDefinition {
   earned: boolean;
   earnedAt?: string;
-  progress?: number;     // 0-100, per mostrar barra de progrés
-  progressLabel?: string; // Ex: "47 / 100 classes"
+  progress?: number;
+  progressLabel?: string;
+  unavailable?: boolean; // Per insígnies no disponibles al gym
 }
 
 // ============================================================
@@ -107,13 +101,13 @@ export const ALL_BADGES: BadgeDefinition[] = [
     requirement: '200 classes',
   },
   {
-    id: 'ass_365',
+    id: 'ass_aniversari',
     name: 'Un Any de Suor',
-    description: '365 classes. Un any sencer de dedicació absoluta.',
+    description: 'Portes més d\'un any venint al gym des de la teva primera classe!',
     emoji: '🌟',
     category: 'assistencia',
     tier: 'diamant',
-    requirement: '365 classes',
+    requirement: '365 dies naturals des de la primera classe',
   },
   {
     id: 'ass_500',
@@ -255,89 +249,44 @@ export const ALL_BADGES: BadgeDefinition[] = [
     requirement: '10 anys com a membre',
   },
 
-  // --- VARIETAT DE PROGRAMES ---
+  // --- PROGRAMES (per categories) ---
   {
-    id: 'prog_2',
-    name: 'Curiosa',
-    description: 'Has provat 2 programes diferents. T\'agrada explorar!',
-    emoji: '🔍',
-    category: 'programes',
-    tier: 'bronze',
-    requirement: '2 programes diferents',
-  },
-  {
-    id: 'prog_3',
-    name: 'Versàtil',
-    description: 'Tres programes a la teva llista. Genial!',
+    id: 'prog_cat_2',
+    name: 'Duo Dinàmic',
+    description: 'Has provat programes de 2 categories diferents. T\'agrada explorar!',
     emoji: '🎯',
     category: 'programes',
-    tier: 'bronze',
-    requirement: '3 programes diferents',
+    tier: 'plata',
+    requirement: '2 categories de programes diferents',
   },
   {
-    id: 'prog_5',
-    name: 'Polivalent',
-    description: '5 programes. No tens por de res!',
+    id: 'prog_cat_3',
+    name: 'Equilibri Total',
+    description: 'Has provat programes de 3 categories diferents. Ets molt completa!',
     emoji: '🌈',
     category: 'programes',
-    tier: 'plata',
-    requirement: '5 programes diferents',
-  },
-  {
-    id: 'prog_8',
-    name: 'Aventurera',
-    description: '8 programes diferents. Ets increïble!',
-    emoji: '🦋',
-    category: 'programes',
-    tier: 'plata',
-    requirement: '8 programes diferents',
-  },
-  {
-    id: 'prog_10',
-    name: 'Mestra de Programes',
-    description: '10 programes. Ho has provat tot!',
-    emoji: '🎓',
-    category: 'programes',
     tier: 'or',
-    requirement: '10 programes diferents',
+    requirement: '3 categories de programes diferents',
   },
   {
-    id: 'prog_15',
-    name: 'Omnisport',
-    description: '15 programes. No hi ha res que no puguis fer!',
+    id: 'prog_cat_all',
+    name: 'Atleta Completa',
+    description: 'Has provat totes les categories de programes disponibles al gym!',
     emoji: '🏆',
     category: 'programes',
     tier: 'diamant',
-    requirement: '15 programes diferents',
+    requirement: 'Totes les categories disponibles',
   },
 
-  // --- EXPLORADORA (activitats especials) ---
-  {
-    id: 'exp_nou',
-    name: 'Ment Oberta',
-    description: 'Has provat un programa nou que no coneixies.',
-    emoji: '🗺️',
-    category: 'exploradora',
-    tier: 'bronze',
-    requirement: 'Provar un programa nou',
-  },
-  {
-    id: 'exp_centre',
-    name: 'Nòmada',
-    description: 'Has assistit a classes en més d\'un centre.',
-    emoji: '📍',
-    category: 'exploradora',
-    tier: 'plata',
-    requirement: 'Assistir a 2 centres diferents',
-  },
+  // --- EXPLORADORA ---
   {
     id: 'exp_matidora',
     name: 'Lleva\'t Prest',
-    description: 'Has assistit a una classe abans de les 9h del matí.',
+    description: 'Has assistit a una classe de matí (abans de les 12h).',
     emoji: '🌅',
     category: 'exploradora',
     tier: 'bronze',
-    requirement: 'Classe abans de les 9h',
+    requirement: 'Classe abans de les 12h',
   },
   {
     id: 'exp_vespre',
@@ -349,19 +298,28 @@ export const ALL_BADGES: BadgeDefinition[] = [
     requirement: 'Classe a les 20h o més tard',
   },
   {
+    id: 'exp_doble',
+    name: 'Doble Sessió',
+    description: 'Has fet una classe de matí i una de tarda en la mateixa setmana. Increïble energia!',
+    emoji: '⚡',
+    category: 'exploradora',
+    tier: 'plata',
+    requirement: 'Classe de matí + tarda en la mateixa setmana',
+  },
+  {
     id: 'exp_5dies',
     name: 'Setmana Completa',
     description: 'Has assistit a classes en els 5 dies laborables d\'una mateixa setmana.',
     emoji: '📋',
     category: 'exploradora',
     tier: 'or',
-    requirement: '5 dies en una seteixa setmana',
+    requirement: '5 dies laborables en una mateixa setmana',
   },
   {
     id: 'exp_3dies_seguits',
     name: 'Tres en Ratlla',
     description: 'Has assistit 3 dies consecutius.',
-    emoji: '⚡',
+    emoji: '🔥',
     category: 'exploradora',
     tier: 'plata',
     requirement: '3 dies consecutius',
@@ -386,16 +344,32 @@ export const ALL_BADGES: BadgeDefinition[] = [
     tier: 'or',
     requirement: 'Mateixa freqüència 3 mesos seguits',
   },
-  {
-    id: 'esp_any_nou',
-    name: 'Any Nou, Força Nova',
-    description: 'Primera classe de l\'any. Comences amb tot!',
-    emoji: '🎆',
-    category: 'especial',
-    tier: 'bronze',
-    requirement: 'Primera classe de l\'any',
-  },
+  // Les insígnies d'Any Nou es generen dinàmicament al codi
+  // (una per any: 2020, 2021, 2022...)
 ];
+
+// Anys disponibles per la insígnia col·leccionable (des del 2020 fins l'any actual)
+export function getNewYearBadges(): BadgeDefinition[] {
+  const currentYear = new Date().getFullYear();
+  const badges: BadgeDefinition[] = [];
+  for (let year = 2020; year <= currentYear; year++) {
+    badges.push({
+      id: `esp_any_nou_${year}`,
+      name: `Any Nou ${year}`,
+      description: `Primera classe de l'any ${year}. Vas començar l'any amb tot!`,
+      emoji: '🎆',
+      category: 'especial',
+      tier: 'bronze',
+      requirement: `Primera classe de l'any ${year} (1-7 de gener)`,
+    });
+  }
+  return badges;
+}
+
+// Tots els badges incloent els col·leccionables d'any nou
+export function getAllBadgesWithDynamic(): BadgeDefinition[] {
+  return [...ALL_BADGES, ...getNewYearBadges()];
+}
 
 // Noms llegibles de categories
 export const CATEGORY_NAMES: Record<BadgeCategory, string> = {
