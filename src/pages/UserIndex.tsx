@@ -82,7 +82,7 @@ const UserIndex = () => {
     };
   }, [currentUserData, userProfile, basicStats.activePrograms]);
 
-  const { title, phrase, isLoading: phraseLoading } = useMotivationalPhrase(phraseStats);
+  const { title, phrase, emoji, isLoading: phraseLoading } = useMotivationalPhrase(phraseStats);
   
   if (loading) {
     return (
@@ -134,7 +134,7 @@ const UserIndex = () => {
       {(phrase || phraseLoading) && (
         <div className="p-4 rounded-xl shadow-neo bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20">
           <div className="flex items-start gap-3">
-            <div className="text-2xl flex-shrink-0">💪</div>
+            <div className="text-2xl flex-shrink-0">{emoji}</div>
             <div className="flex-1 min-w-0">
               {phraseLoading ? (
                 <div className="flex items-center gap-2 py-1">
