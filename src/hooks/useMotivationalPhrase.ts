@@ -105,7 +105,24 @@ CONTEXT de la persona (usa'l per inspirar-te, NO per citar xifres literalment):
 - ${activeProgramsText}
 - Mitjana ${stats.daysBetweenSessions} dies entre sessions — ${stats.daysBetweenSessions <= 4 ? 've molt sovint' : stats.daysBetweenSessions <= 7 ? 've cada setmana' : stats.daysBetweenSessions <= 14 ? 've cada dues setmanes' : 've de tant en tant'}
 
-IMPORTANT: Tria UN SOL angle emocional — el més potent per a aquesta persona ara mateix — i desenvolupa'l amb precisió quirúrgica. Res de llistes de virtuts. Un sol cop, ben donat.
+IMPORTANT: 
+- Tria UN SOL angle emocional i desenvolupa'l amb precisió quirúrgica
+- Avui l'angle ha de ser sobre: ${[
+    'la constància a llarg termini',
+    'la identitat esportiva que ha construït',
+    'el que la diferencia de la majoria',
+    'la relació amb el seu propi cos',
+    'el que significa aparèixer quan costa',
+    'la força mental que demostra',
+    'el futur que està construint ara',
+    'l\'hàbit com a forma de vida',
+    'el que els altres no veuen de l\'esforç diari',
+    'la transformació silenciosa que està vivint',
+    'com es sentirà d\'aquí a un any gràcies al que fa ara',
+    'la diferència entre voler i fer',
+  ][Math.floor(Math.random() * 12)]}
+- NO mencionar la pausa ni els dies d'absència tret que sigui l'angle escollit
+- NO citar xifres numèriques literalment al missatge final
 
 Respon ÚNICAMENT en aquest format exacte (sense cometes, sense res més):
 TÍTOL: [títol aquí]
