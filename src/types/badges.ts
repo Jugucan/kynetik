@@ -66,7 +66,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
   {
     id: 'ass_25',
-    name: 'Compromesa',
+    name: 'Compromís Real',
     description: '25 classes. El compromís és real!',
     emoji: '💪',
     category: 'assistencia',
@@ -84,7 +84,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
   {
     id: 'ass_100',
-    name: 'Centenària',
+    name: 'Centenar de Classes',
     description: '100 classes! Increïble dedicació.',
     emoji: '🥇',
     category: 'assistencia',
@@ -111,7 +111,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
   {
     id: 'ass_500',
-    name: 'Llegendària',
+    name: 'Llegenda del Kynetik',
     description: '500 classes. Ets una llegenda del Kynetik!',
     emoji: '👑',
     category: 'assistencia',
@@ -149,7 +149,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
   {
     id: 'ratxa_12',
-    name: 'Tres Mesos Invicta',
+    name: 'Tres Mesos Sense Aturar',
     description: 'Un trimestre sencer de constància absoluta.',
     emoji: '⚔️',
     category: 'ratxa',
@@ -178,8 +178,8 @@ export const ALL_BADGES: BadgeDefinition[] = [
   // --- ANTIGUITAT ---
   {
     id: 'ant_1m',
-    name: 'Nouvinguda',
-    description: 'Portes 1 mes amb nosaltres. Benvinguda a la família!',
+    name: 'Nouvingut/da',
+    description: 'Portes 1 mes amb nosaltres. Benvingut/da a la família!',
     emoji: '🌱',
     category: 'antiguitat',
     tier: 'bronze',
@@ -214,7 +214,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
   {
     id: 'ant_2a',
-    name: 'Dos Anys Juntes',
+    name: 'Dos Anys Junts',
     description: '2 anys al Kynetik. La teva lleialtat és admirable.',
     emoji: '🎖️',
     category: 'antiguitat',
@@ -232,8 +232,8 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
   {
     id: 'ant_5a',
-    name: 'Veterana',
-    description: '5 anys al Kynetik. Una veritable veterana!',
+    name: 'Veterà/na del Kynetik',
+    description: '5 anys al Kynetik. Un/a veritable veterà/na!',
     emoji: '⭐',
     category: 'antiguitat',
     tier: 'diamant',
@@ -262,7 +262,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'prog_cat_3',
     name: 'Equilibri Total',
-    description: 'Has provat força, cardio i flexibilitat. Ets una esportista completa!',
+    description: 'Has provat força, cardio i flexibilitat. Ets un/a esportista complet/a!',
     emoji: '🌈',
     category: 'programes',
     tier: 'or',
@@ -270,7 +270,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
   {
     id: 'prog_cat_all',
-    name: 'Atleta Completa',
+    name: 'Atleta Complet/a',
     description: 'Has fet força, cardio i flexibilitat en una mateixa setmana. Un repte d\'alt nivell!',
     emoji: '🏆',
     category: 'programes',
@@ -281,7 +281,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   // --- EXPLORADORA ---
   {
     id: 'exp_matidora',
-    name: 'Matinera',
+    name: 'Matiner/a',
     description: 'Has assistit a una classe de matí (abans de les 12h). Bon dia!',
     emoji: '🌅',
     category: 'exploradora',
@@ -290,7 +290,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
   {
     id: 'exp_vespre',
-    name: 'Nocturna',
+    name: 'Nocturn/a',
     description: 'Has assistit a una classe a partir de les 20h.',
     emoji: '🌙',
     category: 'exploradora',
@@ -329,7 +329,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'esp_comeback',
     name: 'La Gran Tornada',
-    description: 'Havies estat més de 30 dies sense venir, i has tornat. Benvinguda de nou!',
+    description: 'Havies estat més de 30 dies sense venir, i has tornat. Benvingut/da de nou!',
     emoji: '🦅',
     category: 'especial',
     tier: 'plata',
@@ -347,8 +347,6 @@ export const ALL_BADGES: BadgeDefinition[] = [
 ];
 
 // Insígnies d'Any Nou col·leccionables
-// IMPORTANT: només es mostren els anys que l'usuari JA HA ACONSEGUIT
-// o l'any actual (si encara hi és a temps). Els anys passats no aconseguits NO apareixen.
 export function getNewYearBadges(): BadgeDefinition[] {
   const currentYear = new Date().getFullYear();
   const badges: BadgeDefinition[] = [];
@@ -375,7 +373,7 @@ export const CATEGORY_NAMES: Record<BadgeCategory, string> = {
   ratxa: '🔥 Constància',
   antiguitat: '⭐ Antiguitat',
   programes: '🎯 Programes',
-  exploradora: '🗺️ Exploradora',
+  exploradora: '🗺️ Explorador/a',
   especial: '✨ Especials',
 };
 
