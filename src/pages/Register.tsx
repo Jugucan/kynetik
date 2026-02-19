@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { Eye, EyeOff } from 'lucide-react';
 
 const Register = () => {
   const { signup } = useAuth();
@@ -18,6 +19,8 @@ const Register = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -76,8 +79,9 @@ const Register = () => {
 
         {/* Capçalera */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Crea el teu compte</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-bold text-primary mb-1">Kynetik</h1>
+          <p className="text-lg font-semibold text-foreground mb-2">Crea el teu compte 🏋️</p>
+          <p className="text-muted-foreground text-sm">
             Omple les teves dades per sol·licitar accés al gym
           </p>
         </div>
@@ -170,31 +174,50 @@ const Register = () => {
               <label className="block text-sm font-semibold text-foreground mb-1">
                 Contrasenya <span className="text-red-500">*</span>
               </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Mínim 6 caràcters"
-                className="w-full px-3 py-2 border-2 border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
-                disabled={loading}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="********"
+                  className="w-full px-3 py-2 pr-10 border-2 border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
-            {/* Confirmar contrasenya */}
             <div>
               <label className="block text-sm font-semibold text-foreground mb-1">
                 Confirma la contrasenya <span className="text-red-500">*</span>
               </label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="Repeteix la contrasenya"
-                className="w-full px-3 py-2 border-2 border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
-                disabled={loading}
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="********"
+                  className="w-full px-3 py-2 pr-10 border-2 border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             {/* Missatge d'error */}
