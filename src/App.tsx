@@ -29,7 +29,7 @@ const queryClient = new QueryClient();
 
 // Component intern que gestiona les redireccions segons l'estat de l'usuari
 const AppRoutes = () => {
-  const { currentUser, userStatus } = useAuth();
+  const { currentUser, userStatus, viewMode } = useAuth();
 
   // Si l'usuari està logat però pendent o rebutjat, el tanquem a /pending
   if (currentUser && (userStatus === 'pending' || userStatus === 'rejected')) {
@@ -37,6 +37,37 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/pending" element={<PendingApproval />} />
         <Route path="*" element={<Navigate to="/pending" replace />} />
+      </Routes>
+    );
+  }
+
+  // Si la vista és superadmin i intenta anar a /, redirigir a /superadmin
+  if (viewMode === 'superadmin') {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <SidebarProvider>
+                <div className="flex min-h-screen w-full bg-background">
+                  <AppSidebar />
+                  <main className="flex-1 p-4 sm:p-8 overflow-x-hidden min-w-0">
+                    <div className="mb-4">
+                      <SidebarTrigger className="shadow-neo hover:shadow-neo-sm" />
+                    </div>
+                    <Routes>
+                      <Route path="/superadmin" element={<Superadmin />} />
+                      <Route path="*" element={<Navigate to="/superadmin" replace />} />
+                    </Routes>
+                  </main>
+                </div>
+              </SidebarProvider>
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     );
   }
