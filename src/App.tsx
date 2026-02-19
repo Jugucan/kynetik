@@ -28,7 +28,19 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const AppRoutes = () => {
-  const { currentUser, userStatus, viewMode } = useAuth();
+  const { currentUser, userStatus, viewMode, loading } = useAuth();
+
+  // Mentre carrega, mostrem una pantalla en blanc per evitar redireccions incorrectes
+  if (loading || (currentUser && userStatus === null)) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">Carregant...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Rutes públiques sempre accessibles
   // (les posem fora de qualsevol condició)
