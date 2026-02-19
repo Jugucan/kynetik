@@ -31,7 +31,7 @@ export const FRASES_ACTIVA: Phrase[] = [
 ];
 
 export const FRASES_MILLORANT: Phrase[] = [
-  { title: "A l'alça!", phrase: "S'nota que has agafat el ritme últimament. Mantén aquesta energia!", emoji: "🚀" },
+  { title: "A l'alça!", phrase: "Es nota que has agafat el ritme darrerament. Manté aquesta energia!", emoji: "🚀" },
   { title: "Tendència positiva", phrase: "Els números no menteixen: estàs millorant. Segueix apujant el llistó!", emoji: "📈" },
   { title: "Moment de forma", phrase: "Estàs en un gran moment. Aprofita'l al màxim!", emoji: "🔥" },
   { title: "Creixement visible", phrase: "La diferència entre ara i fa uns mesos és evident. I és mèrit teu.", emoji: "🌟" },
