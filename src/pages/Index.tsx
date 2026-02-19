@@ -17,6 +17,7 @@ import {
 
 // Components
 import { NeoCard } from "@/components/NeoCard";
+import { PendingUsersPanel } from "@/components/PendingUsersPanel";
 import { DayInfoModalReadOnly } from "@/components/DayInfoModalReadOnly";
 
 // Hooks
@@ -538,6 +539,9 @@ const Index = () => {
         </p>
       </div>
 
+      {/* Panel de sol·licituds pendents (només superadmin/admin) */}
+      <PendingUsersPanel />
+      
       {/* Temporitzador següent classe */}
       {nextClass && (
         <NeoCard className="bg-gradient-to-r from-primary/10 to-accent/10 border-2 border-primary/30">
