@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { UserProfile, UserStatus } from '@/types/user';
 
@@ -40,47 +40,65 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
+  
+  // Guardem la referència a l'escolta del perfil per poder cancel·lar-la
+  const profileUnsubscribeRef = useRef<(() => void) | null>(null);
+
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem('viewMode');
     return (saved === 'user' || saved === 'instructor' || saved === 'superadmin') ? saved : 'instructor';
   });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      // Cancel·lem l'escolta anterior del perfil si n'hi havia una
+      if (profileUnsubscribeRef.current) {
+        profileUnsubscribeRef.current();
+        profileUnsubscribeRef.current = null;
+      }
+
       setCurrentUser(user);
 
       if (user) {
-        // Escoltem el perfil en temps real amb onSnapshot
+        // Iniciem una nova escolta del perfil
         const profileRef = doc(db, 'userProfiles', user.uid);
-        const unsubscribeProfile = onSnapshot(profileRef, (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            const status: UserStatus = data.status || 'approved';
-            setUserStatus(status);
-            setUserProfile({
-              uid: user.uid,
-              email: user.email || '',
-              role: data.role || 'user',
-              displayName: data.displayName || '',
-              firstName: data.firstName,
-              lastName: data.lastName,
-              phone: data.phone,
-              birthDate: data.birthDate,
-              gender: data.gender || null,
-              center: data.center,
-              monitorId: data.monitorId,
-              status: status,
-              createdAt: data.createdAt?.toDate() || new Date(),
-              updatedAt: data.updatedAt?.toDate() || new Date(),
-            });
-          } else {
-            setUserStatus('pending');
+        const unsubscribeProfile = onSnapshot(
+          profileRef,
+          (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              const status: UserStatus = data.status || 'approved';
+              setUserStatus(status);
+              setUserProfile({
+                uid: user.uid,
+                email: user.email || '',
+                role: data.role || 'user',
+                displayName: data.displayName || '',
+                firstName: data.firstName,
+                lastName: data.lastName,
+                phone: data.phone,
+                birthDate: data.birthDate,
+                gender: data.gender || null,
+                center: data.center,
+                monitorId: data.monitorId,
+                status: status,
+                createdAt: data.createdAt?.toDate() || new Date(),
+                updatedAt: data.updatedAt?.toDate() || new Date(),
+              });
+            } else {
+              setUserStatus('pending');
+            }
+            setLoading(false);
+          },
+          (error) => {
+            // Error d'escolta — probablement l'usuari ha tancat sessió
+            console.warn('Escolta del perfil cancel·lada:', error.code);
+            setLoading(false);
           }
-          setLoading(false);
-        });
+        );
 
-        // Guardem la funció per cancel·lar l'escolta quan calgui
-        return unsubscribeProfile;
+        // Guardem la funció de cancel·lació
+        profileUnsubscribeRef.current = unsubscribeProfile;
       } else {
         setUserProfile(null);
         setUserStatus(null);
@@ -88,7 +106,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribeAuth();
+      if (profileUnsubscribeRef.current) {
+        profileUnsubscribeRef.current();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -99,11 +122,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (userProfile) {
       if (userProfile.role === 'user') {
-        // Un usuari normal mai pot estar en vista instructor o superadmin
         setViewMode('user');
         localStorage.setItem('viewMode', 'user');
       } else if (userProfile.role !== 'superadmin' && viewMode === 'superadmin') {
-        // Si no és superadmin no pot estar en vista superadmin
         setViewMode('instructor');
         localStorage.setItem('viewMode', 'instructor');
       }
@@ -115,11 +136,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signup = async (email: string, password: string, data: RegisterData) => {
-    // 1. Creem el compte a Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // 2. Guardem el perfil a Firestore amb estat "pending"
     const displayName = `${data.firstName} ${data.lastName}`.trim();
     const profileRef = doc(db, 'userProfiles', user.uid);
 
@@ -133,16 +152,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       phone: data.phone,
       birthDate: data.birthDate,
       gender: null,
-      status: 'pending',        // ← sempre comença com a pendent
+      status: 'pending',
       createdAt: new Date(),
       updatedAt: new Date(),
     });
   };
 
   const logout = async () => {
-    await signOut(auth);
+    // Cancel·lem l'escolta del perfil ABANS de fer signOut
+    if (profileUnsubscribeRef.current) {
+      profileUnsubscribeRef.current();
+      profileUnsubscribeRef.current = null;
+    }
     setUserProfile(null);
     setUserStatus(null);
+    await signOut(auth);
   };
 
   const value = {
