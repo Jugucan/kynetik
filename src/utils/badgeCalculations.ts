@@ -76,6 +76,36 @@ function calcDaysSinceFirstSession(firstSession?: string): number {
   return Math.floor((now.getTime() - first.getTime()) / 86400000);
 }
 
+/** Un Any de Suor: 1 any de membre AMB mínim 1 classe per mes tots els mesos */
+function hasActiveYearMember(sessions: Session[], firstSession?: string): boolean {
+  if (!firstSession) return false;
+  const first = new Date(firstSession);
+  const now = new Date();
+  const daysSince = Math.floor((now.getTime() - first.getTime()) / 86400000);
+  if (daysSince < 365) return false;
+
+  // Comprovem que cada mes des de la primera sessió fins ara tingui almenys 1 classe
+  const monthsWithSessions = new Set(
+    sessions.map(s => {
+      const d = new Date(s.date);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    })
+  );
+
+  const monthsToCheck: string[] = [];
+  const cursor = new Date(first.getFullYear(), first.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  while (cursor <= end) {
+    monthsToCheck.push(
+      `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`
+    );
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  return monthsToCheck.every(m => monthsWithSessions.has(m));
+}
+
 function hasThreeConsecutiveDays(sessions: Session[]): boolean {
   if (sessions.length < 3) return false;
   const daySet = new Set(sessions.map(s => getDayKey(new Date(s.date))));
@@ -135,7 +165,6 @@ function hasConsistentMonths(sessions: Session[]): boolean {
   return false;
 }
 
-/** Comprova si ha fet classe de matí (abans 12h) I tarda (17h+) en la mateixa setmana */
 function hasDoubleMorningEvening(sessions: Session[]): boolean {
   const byWeek: Record<string, { hasMorning: boolean; hasEvening: boolean }> = {};
   for (const s of sessions) {
@@ -149,7 +178,6 @@ function hasDoubleMorningEvening(sessions: Session[]): boolean {
   return Object.values(byWeek).some(w => w.hasMorning && w.hasEvening);
 }
 
-/** Comprova si ha fet classe de matí (abans 12h) */
 function hasMorningClass(sessions: Session[]): boolean {
   return sessions.some(s => {
     if (!s.time) return false;
@@ -157,7 +185,6 @@ function hasMorningClass(sessions: Session[]): boolean {
   });
 }
 
-/** Comprova si ha fet classe de vespre (20h+) */
 function hasEveningClass(sessions: Session[]): boolean {
   return sessions.some(s => {
     if (!s.time) return false;
@@ -165,22 +192,42 @@ function hasEveningClass(sessions: Session[]): boolean {
   });
 }
 
-/** Comprova insígnia d'any nou per un any concret (classes del 1 al 7 de gener) */
+/** Any Nou: ara fins al 15 de gener */
 function hasNewYearClass(sessions: Session[], year: number): boolean {
   return sessions.some(s => {
     const d = new Date(s.date);
-    return d.getFullYear() === year && d.getMonth() === 0 && d.getDate() <= 7;
+    return d.getFullYear() === year && d.getMonth() === 0 && d.getDate() <= 15;
   });
 }
 
-/** Calcula quantes categories úniques ha provat l'usuari, usant el mapa de programes */
-function calcUniqueCategories(sessions: Session[], programsMap: Record<string, string>): number {
+/** Calcula les categories úniques que ha provat l'usuari */
+function calcUniqueCategories(sessions: Session[], programsMap: Record<string, string>): Set<string> {
   const categories = new Set<string>();
   for (const s of sessions) {
     const cat = programsMap[s.activity];
     if (cat) categories.add(cat);
   }
-  return categories.size;
+  return categories;
+}
+
+/** Atleta Completa: les 3 categories en una mateixa setmana */
+function hasAllCategoriesInOneWeek(
+  sessions: Session[],
+  programsMap: Record<string, string>
+): boolean {
+  const byWeek: Record<string, Set<string>> = {};
+  for (const s of sessions) {
+    const cat = programsMap[s.activity];
+    if (!cat) continue;
+    const wk = getWeekKey(new Date(s.date));
+    if (!byWeek[wk]) byWeek[wk] = new Set();
+    byWeek[wk].add(cat);
+  }
+  // Comprovem si alguna setmana té les 3 categories principals
+  const mainCategories = new Set(['força', 'cardio', 'flexibilitat']);
+  return Object.values(byWeek).some(cats =>
+    [...mainCategories].every(c => cats.has(c))
+  );
 }
 
 // ------------------------------------------------------------
@@ -200,18 +247,39 @@ export function calculateBadges(
   const daysSinceFirst = calcDaysSinceFirstSession(userData.firstSession);
   const maxWeekStreak = calcMaxWeekStreak(sessions);
 
-  // Construïm un mapa activity -> category a partir dels programes de Firebase
+  // Mapa activity -> category
   const programsMap: Record<string, string> = {};
   for (const p of programs) {
     if (p.name && p.category) {
       programsMap[p.name] = p.category;
     }
   }
-  const uniqueCategories = calcUniqueCategories(sessions, programsMap);
+
+  const uniqueCategoriesSet = calcUniqueCategories(sessions, programsMap);
+  const uniqueCategories = uniqueCategoriesSet.size;
+
+  // Anys que sí tenen sessions (per filtrar les insígnies d'any nou)
+  const yearsWithSessions = new Set(
+    sessions.map(s => new Date(s.date).getFullYear())
+  );
 
   const allBadges = getAllBadgesWithDynamic();
 
-  return allBadges.map((badge): BadgeWithStatus => {
+  // Filtrem les insígnies d'any nou: només mostrem els anys on l'usuari
+  // tenia sessions (és a dir, ja era membre) o l'any actual
+  const currentYear = new Date().getFullYear();
+  const filteredBadges = allBadges.filter(badge => {
+    if (!badge.id.startsWith('esp_any_nou_')) return true;
+    const year = parseInt(badge.id.replace('esp_any_nou_', ''), 10);
+    // Mostrem l'any si l'usuari tenia sessions aquell any o l'any següent
+    // (pot ser membre des de novembre i tenir la insígnia de gener de l'any següent)
+    const firstYear = userData.firstSession
+      ? new Date(userData.firstSession).getFullYear()
+      : currentYear;
+    return year >= firstYear;
+  });
+
+  return filteredBadges.map((badge): BadgeWithStatus => {
     let earned = false;
     let progress: number | undefined;
     let progressLabel: string | undefined;
@@ -256,9 +324,11 @@ export function calculateBadges(
         progressLabel = `${totalSessions} / 200 classes`;
         break;
       case badge.id === 'ass_aniversari':
-        earned = daysSinceFirst >= 365;
+        earned = hasActiveYearMember(sessions, userData.firstSession);
         progress = Math.min(100, Math.round((daysSinceFirst / 365) * 100));
-        progressLabel = `${daysSinceFirst} / 365 dies`;
+        progressLabel = earned
+          ? 'Completat!'
+          : `${daysSinceFirst} / 365 dies + activa cada mes`;
         break;
       case badge.id === 'ass_500':
         earned = totalSessions >= 500;
@@ -354,12 +424,14 @@ export function calculateBadges(
         progressLabel = unavailable ? 'No disponible al teu gym' : `${uniqueCategories} / 3 categories`;
         break;
       case badge.id === 'prog_cat_all':
-        unavailable = totalAvailableCategories < 2;
-        earned = !unavailable && uniqueCategories >= totalAvailableCategories;
-        progress = unavailable ? 0 : Math.min(100, Math.round((uniqueCategories / totalAvailableCategories) * 100));
+        unavailable = totalAvailableCategories < 3;
+        earned = !unavailable && hasAllCategoriesInOneWeek(sessions, programsMap);
+        progress = earned ? 100 : 0;
         progressLabel = unavailable
           ? 'No disponible al teu gym'
-          : `${uniqueCategories} / ${totalAvailableCategories} categories`;
+          : earned
+            ? 'Completat!'
+            : 'Fes força, cardio i flexibilitat en una mateixa setmana';
         break;
 
       // EXPLORADORA
@@ -401,13 +473,13 @@ export function calculateBadges(
         progressLabel = earned ? 'Completat!' : 'Mantén la mateixa freqüència 3 mesos';
         break;
 
-      // ESPECIALS - ANY NOU (col·leccionables)
+      // ESPECIALS - ANY NOU (col·leccionables, fins al 15 de gener)
       default:
         if (badge.id.startsWith('esp_any_nou_')) {
           const year = parseInt(badge.id.replace('esp_any_nou_', ''), 10);
           earned = hasNewYearClass(sessions, year);
           progress = earned ? 100 : 0;
-          progressLabel = earned ? 'Completat!' : `Vine del 1 al 7 de gener de ${year}`;
+          progressLabel = earned ? 'Completat!' : `Vine de l'1 al 15 de gener de ${year}`;
         }
         break;
     }
