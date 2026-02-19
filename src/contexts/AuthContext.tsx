@@ -95,6 +95,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('viewMode', viewMode);
   }, [viewMode]);
 
+  // Quan es carrega el perfil, assegurem que el viewMode sigui coherent amb el rol
+  useEffect(() => {
+    if (userProfile) {
+      if (userProfile.role === 'user') {
+        // Un usuari normal mai pot estar en vista instructor o superadmin
+        setViewMode('user');
+        localStorage.setItem('viewMode', 'user');
+      } else if (userProfile.role !== 'superadmin' && viewMode === 'superadmin') {
+        // Si no és superadmin no pot estar en vista superadmin
+        setViewMode('instructor');
+        localStorage.setItem('viewMode', 'instructor');
+      }
+    }
+  }, [userProfile]);
+
   const login = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
   };
