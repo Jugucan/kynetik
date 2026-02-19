@@ -22,6 +22,7 @@ import Badges from "./pages/Badges";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import PendingApproval from "./pages/PendingApproval";
+import Superadmin from "./pages/Superadmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -126,6 +127,15 @@ const AppRoutes = () => {
                       }
                     />
 
+                    <Route
+                      path="/superadmin"
+                      element={
+                        <ViewProtectedRoute allowedViews={['superadmin']}>
+                          <Superadmin />
+                        </ViewProtectedRoute>
+                      }
+                    />
+                    
                     <Route path="/404" element={<NotFound />} />
                     <Route path="*" element={<Navigate to="/404" replace />} />
                   </Routes>
