@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Home, Calendar, Users, Dumbbell, Shuffle, Clock, Settings, LogOut, User, BarChart3, GraduationCap, UserCircle, StickyNote, Pencil, Trophy } from "lucide-react";
+import { Home, Calendar, Users, Dumbbell, Shuffle, Clock, Settings, LogOut, User, BarChart3, GraduationCap, UserCircle, StickyNote, Pencil, Trophy, Shield } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -43,7 +43,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const getMenuItems = (viewMode: 'instructor' | 'user') => {
+const getMenuItems = (viewMode: 'instructor' | 'user' | 'superadmin') => {
+  if (viewMode === 'superadmin') {
+    return [
+      { title: "Tauler de control", icon: Shield, path: "/superadmin", visibleFor: ['superadmin'] },
+    ];
+  }
   const allItems = [
     { title: "Inici", icon: Home, path: "/", visibleFor: ['instructor', 'user'] },
     { title: "Calendari", icon: Calendar, path: "/calendar", visibleFor: ['instructor', 'user'] },
@@ -228,6 +233,14 @@ export const AppSidebar = () => {
                               <span>Usuària</span>
                             </div>
                           </SelectItem>
+                          {userProfile?.role === 'superadmin' && (
+                            <SelectItem value="superadmin">
+                              <div className="flex items-center gap-2">
+                                <Shield className="w-3.5 h-3.5" />
+                                <span>Superadmin</span>
+                              </div>
+                            </SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -272,6 +285,12 @@ export const AppSidebar = () => {
                     <UserCircle className="w-4 h-4 mr-2" />
                     Usuària
                   </DropdownMenuItem>
+                  {userProfile?.role === 'superadmin' && (
+                    <DropdownMenuItem onClick={() => handleViewModeChange('superadmin')}>
+                      <Shield className="w-4 h-4 mr-2" />
+                      Superadmin
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
 
