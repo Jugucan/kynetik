@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { getBenvingut } from "@/utils/genderHelpers";
 import UserIndex from "./UserIndex";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -96,7 +97,7 @@ const getMonthName = (monthIndex: number): string => {
 // ============================================================================
 
 const Index = () => {
-  const { viewMode } = useAuth();
+  const { viewMode, userProfile } = useAuth();
 
   // Si estem en mode usuària, mostrar la vista d'usuària
   if (viewMode === 'user') {
@@ -531,7 +532,7 @@ const Index = () => {
       {/* Header */}
       <div>
         <h1 className="text-4xl font-bold text-foreground mb-2">
-          Benvinguda! 👋
+          {getBenvingut(userProfile?.gender)}! 👋
         </h1>
         <p className="text-muted-foreground">
           Aquí tens un resum de l'activitat actual
