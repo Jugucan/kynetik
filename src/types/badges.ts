@@ -48,7 +48,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
   {
     id: 'ass_5',
-    name: 'Calentant Motors',
+    name: 'Escalfant Motors',
     description: 'Ja portes 5 classes. Estàs agafant el ritme!',
     emoji: '🔥',
     category: 'assistencia',
@@ -102,9 +102,9 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
   {
     id: 'ass_aniversari',
-    name: 'Un Any de Suor',
-    description: 'Portes més d\'un any venint al gym i has estat activa cada mes. Increïble constància!',
-    emoji: '🌟',
+    name: 'Volta al Sol',
+    description: 'Un any sencer venint cada mes sense excuses. Has donat una volta al sol amb nosaltres!',
+    emoji: '☀️',
     category: 'assistencia',
     tier: 'diamant',
     requirement: '1 any de membre amb mínim 1 classe per mes',
@@ -253,11 +253,11 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'prog_cat_2',
     name: 'Doble Poder',
-    description: 'Has provat programes de 2 categories diferents. Força i cardio, o cardio i flexibilitat... t\'atreveixes amb tot!',
+    description: 'Has provat programes de 2 categories diferents. T\'atreveixes amb tot!',
     emoji: '⚡',
     category: 'programes',
     tier: 'plata',
-    requirement: '2 categories de programes diferents (força, cardio o flexibilitat)',
+    requirement: '2 categories de programes diferents',
   },
   {
     id: 'prog_cat_3',
@@ -346,8 +346,9 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
 ];
 
-// Anys disponibles per la insígnia col·leccionable
-// Només genera anys on hi ha hagut sessions (es filtra al component)
+// Insígnies d'Any Nou col·leccionables
+// IMPORTANT: només es mostren els anys que l'usuari JA HA ACONSEGUIT
+// o l'any actual (si encara hi és a temps). Els anys passats no aconseguits NO apareixen.
 export function getNewYearBadges(): BadgeDefinition[] {
   const currentYear = new Date().getFullYear();
   const badges: BadgeDefinition[] = [];
@@ -369,7 +370,6 @@ export function getAllBadgesWithDynamic(): BadgeDefinition[] {
   return [...ALL_BADGES, ...getNewYearBadges()];
 }
 
-// Noms llegibles de categories
 export const CATEGORY_NAMES: Record<BadgeCategory, string> = {
   assistencia: '💪 Assistència',
   ratxa: '🔥 Constància',
@@ -379,12 +379,11 @@ export const CATEGORY_NAMES: Record<BadgeCategory, string> = {
   especial: '✨ Especials',
 };
 
-// Colors per tier
 export const TIER_COLORS: Record<BadgeTier, { bg: string; text: string; border: string; label: string }> = {
   bronze: {
-    bg: 'from-orange-400 via-amber-300 to-orange-300',
-    text: 'text-orange-950',
-    border: 'border-orange-400',
+    bg: 'from-[#8B5E4A] via-[#C49A7A] to-[#A0735A]',
+    text: 'text-[#3D1F10]',
+    border: 'border-[#8B5E4A]',
     label: 'Bronze',
   },
   plata: {
@@ -394,7 +393,7 @@ export const TIER_COLORS: Record<BadgeTier, { bg: string; text: string; border: 
     label: 'Plata',
   },
   or: {
-    bg: 'from-yellow-500 via-amber-300 to-yellow-200',
+    bg: 'from-yellow-600 via-yellow-400 to-yellow-200',
     text: 'text-yellow-900',
     border: 'border-yellow-500',
     label: 'Or',
