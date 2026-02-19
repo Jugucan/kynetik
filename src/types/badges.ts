@@ -381,9 +381,9 @@ export const CATEGORY_NAMES: Record<BadgeCategory, string> = {
 
 export const TIER_COLORS: Record<BadgeTier, { bg: string; text: string; border: string; label: string }> = {
   bronze: {
-    bg: 'from-[#8B5E4A] via-[#C49A7A] to-[#A0735A]',
-    text: 'text-[#3D1F10]',
-    border: 'border-[#8B5E4A]',
+    bg: 'from-rose-300 via-orange-200 to-rose-400',
+    text: 'text-rose-950',
+    border: 'border-rose-300',
     label: 'Bronze',
   },
   plata: {
