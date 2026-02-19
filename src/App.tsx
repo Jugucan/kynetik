@@ -27,26 +27,34 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Component intern que gestiona les redireccions segons l'estat de l'usuari
 const AppRoutes = () => {
   const { currentUser, userStatus, viewMode } = useAuth();
 
-  // Si l'usuari està logat però pendent o rebutjat, el tanquem a /pending
+  // Rutes públiques sempre accessibles
+  // (les posem fora de qualsevol condició)
+  const publicRoutes = (
+    <>
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+    </>
+  );
+
+  // Usuari pendent o rebutjat → només pot veure /pending
   if (currentUser && (userStatus === 'pending' || userStatus === 'rejected')) {
     return (
       <Routes>
+        {publicRoutes}
         <Route path="/pending" element={<PendingApproval />} />
         <Route path="*" element={<Navigate to="/pending" replace />} />
       </Routes>
     );
   }
 
-  // Si la vista és superadmin i intenta anar a /, redirigir a /superadmin
-  if (viewMode === 'superadmin') {
+  // Vista superadmin → només veu el tauler de superadmin
+  if (currentUser && viewMode === 'superadmin') {
     return (
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        {publicRoutes}
         <Route
           path="/*"
           element={
@@ -72,13 +80,10 @@ const AppRoutes = () => {
     );
   }
 
+  // Resta de vistes (instructor i user) → accés normal
   return (
     <Routes>
-      {/* Rutes públiques */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-
-      {/* Rutes protegides amb Sidebar */}
+      {publicRoutes}
       <Route
         path="/*"
         element={
@@ -91,12 +96,10 @@ const AppRoutes = () => {
                     <SidebarTrigger className="shadow-neo hover:shadow-neo-sm" />
                   </div>
                   <Routes>
-                    {/* Rutes accessibles per tothom */}
                     <Route path="/" element={<Index />} />
                     <Route path="/calendar" element={<Calendar />} />
                     <Route path="/stats" element={<Stats />} />
 
-                    {/* Ruta d'insígnies (només vista usuari) */}
                     <Route
                       path="/badges"
                       element={
@@ -105,8 +108,6 @@ const AppRoutes = () => {
                         </ViewProtectedRoute>
                       }
                     />
-
-                    {/* Rutes només per vista instructora */}
                     <Route
                       path="/users"
                       element={
@@ -158,15 +159,7 @@ const AppRoutes = () => {
                       }
                     />
 
-                    <Route
-                      path="/superadmin"
-                      element={
-                        <ViewProtectedRoute allowedViews={['superadmin']}>
-                          <Superadmin />
-                        </ViewProtectedRoute>
-                      }
-                    />
-                    
+                    {/* /pending redirigeix a / per si l'usuari ja està aprovat */}
                     <Route path="/pending" element={<Navigate to="/" replace />} />
                     <Route path="/404" element={<NotFound />} />
                     <Route path="*" element={<Navigate to="/404" replace />} />
