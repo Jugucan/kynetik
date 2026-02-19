@@ -1,10 +1,9 @@
-import { Shield, Users, Building2, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Shield, Users, Building2, Clock, CheckCircle } from "lucide-react";
 import { NeoCard } from "@/components/NeoCard";
-import { PendingUsersPanel } from "@/components/PendingUsersPanel";
 import { usePendingUsers } from "@/hooks/usePendingUsers";
 
 const Superadmin = () => {
-  const { pendingUsers } = usePendingUsers();
+  const { pendingUsers, loading, approveUser, rejectUser } = usePendingUsers();
 
   return (
     <div className="space-y-6">
@@ -26,6 +25,7 @@ const Superadmin = () => {
 
       {/* Targetes de resum */}
       <div className="grid md:grid-cols-3 gap-6">
+
         <NeoCard>
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-yellow-100 flex items-center justify-center shadow-neo-inset">
@@ -34,7 +34,7 @@ const Superadmin = () => {
             <div>
               <p className="text-sm text-muted-foreground">Sol·licituds pendents</p>
               <p className="text-2xl font-bold text-yellow-600">
-                {pendingUsers.length}
+                {loading ? '...' : pendingUsers.length}
               </p>
             </div>
           </div>
@@ -65,33 +65,83 @@ const Superadmin = () => {
             </div>
           </div>
         </NeoCard>
+
       </div>
 
-      {/* Sol·licituds pendents */}
+      {/* Sol·licituds d'accés */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Sol·licituds d'accés</h2>
-        {pendingUsers.length === 0 ? (
+
+        {loading ? (
+          <NeoCard>
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              Carregant sol·licituds...
+            </div>
+          </NeoCard>
+        ) : pendingUsers.length === 0 ? (
           <NeoCard>
             <div className="text-center py-8">
               <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-              <p className="text-foreground font-semibold mb-1">
-                Tot al dia!
-              </p>
+              <p className="text-foreground font-semibold mb-1">Tot al dia!</p>
               <p className="text-muted-foreground text-sm">
                 No hi ha cap sol·licitud pendent d'aprovació
               </p>
             </div>
           </NeoCard>
         ) : (
-          <PendingUsersPanel />
+          <div className="space-y-3">
+            {pendingUsers.map((user) => (
+              <NeoCard key={user.uid}>
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div>
+                    <p className="font-semibold text-foreground">{user.displayName}</p>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                  </div>
+                  <span className="text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 rounded-full px-2 py-0.5 whitespace-nowrap">
+                    Pendent
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mb-3 text-sm text-muted-foreground">
+                  {user.phone && (
+                    <p>📞 {user.phone}</p>
+                  )}
+                  {user.birthDate && (
+                    <p>🎂 {user.birthDate.split('-').reverse().join('/')}</p>
+                  )}
+                  <p className="col-span-2 text-xs">
+                    Sol·licitud: {user.createdAt.toLocaleDateString('ca-ES', {
+                      day: '2-digit', month: '2-digit', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => approveUser(user.uid)}
+                    className="flex-1 py-2 px-3 bg-green-50 text-green-700 font-semibold rounded-lg border-2 border-green-200 shadow-neo hover:shadow-neo-sm hover:translate-y-0.5 transition-all text-sm"
+                  >
+                    ✓ Aprovar
+                  </button>
+                  <button
+                    onClick={() => rejectUser(user.uid)}
+                    className="flex-1 py-2 px-3 bg-red-50 text-red-700 font-semibold rounded-lg border-2 border-red-200 shadow-neo hover:shadow-neo-sm hover:translate-y-0.5 transition-all text-sm"
+                  >
+                    ✕ Rebutjar
+                  </button>
+                </div>
+              </NeoCard>
+            ))}
+          </div>
         )}
       </div>
 
       {/* Seccions futures */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Pròximament</h2>
+        <h2 className="text-xl font-semibold mb-4 text-muted-foreground">Pròximament</h2>
         <div className="grid md:grid-cols-2 gap-4">
-          <NeoCard className="opacity-60 border-dashed">
+          <NeoCard className="opacity-50 border-dashed">
             <div className="flex items-center gap-3">
               <Building2 className="w-8 h-8 text-muted-foreground" />
               <div>
@@ -103,7 +153,7 @@ const Superadmin = () => {
             </div>
           </NeoCard>
 
-          <NeoCard className="opacity-60 border-dashed">
+          <NeoCard className="opacity-50 border-dashed">
             <div className="flex items-center gap-3">
               <Users className="w-8 h-8 text-muted-foreground" />
               <div>
