@@ -222,36 +222,38 @@ export const AppSidebar = () => {
                       </div>
                     )}
                     
-                    <div className="pt-2 border-t border-primary/10">
-                      <p className="text-xs text-muted-foreground mb-1.5">Vista:</p>
-                      <Select value={viewMode} onValueChange={handleViewModeChange}>
-                        <SelectTrigger className="w-full h-8 shadow-neo-sm border-0 bg-background text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="instructor">
-                            <div className="flex items-center gap-2">
-                              <GraduationCap className="w-3.5 h-3.5" />
-                              <span>Instructora</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="user">
-                            <div className="flex items-center gap-2">
-                              <UserCircle className="w-3.5 h-3.5" />
-                              <span>Usuària</span>
-                            </div>
-                          </SelectItem>
-                          {userProfile?.role === 'superadmin' && (
-                            <SelectItem value="superadmin">
+                    {userProfile?.role !== 'user' && (
+                      <div className="pt-2 border-t border-primary/10">
+                        <p className="text-xs text-muted-foreground mb-1.5">Vista:</p>
+                        <Select value={viewMode} onValueChange={handleViewModeChange}>
+                          <SelectTrigger className="w-full h-8 shadow-neo-sm border-0 bg-background text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="instructor">
                               <div className="flex items-center gap-2">
-                                <Shield className="w-3.5 h-3.5" />
-                                <span>Superadmin</span>
+                                <GraduationCap className="w-3.5 h-3.5" />
+                                <span>Instructora</span>
                               </div>
                             </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                            <SelectItem value="user">
+                              <div className="flex items-center gap-2">
+                                <UserCircle className="w-3.5 h-3.5" />
+                                <span>Usuària</span>
+                              </div>
+                            </SelectItem>
+                            {userProfile?.role === 'superadmin' && (
+                              <SelectItem value="superadmin">
+                                <div className="flex items-center gap-2">
+                                  <Shield className="w-3.5 h-3.5" />
+                                  <span>Superadmin</span>
+                                </div>
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -267,40 +269,42 @@ export const AppSidebar = () => {
             </div>
           ) : (
             <div className="p-2 space-y-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="w-full shadow-neo hover:shadow-neo-sm"
-                    title={viewMode === 'instructor' ? 'Vista Instructora' : 'Vista Usuària'}
-                  >
-                    {viewMode === 'instructor' ? (
-                      <GraduationCap className="w-5 h-5" />
-                    ) : (
-                      <UserCircle className="w-5 h-5" />
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>Canviar vista</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleViewModeChange('instructor')}>
-                    <GraduationCap className="w-4 h-4 mr-2" />
-                    Instructora
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleViewModeChange('user')}>
-                    <UserCircle className="w-4 h-4 mr-2" />
-                    Usuària
-                  </DropdownMenuItem>
-                  {userProfile?.role === 'superadmin' && (
-                    <DropdownMenuItem onClick={() => handleViewModeChange('superadmin')}>
-                      <Shield className="w-4 h-4 mr-2" />
-                      Superadmin
+              {userProfile?.role !== 'user' && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="w-full shadow-neo hover:shadow-neo-sm"
+                      title={viewMode === 'instructor' ? 'Vista Instructora' : 'Vista Usuària'}
+                    >
+                      {viewMode === 'instructor' ? (
+                        <GraduationCap className="w-5 h-5" />
+                      ) : (
+                        <UserCircle className="w-5 h-5" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>Canviar vista</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleViewModeChange('instructor')}>
+                      <GraduationCap className="w-4 h-4 mr-2" />
+                      Instructora
                     </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <DropdownMenuItem onClick={() => handleViewModeChange('user')}>
+                      <UserCircle className="w-4 h-4 mr-2" />
+                      Usuària
+                    </DropdownMenuItem>
+                    {userProfile?.role === 'superadmin' && (
+                      <DropdownMenuItem onClick={() => handleViewModeChange('superadmin')}>
+                        <Shield className="w-4 h-4 mr-2" />
+                        Superadmin
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
