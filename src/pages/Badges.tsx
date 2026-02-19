@@ -98,7 +98,7 @@ const Badges = () => {
         </div>
       </div>
 
-      <BadgeGrid badges={badges} />
+      <BadgeGrid badges={badges} gender={userProfile?.gender} />
     </div>
   );
 };
