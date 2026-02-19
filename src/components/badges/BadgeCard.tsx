@@ -2,14 +2,16 @@
 // COMPONENT VISUAL D'UNA INSÍGNIA (guanyada o pendent)
 // ============================================================
 
-import { BadgeWithStatus, TIER_COLORS } from '@/types/badges';
+import { BadgeWithStatus, TIER_COLORS, getBadgeTexts } from '@/types/badges';
 import { Lock } from 'lucide-react';
 
 interface BadgeCardProps {
   badge: BadgeWithStatus;
+  gender?: string | null;
 }
 
-const BadgeCard = ({ badge }: BadgeCardProps) => {
+const BadgeCard = ({ badge, gender }: BadgeCardProps) => {
+  const { name, description } = getBadgeTexts(badge, gender);
   const tierStyle = TIER_COLORS[badge.tier];
   const isEarned = badge.earned;
   const isUnavailable = badge.unavailable;
@@ -38,12 +40,11 @@ const BadgeCard = ({ badge }: BadgeCardProps) => {
 
       {/* Nom */}
       <h3 className={`font-bold text-sm text-center mb-1 leading-tight relative z-10 ${isEarned ? tierStyle.text : 'text-muted-foreground'}`}>
-        {badge.name}
+        {name}
       </h3>
 
-      {/* Descripció */}
       <p className={`text-xs text-center leading-tight mb-3 relative z-10 ${isEarned ? tierStyle.text + ' opacity-80' : 'text-muted-foreground'}`}>
-        {isUnavailable ? 'No disponible al teu gym' : isEarned ? badge.description : badge.requirement}
+        {isUnavailable ? 'No disponible al teu gym' : isEarned ? description : badge.requirement}
       </p>
 
       {/* Barra de progrés (només per les pendents i no unavailable) */}
