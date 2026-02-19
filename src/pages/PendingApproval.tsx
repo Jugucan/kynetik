@@ -1,29 +1,52 @@
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
 
 const PendingApproval = () => {
   const { userStatus, logout, userProfile } = useAuth();
   const navigate = useNavigate();
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (userStatus === 'approved') {
-      navigate('/', { replace: true });
+    // Donem un petit marge perquè el perfil es carregui
+    const timer = setTimeout(() => {
+      setChecking(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!checking && userStatus === 'approved') {
+      window.location.href = '/';
     }
-  }, [userStatus, navigate]);
+  }, [checking, userStatus]);
+
+  // També escoltem canvis en temps real
+  useEffect(() => {
+    if (userStatus === 'approved') {
+      window.location.href = '/';
+    }
+  }, [userStatus]);
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    window.location.href = '/login';
   };
 
   const isRejected = userStatus === 'rejected';
+
+  if (userStatus === 'approved') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Redirigint...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
 
-        {/* Icona central */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full border-2 border-border shadow-neo mb-4"
             style={{ backgroundColor: isRejected ? '#fef2f2' : '#fefce8' }}>
@@ -41,9 +64,7 @@ const PendingApproval = () => {
           </p>
         </div>
 
-        {/* Targeta principal */}
         <div className="bg-card border-2 border-border shadow-neo rounded-xl p-8 text-center space-y-4">
-
           {isRejected ? (
             <>
               <p className="text-foreground">
@@ -75,10 +96,8 @@ const PendingApproval = () => {
           >
             Tancar sessió
           </button>
-
         </div>
 
-        {/* Peu */}
         <div className="mt-4 text-center text-xs text-muted-foreground">
           Si tens dubtes, contacta amb el teu gym directament.
         </div>
