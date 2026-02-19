@@ -4,13 +4,12 @@ import { ReactNode } from 'react';
 
 interface ViewProtectedRouteProps {
   children: ReactNode;
-  allowedViews: ('instructor' | 'user')[];
+  allowedViews: ('instructor' | 'user' | 'superadmin')[];
 }
 
 export const ViewProtectedRoute = ({ children, allowedViews }: ViewProtectedRouteProps) => {
   const { viewMode } = useAuth();
 
-  // Si la vista actual no està permesa, redirigir a inici
   if (!allowedViews.includes(viewMode)) {
     return <Navigate to="/" replace />;
   }
