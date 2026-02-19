@@ -384,9 +384,9 @@ export const CATEGORY_NAMES: Record<BadgeCategory, string> = {
 // Colors per tier
 export const TIER_COLORS: Record<BadgeTier, { bg: string; text: string; border: string; label: string }> = {
   bronze: {
-    bg: 'from-amber-600 via-amber-400 to-yellow-300',
-    text: 'text-amber-900',
-    border: 'border-amber-500',
+    bg: 'from-orange-300 via-rose-300 to-orange-400',
+    text: 'text-orange-950',
+    border: 'border-orange-400',
     label: 'Bronze',
   },
   plata: {
@@ -396,9 +396,9 @@ export const TIER_COLORS: Record<BadgeTier, { bg: string; text: string; border: 
     label: 'Plata',
   },
   or: {
-    bg: 'from-yellow-400 via-yellow-200 to-white',
-    text: 'text-yellow-800',
-    border: 'border-yellow-400',
+    bg: 'from-yellow-500 via-amber-400 to-yellow-500',
+    text: 'text-yellow-900',
+    border: 'border-yellow-500',
     label: 'Or',
   },
   diamant: {
