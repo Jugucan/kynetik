@@ -42,7 +42,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
   
-  // Guardem la referència a l'escolta del perfil per poder cancel·lar-la
   const profileUnsubscribeRef = useRef<(() => void) | null>(null);
 
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -52,7 +51,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      // Cancel·lem l'escolta anterior del perfil si n'hi havia una
       if (profileUnsubscribeRef.current) {
         profileUnsubscribeRef.current();
         profileUnsubscribeRef.current = null;
@@ -61,7 +59,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setCurrentUser(user);
 
       if (user) {
-        // Iniciem una nova escolta del perfil
         const profileRef = doc(db, 'userProfiles', user.uid);
         const unsubscribeProfile = onSnapshot(
           profileRef,
@@ -92,13 +89,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setLoading(false);
           },
           (error) => {
-            // Error d'escolta — probablement l'usuari ha tancat sessió
             console.warn('Escolta del perfil cancel·lada:', error.code);
             setLoading(false);
           }
         );
 
-        // Guardem la funció de cancel·lació
         profileUnsubscribeRef.current = unsubscribeProfile;
       } else {
         setUserProfile(null);
@@ -119,7 +114,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('viewMode', viewMode);
   }, [viewMode]);
 
-  // Quan es carrega el perfil, assegurem que el viewMode sigui coherent amb el rol
   useEffect(() => {
     if (userProfile) {
       if (userProfile.role === 'user') {
@@ -157,9 +151,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+  };
 
   const logout = async () => {
-    // Cancel·lem l'escolta del perfil ABANS de fer signOut
     if (profileUnsubscribeRef.current) {
       profileUnsubscribeRef.current();
       profileUnsubscribeRef.current = null;
