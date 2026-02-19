@@ -8,6 +8,7 @@ import { getBadgeSummary } from '@/utils/badgeCalculations';
 
 interface BadgeGridProps {
   badges: BadgeWithStatus[];
+  gender?: string | null;
 }
 
 const CATEGORY_ORDER: BadgeCategory[] = [
@@ -19,7 +20,7 @@ const CATEGORY_ORDER: BadgeCategory[] = [
   'especial',
 ];
 
-const BadgeGrid = ({ badges }: BadgeGridProps) => {
+const BadgeGrid = ({ badges, gender }: BadgeGridProps) => {
   const summary = getBadgeSummary(badges);
 
   return (
@@ -84,7 +85,7 @@ const BadgeGrid = ({ badges }: BadgeGridProps) => {
             {/* Graella d'insígnies */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {catBadges.map(badge => (
-                <BadgeCard key={badge.id} badge={badge} />
+                <BadgeCard key={badge.id} badge={badge} gender={gender} />
               ))}
             </div>
           </div>
