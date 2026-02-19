@@ -15,7 +15,11 @@ export type BadgeTier = 'bronze' | 'plata' | 'or' | 'diamant' | 'llegenda';
 export interface BadgeDefinition {
   id: string;
   name: string;
+  nameFemeni?: string;
+  nameMasculi?: string;
   description: string;
+  descriptionFemeni?: string;
+  descriptionMasculi?: string;
   emoji: string;
   category: BadgeCategory;
   tier: BadgeTier;
@@ -67,6 +71,8 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'ass_25',
     name: 'Compromís Real',
+    nameFemeni: 'Compromesa',
+    nameMasculi: 'Compromès',
     description: '25 classes. El compromís és real!',
     emoji: '💪',
     category: 'assistencia',
@@ -85,6 +91,8 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'ass_100',
     name: 'Centenar de Classes',
+    nameFemeni: 'Centenària',
+    nameMasculi: 'Centenari',
     description: '100 classes! Increïble dedicació.',
     emoji: '🥇',
     category: 'assistencia',
@@ -112,6 +120,8 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'ass_500',
     name: 'Llegenda del Kynetik',
+    nameFemeni: 'Llegendària',
+    nameMasculi: 'Llegendari',
     description: '500 classes. Ets una llegenda del Kynetik!',
     emoji: '👑',
     category: 'assistencia',
@@ -150,6 +160,8 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'ratxa_12',
     name: 'Tres Mesos Sense Aturar',
+    nameFemeni: 'Tres Mesos Invicta',
+    nameMasculi: 'Tres Mesos Invicte',
     description: 'Un trimestre sencer de constància absoluta.',
     emoji: '⚔️',
     category: 'ratxa',
@@ -179,7 +191,11 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'ant_1m',
     name: 'Nouvingut/da',
+    nameFemeni: 'Nouvinguda',
+    nameMasculi: 'Nouvingut',
     description: 'Portes 1 mes amb nosaltres. Benvingut/da a la família!',
+    descriptionFemeni: 'Portes 1 mes amb nosaltres. Benvinguda a la família!',
+    descriptionMasculi: 'Portes 1 mes amb nosaltres. Benvingut a la família!',
     emoji: '🌱',
     category: 'antiguitat',
     tier: 'bronze',
@@ -215,6 +231,8 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'ant_2a',
     name: 'Dos Anys Junts',
+    nameFemeni: 'Dos Anys Juntes',
+    nameMasculi: 'Dos Anys Junts',
     description: '2 anys al Kynetik. La teva lleialtat és admirable.',
     emoji: '🎖️',
     category: 'antiguitat',
@@ -233,7 +251,11 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'ant_5a',
     name: 'Veterà/na del Kynetik',
+    nameFemeni: 'Veterana del Kynetik',
+    nameMasculi: 'Veterà del Kynetik',
     description: '5 anys al Kynetik. Un/a veritable veterà/na!',
+    descriptionFemeni: '5 anys al Kynetik. Una veritable veterana!',
+    descriptionMasculi: '5 anys al Kynetik. Un veritable veterà!',
     emoji: '⭐',
     category: 'antiguitat',
     tier: 'diamant',
@@ -263,6 +285,8 @@ export const ALL_BADGES: BadgeDefinition[] = [
     id: 'prog_cat_3',
     name: 'Equilibri Total',
     description: 'Has provat força, cardio i flexibilitat. Ets un/a esportista complet/a!',
+    descriptionFemeni: 'Has provat força, cardio i flexibilitat. Ets una esportista completa!',
+    descriptionMasculi: 'Has provat força, cardio i flexibilitat. Ets un esportista complet!',
     emoji: '🌈',
     category: 'programes',
     tier: 'or',
@@ -271,7 +295,9 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'prog_cat_all',
     name: 'Atleta Complet/a',
-    description: 'Has fet força, cardio i flexibilitat en una mateixa setmana. Un repte d\'alt nivell!',
+    nameFemeni: 'Atleta Completa',
+    nameMasculi: 'Atleta Complet',
+    description: 'Has fet força, cardio i flexibilitat en una mateixa setmana.',
     emoji: '🏆',
     category: 'programes',
     tier: 'diamant',
@@ -282,6 +308,8 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'exp_matidora',
     name: 'Matiner/a',
+    nameFemeni: 'Matinera',
+    nameMasculi: 'Matiner',
     description: 'Has assistit a una classe de matí (abans de les 12h). Bon dia!',
     emoji: '🌅',
     category: 'exploradora',
@@ -291,6 +319,8 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'exp_vespre',
     name: 'Nocturn/a',
+    nameFemeni: 'Nocturna',
+    nameMasculi: 'Nocturn',
     description: 'Has assistit a una classe a partir de les 20h.',
     emoji: '🌙',
     category: 'exploradora',
@@ -330,6 +360,8 @@ export const ALL_BADGES: BadgeDefinition[] = [
     id: 'esp_comeback',
     name: 'La Gran Tornada',
     description: 'Havies estat més de 30 dies sense venir, i has tornat. Benvingut/da de nou!',
+    descriptionFemeni: 'Havies estat més de 30 dies sense venir, i has tornat. Benvinguda de nou!',
+    descriptionMasculi: 'Havies estat més de 30 dies sense venir, i has tornat. Benvingut de nou!',
     emoji: '🦅',
     category: 'especial',
     tier: 'plata',
@@ -367,6 +399,26 @@ export function getNewYearBadges(): BadgeDefinition[] {
 export function getAllBadgesWithDynamic(): BadgeDefinition[] {
   return [...ALL_BADGES, ...getNewYearBadges()];
 }
+
+// Retorna el nom i descripció adaptats al gènere
+export const getBadgeTexts = (
+  badge: BadgeDefinition,
+  gender?: string | null
+): { name: string; description: string } => {
+  if (gender === 'Femení') {
+    return {
+      name: badge.nameFemeni || badge.name,
+      description: badge.descriptionFemeni || badge.description,
+    };
+  }
+  if (gender === 'Masculí') {
+    return {
+      name: badge.nameMasculi || badge.name,
+      description: badge.descriptionMasculi || badge.description,
+    };
+  }
+  return { name: badge.name, description: badge.description };
+};
 
 export const CATEGORY_NAMES: Record<BadgeCategory, string> = {
   assistencia: '💪 Assistència',
