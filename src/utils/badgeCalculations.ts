@@ -76,7 +76,6 @@ function calcDaysSinceFirstSession(firstSession?: string): number {
   return Math.floor((now.getTime() - first.getTime()) / 86400000);
 }
 
-/** Un Any de Suor: 1 any de membre AMB mínim 1 classe per mes tots els mesos */
 function hasActiveYearMember(sessions: Session[], firstSession?: string): boolean {
   if (!firstSession) return false;
   const first = new Date(firstSession);
@@ -84,7 +83,6 @@ function hasActiveYearMember(sessions: Session[], firstSession?: string): boolea
   const daysSince = Math.floor((now.getTime() - first.getTime()) / 86400000);
   if (daysSince < 365) return false;
 
-  // Comprovem que cada mes des de la primera sessió fins ara tingui almenys 1 classe
   const monthsWithSessions = new Set(
     sessions.map(s => {
       const d = new Date(s.date);
@@ -151,7 +149,7 @@ function hasConsistentMonths(sessions: Session[]): boolean {
   const monthCount: Record<string, number> = {};
   for (const s of sessions) {
     const d = new Date(s.date);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '00')}`;
     monthCount[key] = (monthCount[key] || 0) + 1;
   }
   const keys = Object.keys(monthCount).sort();
@@ -192,7 +190,6 @@ function hasEveningClass(sessions: Session[]): boolean {
   });
 }
 
-/** Any Nou: ara fins al 15 de gener */
 function hasNewYearClass(sessions: Session[], year: number): boolean {
   return sessions.some(s => {
     const d = new Date(s.date);
@@ -200,33 +197,34 @@ function hasNewYearClass(sessions: Session[], year: number): boolean {
   });
 }
 
-/** Calcula les categories úniques que ha provat l'usuari */
-function calcUniqueCategories(sessions: Session[], programsMap: Record<string, string>): Set<string> {
+function calcUniqueCategories(
+  sessions: Session[],
+  programsMap: Record<string, string>
+): Set<string> {
   const categories = new Set<string>();
   for (const s of sessions) {
-    const cat = programsMap[s.activity];
-    if (cat) categories.add(cat);
+    // Intentem trobar la categoria tant amb el nom exacte com normalitzat
+    const cat = programsMap[s.activity] || programsMap[s.activity?.trim()];
+    if (cat) categories.add(cat.trim().toLowerCase());
   }
   return categories;
 }
 
-/** Atleta Completa: les 3 categories en una mateixa setmana */
 function hasAllCategoriesInOneWeek(
   sessions: Session[],
   programsMap: Record<string, string>
 ): boolean {
   const byWeek: Record<string, Set<string>> = {};
   for (const s of sessions) {
-    const cat = programsMap[s.activity];
+    const cat = programsMap[s.activity] || programsMap[s.activity?.trim()];
     if (!cat) continue;
     const wk = getWeekKey(new Date(s.date));
     if (!byWeek[wk]) byWeek[wk] = new Set();
-    byWeek[wk].add(cat);
+    byWeek[wk].add(cat.trim().toLowerCase());
   }
-  // Comprovem si alguna setmana té les 3 categories principals
-  const mainCategories = new Set(['força', 'cardio', 'flexibilitat']);
+  const mainCategories = ['força', 'cardio', 'flexibilitat'];
   return Object.values(byWeek).some(cats =>
-    [...mainCategories].every(c => cats.has(c))
+    mainCategories.every(c => cats.has(c))
   );
 }
 
@@ -247,36 +245,48 @@ export function calculateBadges(
   const daysSinceFirst = calcDaysSinceFirstSession(userData.firstSession);
   const maxWeekStreak = calcMaxWeekStreak(sessions);
 
-  // Mapa activity -> category
+  // Mapa activity -> category, normalitzant els valors
   const programsMap: Record<string, string> = {};
   for (const p of programs) {
     if (p.name && p.category) {
-      programsMap[p.name] = p.category;
+      // Guardem tant amb el nom original com normalitzat per robustesa
+      const normalizedCategory = p.category.trim().toLowerCase();
+      programsMap[p.name] = normalizedCategory;
+      programsMap[p.name.trim()] = normalizedCategory;
     }
   }
 
   const uniqueCategoriesSet = calcUniqueCategories(sessions, programsMap);
   const uniqueCategories = uniqueCategoriesSet.size;
 
-  // Anys que sí tenen sessions (per filtrar les insígnies d'any nou)
-  const yearsWithSessions = new Set(
-    sessions.map(s => new Date(s.date).getFullYear())
+  // Calculem les categories disponibles al gym normalitzades
+  const availableCategories = new Set(
+    programs
+      .map(p => p.category?.trim().toLowerCase())
+      .filter(Boolean) as string[]
   );
+  const realTotalCategories = availableCategories.size || totalAvailableCategories;
+
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth(); // 0 = gener
+  const currentDay = new Date().getDate();
+
+  // Anys nous: precalculem quins s'han aconseguit
+  const newYearBadgeEarned: Record<number, boolean> = {};
+  for (let year = 2020; year <= currentYear; year++) {
+    newYearBadgeEarned[year] = hasNewYearClass(sessions, year);
+  }
 
   const allBadges = getAllBadgesWithDynamic();
 
-  // Filtrem les insígnies d'any nou: només mostrem els anys on l'usuari
-  // tenia sessions (és a dir, ja era membre) o l'any actual
-  const currentYear = new Date().getFullYear();
+  // FILTRE D'ANYS NOUS:
+  // - Any actual: sempre es mostra (si estem dins del període, és assolible)
+  // - Anys passats: NOMÉS es mostren si s'han aconseguit
   const filteredBadges = allBadges.filter(badge => {
     if (!badge.id.startsWith('esp_any_nou_')) return true;
     const year = parseInt(badge.id.replace('esp_any_nou_', ''), 10);
-    // Mostrem l'any si l'usuari tenia sessions aquell any o l'any següent
-    // (pot ser membre des de novembre i tenir la insígnia de gener de l'any següent)
-    const firstYear = userData.firstSession
-      ? new Date(userData.firstSession).getFullYear()
-      : currentYear;
-    return year >= firstYear;
+    if (year === currentYear) return true; // L'any actual sempre visible
+    return newYearBadgeEarned[year] === true; // Anys passats: només si guanyat
   });
 
   return filteredBadges.map((badge): BadgeWithStatus => {
@@ -412,19 +422,23 @@ export function calculateBadges(
 
       // PROGRAMES PER CATEGORIES
       case badge.id === 'prog_cat_2':
-        unavailable = totalAvailableCategories < 2;
+        unavailable = realTotalCategories < 2;
         earned = !unavailable && uniqueCategories >= 2;
         progress = unavailable ? 0 : Math.min(100, Math.round((uniqueCategories / 2) * 100));
-        progressLabel = unavailable ? 'No disponible al teu gym' : `${uniqueCategories} / 2 categories`;
+        progressLabel = unavailable
+          ? 'No disponible al teu gym'
+          : `${uniqueCategories} / 2 categories`;
         break;
       case badge.id === 'prog_cat_3':
-        unavailable = totalAvailableCategories < 3;
+        unavailable = realTotalCategories < 3;
         earned = !unavailable && uniqueCategories >= 3;
         progress = unavailable ? 0 : Math.min(100, Math.round((uniqueCategories / 3) * 100));
-        progressLabel = unavailable ? 'No disponible al teu gym' : `${uniqueCategories} / 3 categories`;
+        progressLabel = unavailable
+          ? 'No disponible al teu gym'
+          : `${uniqueCategories} / 3 categories`;
         break;
       case badge.id === 'prog_cat_all':
-        unavailable = totalAvailableCategories < 3;
+        unavailable = realTotalCategories < 3;
         earned = !unavailable && hasAllCategoriesInOneWeek(sessions, programsMap);
         progress = earned ? 100 : 0;
         progressLabel = unavailable
@@ -473,13 +487,15 @@ export function calculateBadges(
         progressLabel = earned ? 'Completat!' : 'Mantén la mateixa freqüència 3 mesos';
         break;
 
-      // ESPECIALS - ANY NOU (col·leccionables, fins al 15 de gener)
+      // ESPECIALS - ANY NOU
       default:
         if (badge.id.startsWith('esp_any_nou_')) {
           const year = parseInt(badge.id.replace('esp_any_nou_', ''), 10);
-          earned = hasNewYearClass(sessions, year);
+          earned = newYearBadgeEarned[year] || false;
           progress = earned ? 100 : 0;
-          progressLabel = earned ? 'Completat!' : `Vine de l'1 al 15 de gener de ${year}`;
+          progressLabel = earned
+            ? 'Completat!'
+            : `Vine de l'1 al 15 de gener de ${year}`;
         }
         break;
     }
