@@ -25,6 +25,31 @@ interface UserDataForBadges {
 // HELPERS INTERNS
 // ------------------------------------------------------------
 
+/** Normalitza un text: minúscules, sense apòstrofs, guions ni espais */
+function normalize(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/['\-\s]/g, '')  // treu apòstrofs, guions i espais
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, ''); // treu accents
+}
+
+/** Troba la categoria d'una activitat buscant el programa que millor hi coincideix */
+function findCategory(
+  activity: string,
+  programEntries: Array<{ normalizedName: string; category: string }>
+): string | null {
+  const normalizedActivity = normalize(activity);
+  for (const entry of programEntries) {
+    // Coincideix si el nom del programa està contingut dins l'activitat
+    // Ex: "bodypump" dins "bodypumpoutdoor" → true
+    if (normalizedActivity.includes(entry.normalizedName)) {
+      return entry.category;
+    }
+  }
+  return null;
+}
+
 function getWeekKey(date: Date): string {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -149,7 +174,7 @@ function hasConsistentMonths(sessions: Session[]): boolean {
   const monthCount: Record<string, number> = {};
   for (const s of sessions) {
     const d = new Date(s.date);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '00')}`;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     monthCount[key] = (monthCount[key] || 0) + 1;
   }
   const keys = Object.keys(monthCount).sort();
@@ -197,37 +222,6 @@ function hasNewYearClass(sessions: Session[], year: number): boolean {
   });
 }
 
-function calcUniqueCategories(
-  sessions: Session[],
-  programsMap: Record<string, string>
-): Set<string> {
-  const categories = new Set<string>();
-  for (const s of sessions) {
-    // Intentem trobar la categoria tant amb el nom exacte com normalitzat
-    const cat = programsMap[s.activity] || programsMap[s.activity?.trim()];
-    if (cat) categories.add(cat.trim().toLowerCase());
-  }
-  return categories;
-}
-
-function hasAllCategoriesInOneWeek(
-  sessions: Session[],
-  programsMap: Record<string, string>
-): boolean {
-  const byWeek: Record<string, Set<string>> = {};
-  for (const s of sessions) {
-    const cat = programsMap[s.activity] || programsMap[s.activity?.trim()];
-    if (!cat) continue;
-    const wk = getWeekKey(new Date(s.date));
-    if (!byWeek[wk]) byWeek[wk] = new Set();
-    byWeek[wk].add(cat.trim().toLowerCase());
-  }
-  const mainCategories = ['força', 'cardio', 'flexibilitat'];
-  return Object.values(byWeek).some(cats =>
-    mainCategories.every(c => cats.has(c))
-  );
-}
-
 // ------------------------------------------------------------
 // FUNCIÓ PRINCIPAL
 // ------------------------------------------------------------
@@ -245,21 +239,23 @@ export function calculateBadges(
   const daysSinceFirst = calcDaysSinceFirstSession(userData.firstSession);
   const maxWeekStreak = calcMaxWeekStreak(sessions);
 
-  // Mapa activity -> category, normalitzant els valors
-  const programsMap: Record<string, string> = {};
-  for (const p of programs) {
-    if (p.name && p.category) {
-      // Guardem tant amb el nom original com normalitzat per robustesa
-      const normalizedCategory = p.category.trim().toLowerCase();
-      programsMap[p.name] = normalizedCategory;
-      programsMap[p.name.trim()] = normalizedCategory;
-    }
-  }
+  // Construïm la llista de programes amb noms normalitzats per fer cerques flexibles
+  const programEntries = programs
+    .filter(p => p.name && p.category)
+    .map(p => ({
+      normalizedName: normalize(p.name),
+      category: p.category!.trim().toLowerCase(),
+    }));
 
-  const uniqueCategoriesSet = calcUniqueCategories(sessions, programsMap);
+  // Calculem categories úniques de l'usuari amb la cerca flexible
+  const uniqueCategoriesSet = new Set<string>();
+  for (const s of sessions) {
+    const cat = findCategory(s.activity, programEntries);
+    if (cat) uniqueCategoriesSet.add(cat);
+  }
   const uniqueCategories = uniqueCategoriesSet.size;
 
-  // Calculem les categories disponibles al gym normalitzades
+  // Categories disponibles al gym
   const availableCategories = new Set(
     programs
       .map(p => p.category?.trim().toLowerCase())
@@ -267,11 +263,25 @@ export function calculateBadges(
   );
   const realTotalCategories = availableCategories.size || totalAvailableCategories;
 
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth(); // 0 = gener
-  const currentDay = new Date().getDate();
+  // Atleta Completa: les 3 categories en una mateixa setmana
+  const hasAllCategoriesInOneWeek = (): boolean => {
+    const byWeek: Record<string, Set<string>> = {};
+    for (const s of sessions) {
+      const cat = findCategory(s.activity, programEntries);
+      if (!cat) continue;
+      const wk = getWeekKey(new Date(s.date));
+      if (!byWeek[wk]) byWeek[wk] = new Set();
+      byWeek[wk].add(cat);
+    }
+    const mainCategories = ['força', 'cardio', 'flexibilitat'];
+    return Object.values(byWeek).some(cats =>
+      mainCategories.every(c => cats.has(c))
+    );
+  };
 
-  // Anys nous: precalculem quins s'han aconseguit
+  const currentYear = new Date().getFullYear();
+
+  // Precalculem anys nous
   const newYearBadgeEarned: Record<number, boolean> = {};
   for (let year = 2020; year <= currentYear; year++) {
     newYearBadgeEarned[year] = hasNewYearClass(sessions, year);
@@ -279,14 +289,12 @@ export function calculateBadges(
 
   const allBadges = getAllBadgesWithDynamic();
 
-  // FILTRE D'ANYS NOUS:
-  // - Any actual: sempre es mostra (si estem dins del període, és assolible)
-  // - Anys passats: NOMÉS es mostren si s'han aconseguit
+  // Filtrem anys nous: passats només si guanyats, actual sempre visible
   const filteredBadges = allBadges.filter(badge => {
     if (!badge.id.startsWith('esp_any_nou_')) return true;
     const year = parseInt(badge.id.replace('esp_any_nou_', ''), 10);
-    if (year === currentYear) return true; // L'any actual sempre visible
-    return newYearBadgeEarned[year] === true; // Anys passats: només si guanyat
+    if (year === currentYear) return true;
+    return newYearBadgeEarned[year] === true;
   });
 
   return filteredBadges.map((badge): BadgeWithStatus => {
@@ -439,7 +447,7 @@ export function calculateBadges(
         break;
       case badge.id === 'prog_cat_all':
         unavailable = realTotalCategories < 3;
-        earned = !unavailable && hasAllCategoriesInOneWeek(sessions, programsMap);
+        earned = !unavailable && hasAllCategoriesInOneWeek();
         progress = earned ? 100 : 0;
         progressLabel = unavailable
           ? 'No disponible al teu gym'
