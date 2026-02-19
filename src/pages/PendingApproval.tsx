@@ -6,12 +6,10 @@ const PendingApproval = () => {
   const { userStatus, logout, userProfile } = useAuth();
   const navigate = useNavigate();
 
-  // Si l'usuari ja està aprovat, el portem a l'inici
   useEffect(() => {
     if (userStatus === 'approved') {
-      navigate('/');
+      navigate('/', { replace: true });
     }
-    // Si l'usuari és rebutjat, es queda aquí però amb missatge diferent
   }, [userStatus, navigate]);
 
   const handleLogout = async () => {
