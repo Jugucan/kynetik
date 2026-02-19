@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { calculateUserRanking, calculateAdvancedStats, calculateYearlyTrend } from '@/utils/advancedStats';
+import { getBenvingut } from "@/utils/genderHelpers";
 import { useMotivationalPhrase } from '@/hooks/useMotivationalPhrase';
 
 const UserIndex = () => {
@@ -87,7 +88,7 @@ const UserIndex = () => {
   if (loading) {
     return (
       <div className="space-y-6 px-4 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold">Benvinguda!</h1>
+        <h1 className="text-3xl font-bold">{getBenvingut(userProfile?.gender)}!</h1>
         <div className="text-center py-8 text-muted-foreground">Carregant...</div>
       </div>
     );
@@ -96,7 +97,7 @@ const UserIndex = () => {
   if (!currentUserData) {
     return (
       <div className="space-y-6 px-4 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold">Benvinguda, {userProfile?.displayName}!</h1>
+        <h1 className="text-3xl font-bold">{getBenvingut(userProfile?.gender)}, {userProfile?.displayName}!</h1>
         <div className="p-8 rounded-xl shadow-neo bg-background text-center">
           <p className="text-muted-foreground">Encara no tens sessions registrades.</p>
           <p className="text-sm text-muted-foreground mt-2">Quan assisteixis a la teva primera classe, les teves estadístiques apareixeran aquí!</p>
@@ -116,7 +117,7 @@ const UserIndex = () => {
           className="w-12 h-12 rounded-full shadow-neo object-cover"
         />
         <div>
-          <h1 className="text-2xl font-bold">Benvinguda, {userProfile?.displayName}! 👋</h1>
+          <h1 className="text-2xl font-bold">{getBenvingut(userProfile?.gender)}, {userProfile?.displayName}! 👋</h1>
           <div className="flex flex-wrap items-center gap-2 mt-1">
             <Badge variant="outline" className={currentUserData.center === "Arbúcies" ? "bg-blue-100" : "bg-green-100"}>
               <MapPin className="w-3 h-3 mr-1" />
