@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { UserProfile, UserStatus } from '@/types/user';
 
@@ -50,41 +50,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setCurrentUser(user);
 
       if (user) {
-        // Carreguem el perfil de l'usuari des de Firestore
+        // Escoltem el perfil en temps real amb onSnapshot
         const profileRef = doc(db, 'userProfiles', user.uid);
-        const profileSnap = await getDoc(profileRef);
+        const unsubscribeProfile = onSnapshot(profileRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            const status: UserStatus = data.status || 'approved';
+            setUserStatus(status);
+            setUserProfile({
+              uid: user.uid,
+              email: user.email || '',
+              role: data.role || 'user',
+              displayName: data.displayName || '',
+              firstName: data.firstName,
+              lastName: data.lastName,
+              phone: data.phone,
+              birthDate: data.birthDate,
+              gender: data.gender || null,
+              center: data.center,
+              monitorId: data.monitorId,
+              status: status,
+              createdAt: data.createdAt?.toDate() || new Date(),
+              updatedAt: data.updatedAt?.toDate() || new Date(),
+            });
+          } else {
+            setUserStatus('pending');
+          }
+          setLoading(false);
+        });
 
-        if (profileSnap.exists()) {
-          const data = profileSnap.data();
-          // Si no té camp status, considerem que és aprovat (usuaris antics)
-          const status: UserStatus = data.status || 'approved';
-          setUserStatus(status);
-          setUserProfile({
-            uid: user.uid,
-            email: user.email || '',
-            role: data.role || 'user',
-            displayName: data.displayName || '',
-            firstName: data.firstName,
-            lastName: data.lastName,
-            phone: data.phone,
-            birthDate: data.birthDate,
-            gender: data.gender || null,
-            center: data.center,
-            monitorId: data.monitorId,
-            status: status,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            updatedAt: data.updatedAt?.toDate() || new Date(),
-          });
-        } else {
-          // Perfil nou sense document → el creem com a pendent
-          setUserStatus('pending');
-        }
+        // Guardem la funció per cancel·lar l'escolta quan calgui
+        return unsubscribeProfile;
       } else {
         setUserProfile(null);
         setUserStatus(null);
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
     return unsubscribe;
