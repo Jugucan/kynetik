@@ -117,12 +117,20 @@ export const AppSidebar = () => {
     }
   };
 
-  const handleViewModeChange = (newMode: 'instructor' | 'user') => {
+  const handleViewModeChange = (newMode: 'instructor' | 'user' | 'superadmin') => {
     setViewMode(newMode);
-    toast.success(`Vista canviada a ${newMode === 'instructor' ? 'Instructora' : 'Usuària'}`);
-    navigate('/');
+    const modeNames = {
+      instructor: 'Instructora',
+      user: 'Usuària',
+      superadmin: 'Superadmin'
+    };
+    toast.success(`Vista canviada a ${modeNames[newMode]}`);
+    if (newMode === 'superadmin') {
+      navigate('/superadmin');
+    } else {
+      navigate('/');
+    }
   };
-
   return (
     <>
       <Sidebar collapsible="icon">
