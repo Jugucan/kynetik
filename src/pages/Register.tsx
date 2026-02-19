@@ -13,6 +13,7 @@ const Register = () => {
     email: '',
     phone: '',
     birthDate: '',
+    gender: '',
     password: '',
     confirmPassword: '',
   });
@@ -54,6 +55,7 @@ const Register = () => {
         lastName: formData.lastName,
         phone: formData.phone,
         birthDate: formData.birthDate,
+        gender: formData.gender || null,
       });
       // Un cop registrat, el portem a la pàgina d'espera
       navigate('/pending');
@@ -167,6 +169,25 @@ const Register = () => {
                 className="w-full px-3 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:outline-none focus:border-primary transition-colors"
                 disabled={loading}
               />
+            </div>
+
+            {/* Gènere */}
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1">
+                Gènere
+              </label>
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                className="w-full px-3 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:outline-none focus:border-primary transition-colors"
+                disabled={loading}
+              >
+                <option value="">Prefereixo no dir-ho</option>
+                <option value="Femení">Femení</option>
+                <option value="Masculí">Masculí</option>
+                <option value="No binari">No binari</option>
+              </select>
             </div>
 
             {/* Contrasenya */}
