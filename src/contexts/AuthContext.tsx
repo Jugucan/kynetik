@@ -11,6 +11,7 @@ interface RegisterData {
   lastName: string;
   phone: string;
   birthDate: string;
+  gender?: string | null;
 }
 
 interface AuthContextType {
@@ -151,12 +152,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       lastName: data.lastName,
       phone: data.phone,
       birthDate: data.birthDate,
-      gender: null,
+      gender: data.gender || null,
       status: 'pending',
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-  };
 
   const logout = async () => {
     // Cancel·lem l'escolta del perfil ABANS de fer signOut
