@@ -33,6 +33,7 @@ export interface Program {
   subprograms: { [key: string]: Subprogram };
   isActive?: boolean; 
   activeSince?: string; 
+  category?: string; // ← AFEGIR AQUESTA LÍNIA
 }
 
 // Plantilles de tracks per defecte segons el programa
@@ -207,6 +208,7 @@ export const usePrograms = () => {
           subprograms: sortedSubprogramsMap, 
           isActive: data.isActive || false,
           activeSince: data.activeSince || null,
+          category: data.category || '', // ← AFEGIR AQUESTA LÍNIA
         };
       });
       
