@@ -4,7 +4,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { UserProfile, UserStatus } from '@/types/user';
 
-type ViewMode = 'instructor' | 'user';
+type ViewMode = 'instructor' | 'user' | 'superadmin';
 
 interface RegisterData {
   firstName: string;
@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem('viewMode');
-    return (saved === 'user' || saved === 'instructor') ? saved : 'instructor';
+    return (saved === 'user' || saved === 'instructor' || saved === 'superadmin') ? saved : 'instructor';
   });
 
   useEffect(() => {
