@@ -35,6 +35,13 @@ const getDayOfYear = (): number => {
 
 const selectPhrase = (stats: UserStatsForPhrase): Phrase => {
   const dayIndex = getDayOfYear();
+  
+  // Crear un hash únic per usuari basat en el seu nom
+  const userHash = stats.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  
+  // Combinar dia + usuari per generar un índex únic
+  const uniqueIndex = dayIndex + userHash;
+  
   let pool: Phrase[] = [];
 
   // Seleccionar pool segons situació
@@ -67,7 +74,7 @@ const selectPhrase = (stats: UserStatsForPhrase): Phrase => {
     pool = [...pool, ...FRASES_UNIVERSALS];
   }
 
-  const selectedPhrase = pool[dayIndex % pool.length];
+  const selectedPhrase = pool[uniqueIndex % pool.length];
   return personalizePhrase(selectedPhrase, stats);
 };
 
