@@ -1,23 +1,23 @@
 // src/hooks/useSchedules.ts
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export type CenterType = 'Arbucies' | 'SantHilari';
 
 export interface ScheduleSession {
   time: string;
-  program: string; // BP, BC, SB, BB, ES
+  program: string;
   center: CenterType;
 }
 
 export interface Schedule {
   id: string;
-  startDate: string; // Format YYYY-MM-DD
-  endDate: string | null; // null = actiu
+  startDate: string;
+  endDate: string | null;
   isActive: boolean;
-  sessions: Record<number, ScheduleSession[]>; // 1=Dilluns, 2=Dimarts, etc.
-  name?: string; // Nom opcional per identificar l'horari
+  sessions: Record<number, ScheduleSession[]>;
+  name?: string;
 }
 
 export interface SchedulesData {
@@ -41,9 +41,9 @@ export const useSchedules = (): SchedulesData & {
   const [data, setData] = useState<SchedulesData>(defaultSchedulesData);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      SCHEDULES_DOC_REF,
-      (docSnap) => {
+    const fetchSchedules = async () => {
+      try {
+        const docSnap = await getDoc(SCHEDULES_DOC_REF);
         if (docSnap.exists()) {
           const firebaseData = docSnap.data();
           setData({
@@ -56,19 +56,20 @@ export const useSchedules = (): SchedulesData & {
             loading: false,
           });
         }
-      },
-      (error) => {
+      } catch (error) {
         console.error('Error loading schedules from Firebase:', error);
         setData((prev) => ({ ...prev, loading: false }));
       }
-    );
+    };
 
-    return () => unsubscribe();
+    fetchSchedules();
   }, []);
 
   const saveSchedules = async (schedules: Schedule[]) => {
     try {
       await setDoc(SCHEDULES_DOC_REF, { schedules });
+      // Actualitzem l'estat local també perquè la UI es refresqui
+      setData(prev => ({ ...prev, schedules }));
       console.log('✅ Horaris guardats a Firebase');
     } catch (error) {
       console.error('❌ Error al guardar horaris:', error);
@@ -97,7 +98,7 @@ export const useSchedules = (): SchedulesData & {
 
   const deactivateSchedule = (scheduleId: string) => {
     const today = new Date();
-    today.setDate(today.getDate() - 1); // Finalitza ahir
+    today.setDate(today.getDate() - 1);
     const dateStr = today.toISOString().split('T')[0];
 
     const updatedSchedules = data.schedules.map((s) =>
