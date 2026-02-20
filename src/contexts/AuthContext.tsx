@@ -43,6 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
   const [firestoreUserId, setFirestoreUserId] = useState<string | null>(null);
+  const [firestoreUserIdResolved, setFirestoreUserIdResolved] = useState(false);
 
   const profileUnsubscribeRef = useRef<(() => void) | null>(null);
 
@@ -51,14 +52,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return (saved === 'user' || saved === 'instructor' || saved === 'superadmin') ? saved : 'instructor';
   });
 
-  // Cerca i vincula el document de 'users' amb el perfil autenticat
-  const linkFirestoreUserId = async (email: string, uid: string, existingId: string | null) => {
-    // Si ja el tenim guardat al perfil, no cal fer res
-    if (existingId) {
-      setFirestoreUserId(existingId);
-      return;
-    }
-
+  // Cerca i vincula el document de 'users' amb el perfil autenticat (primera vegada)
+  const linkFirestoreUserId = async (email: string, uid: string) => {
     try {
       const q = query(collection(db, 'users'), where('email', '==', email));
       const snapshot = await getDocs(q);
@@ -68,6 +63,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setFirestoreUserId(foundId);
 
         // Guardem l'ID al userProfile perquè les properes vegades no calgui la query
+        // Nota: això dispararà un nou onSnapshot, però com que data.firestoreUserId
+        // ja existirà, entrarà per la branca ràpida i no tornarà a fer la query
         await updateDoc(doc(db, 'userProfiles', uid), {
           firestoreUserId: foundId
         });
@@ -78,6 +75,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.warn('No s\'ha pogut vincular firestoreUserId:', error);
       setFirestoreUserId(null);
+    } finally {
+      setFirestoreUserIdResolved(true);
     }
   };
 
@@ -90,6 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setCurrentUser(user);
       setFirestoreUserId(null);
+      setFirestoreUserIdResolved(false);
 
       if (user) {
         const profileRef = doc(db, 'userProfiles', user.uid);
@@ -119,13 +119,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               };
               setUserProfile(profile);
 
-              // Vincular firestoreUserId només per usuaris normals (role='user')
-              // Els instructors/admins no necessiten accedir al seu document de 'users'
-              if (data.role === 'user' && user.email) {
-                linkFirestoreUserId(user.email, user.uid, data.firestoreUserId || null);
+              // Vincular firestoreUserId per a TOTS els rols.
+              // Qualsevol persona pot tenir un document a 'users' (historial de sessions)
+              // i pot necessitar la vista d'usuari (superadmin, instructor, user).
+              if (user.email) {
+                // Si ja tenim l'ID guardat al perfil, l'usem directament (0 queries)
+                if (data.firestoreUserId) {
+                  setFirestoreUserId(data.firestoreUserId);
+                  setFirestoreUserIdResolved(true);
+                } else {
+                  // Primera vegada: busquem per email i guardem l'ID per sempre
+                  linkFirestoreUserId(user.email, user.uid);
+                }
+              } else {
+                // Cas improbable: usuari sense email
+                setFirestoreUserIdResolved(true);
               }
             } else {
               setUserStatus('pending');
+              setFirestoreUserIdResolved(true);
             }
             setLoading(false);
           },
@@ -140,6 +152,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUserProfile(null);
         setUserStatus(null);
         setFirestoreUserId(null);
+        setFirestoreUserIdResolved(true); // sense usuari, no cal esperar res
         setLoading(false);
       }
     });
@@ -205,6 +218,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUserProfile(null);
     setUserStatus(null);
     setFirestoreUserId(null);
+    setFirestoreUserIdResolved(false);
     await signOut(auth);
   };
 
@@ -223,7 +237,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {(!loading && firestoreUserIdResolved) && children}
     </AuthContext.Provider>
   );
 };
