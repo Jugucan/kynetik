@@ -220,18 +220,16 @@ const Users = () => {
           </label>
           <input id="excel-upload" type="file" accept=".xlsx,.xls" onChange={handleImportExcel} className="hidden" />
 
-          {userProfile?.role === 'superadmin' && (
-            <Button
-              onClick={handleRecalculateRankings}
-              disabled={isImporting || isRecalculating}
-              variant="outline"
-              className="shadow-neo hover:shadow-neo-sm gap-2 flex-1 sm:flex-none border-purple-400 text-purple-700 hover:bg-purple-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRecalculating ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{isRecalculating ? "Recalculant..." : "Recalcular Rankings"}</span>
-              <span className="sm:hidden">Rankings</span>
-            </Button>
-          )}
+          <Button
+            onClick={handleRecalculateRankings}
+            disabled={isImporting || isRecalculating}
+            variant="outline"
+            className="shadow-neo hover:shadow-neo-sm gap-2 flex-1 sm:flex-none border-purple-400 text-purple-700 hover:bg-purple-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRecalculating ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{isRecalculating ? "Recalculant..." : "Recalcular Rankings"}</span>
+            <span className="sm:hidden">Rankings</span>
+          </Button>
 
           <Button onClick={handleAddNew} className="shadow-neo hover:shadow-neo-sm gap-2 flex-1 sm:flex-none" disabled={isImporting || isRecalculating}>
             <Plus className="w-4 h-4" />
