@@ -3,7 +3,7 @@
 // ============================================================
 
 import { useMemo } from 'react';
-import { useUsers } from '@/hooks/useUsers';
+import { useUsersWithSessions as useUsers } from '@/hooks/useUsers';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { usePrograms } from '@/hooks/usePrograms';
 import { calculateBadges } from '@/utils/badgeCalculations';
