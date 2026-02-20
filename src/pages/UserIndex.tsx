@@ -1,18 +1,18 @@
 import { Mail, Phone, Cake, MapPin, Award, Zap, Calendar, TrendingUp } from "lucide-react";
-import { useUsersWithSessions as useUsers } from "@/hooks/useUsers";
+import { useCurrentUserWithSessions } from "@/hooks/useUsers";
+import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { calculateUserRanking, calculateAdvancedStats, calculateYearlyTrend } from '@/utils/advancedStats';
+import { calculateAdvancedStats, calculateYearlyTrend } from '@/utils/advancedStats';
 import { getBenvingut } from "@/utils/genderHelpers";
 import { useMotivationalPhrase } from '@/hooks/useMotivationalPhrase';
 
 const UserIndex = () => {
+  const { firestoreUserId } = useAuth();
   const { userProfile } = useUserProfile();
-  const { users, loading } = useUsers();
-
-  const currentUserData = users.find(u => u.email === userProfile?.email);
+  const { user: currentUserData, loading } = useCurrentUserWithSessions(firestoreUserId);
 
   // Calcular estadístiques bàsiques
   const basicStats = useMemo(() => {
@@ -26,14 +26,14 @@ const UserIndex = () => {
     }
 
     const sessions = currentUserData.sessions || [];
-    
+
     // Programes únics totals
     const allPrograms = new Set(sessions.map(s => s.activity));
-    
+
     // Programes actius (últims 30 dies)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     const recentSessions = sessions.filter(s => {
       const sessionDate = new Date(s.date);
       return sessionDate >= thirtyDaysAgo;
@@ -49,7 +49,9 @@ const UserIndex = () => {
       .slice(0, 5)
       .map(([name]) => name);
 
-    const generalRanking = calculateUserRanking(users, currentUserData, 'totalSessions');
+    // Llegim el ranking del cache (calculat durant la importació, sense cost de lectures)
+    const generalRanking = currentUserData.rankingCache?.totalSessions
+      || { rank: 0, total: 0, percentile: 0 };
 
     return {
       totalSessions: sessions.length,
@@ -57,9 +59,9 @@ const UserIndex = () => {
       activePrograms,
       generalRanking
     };
-  }, [currentUserData, users]);
+  }, [currentUserData]);
 
-// Preparar dades per la frase motivacional
+  // Preparar dades per la frase motivacional
   const phraseStats = useMemo(() => {
     if (!currentUserData || !currentUserData.sessions) return null;
 
@@ -84,7 +86,7 @@ const UserIndex = () => {
   }, [currentUserData, userProfile, basicStats.activePrograms]);
 
   const { title, phrase, emoji, isLoading: phraseLoading } = useMotivationalPhrase(phraseStats);
-  
+
   if (loading) {
     return (
       <div className="space-y-6 px-4 max-w-7xl mx-auto">
@@ -108,11 +110,11 @@ const UserIndex = () => {
 
   return (
     <div className="space-y-4 px-4 max-w-7xl mx-auto pb-8">
-      
-     {/* Header amb foto */}
+
+      {/* Header amb foto */}
       <div className="flex items-center gap-3">
-        <img 
-          src={currentUserData.profileImageUrl || currentUserData.avatar} 
+        <img
+          src={currentUserData.profileImageUrl || currentUserData.avatar}
           alt={currentUserData.name}
           className="w-12 h-12 rounded-full shadow-neo object-cover"
         />
@@ -221,9 +223,13 @@ const UserIndex = () => {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-xs text-indigo-600 mb-1 font-medium">Ranking General d'Assistència</div>
-              <div className="text-3xl font-bold text-indigo-700">
-                #{basicStats.generalRanking.rank}
-              </div>
+              {basicStats.generalRanking.rank > 0 ? (
+                <div className="text-3xl font-bold text-indigo-700">
+                  #{basicStats.generalRanking.rank}
+                </div>
+              ) : (
+                <div className="text-sm text-indigo-500">Pendent de càlcul</div>
+              )}
             </div>
             {basicStats.generalRanking.total > 0 && (
               <div className="text-right">
@@ -251,8 +257,8 @@ const UserIndex = () => {
         {basicStats.activePrograms.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {basicStats.activePrograms.map((program, idx) => (
-              <span 
-                key={idx} 
+              <span
+                key={idx}
                 className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary font-semibold shadow-neo hover:shadow-neo-sm transition-all cursor-default text-sm"
               >
                 {program}
@@ -267,7 +273,7 @@ const UserIndex = () => {
           </div>
         )}
       </div>
-     
+
     </div>
   );
 };
