@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { BarChart3 } from "lucide-react";
-import { useUsers } from "@/hooks/useUsers";
+import { useUsersWithSessions as useUsers } from "@/hooks/useUsers";
 import { useSettings } from "@/hooks/useSettings";
 import { useSchedules } from "@/hooks/useSchedules";
 import { useCenters } from "@/hooks/useCenters";
