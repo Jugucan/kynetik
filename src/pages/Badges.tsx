@@ -1,9 +1,6 @@
-// ============================================================
-// PÀGINA PRINCIPAL D'INSÍGNIES (vista usuari)
-// ============================================================
-
 import { useMemo } from 'react';
-import { useUsersWithSessions as useUsers } from '@/hooks/useUsers';
+import { useCurrentUserWithSessions } from '@/hooks/useUsers';
+import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { usePrograms } from '@/hooks/usePrograms';
 import { calculateBadges } from '@/utils/badgeCalculations';
@@ -11,18 +8,15 @@ import BadgeGrid from '@/components/badges/BadgeGrid';
 import { Trophy } from 'lucide-react';
 
 const Badges = () => {
+  const { firestoreUserId } = useAuth();
   const { userProfile } = useUserProfile();
-  const { users, loading: loadingUsers } = useUsers();
+  const { user: currentUserData, loading: loadingUser } = useCurrentUserWithSessions(firestoreUserId);
   const { programs, loading: loadingPrograms } = usePrograms();
 
-  const currentUserData = users.find(u => u.email === userProfile?.email);
-
-  // programs és un objecte { [key: string]: Program }, el convertim a array
   const programsArray = useMemo(() => {
     return Object.values(programs);
   }, [programs]);
 
-  // Calculem quantes categories úniques hi ha disponibles al gym
   const totalAvailableCategories = useMemo(() => {
     const cats = new Set(
       programsArray
@@ -32,7 +26,6 @@ const Badges = () => {
     return cats.size;
   }, [programsArray]);
 
-  // Preparem els programes en el format que necessita el càlcul
   const programsForBadges = useMemo(() => {
     return programsArray.map((p: any) => ({
       name: p.name,
@@ -52,7 +45,7 @@ const Badges = () => {
     );
   }, [currentUserData, programsForBadges, totalAvailableCategories]);
 
-  const loading = loadingUsers || loadingPrograms;
+  const loading = loadingUser || loadingPrograms;
 
   if (loading) {
     return (
