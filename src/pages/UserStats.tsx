@@ -1,5 +1,5 @@
 import { Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, ChevronDown, ChevronUp, MapPin } from "lucide-react";
-import { useUsers } from "@/hooks/useUsers";
+import { useUsersWithSessions as useUsers } from "@/hooks/useUsers";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
