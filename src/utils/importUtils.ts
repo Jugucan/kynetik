@@ -333,3 +333,45 @@ export const importDeporsiteOptimized = async (
 
   return { newCount, updatedCount, skippedCount };
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FUNCIÓ INDEPENDENT: Recalcula rankings llegint directament de Firebase
+// Útil per recalcular sense fer importació
+// ─────────────────────────────────────────────────────────────────────────────
+export const recalculateAllRankingsFromFirebase = async (
+  onProgress?: (msg: string) => void
+): Promise<number> => {
+  onProgress?.('Llegint tots els usuaris de Firebase...');
+  console.log('[Rankings] Llegint tots els usuaris de Firebase...');
+
+  const snapshot = await getDocs(collection(db, 'users'));
+  console.log('[Rankings] Usuaris trobats a Firebase:', snapshot.docs.length);
+
+  if (snapshot.docs.length === 0) {
+    console.warn('[Rankings] Cap usuari trobat!');
+    return 0;
+  }
+
+  const users: UserForRanking[] = snapshot.docs.map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      email: data.email || '',
+      sessions: Array.isArray(data.sessions) ? data.sessions : [],
+      center: data.center || '',
+    };
+  });
+
+  console.log('[Rankings] Primer usuari exemple:', {
+    id: users[0].id,
+    email: users[0].email,
+    sessions: users[0].sessions.length,
+    center: users[0].center,
+  });
+
+  onProgress?.(`Calculant rankings per ${users.length} usuaris...`);
+  await recalculateAndSaveRankings(users);
+
+  onProgress?.(`✅ Rankings actualitzats per ${users.length} usuaris`);
+  return users.length;
+};
