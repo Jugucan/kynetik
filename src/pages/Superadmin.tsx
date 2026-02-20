@@ -12,11 +12,9 @@ const Superadmin = () => {
 
   const handleRecalculateRankings = async () => {
     setIsRecalculating(true);
-    console.log('[Rankings] Botó recalcular premut des de Superadmin');
     try {
       const count = await recalculateAllRankingsFromFirebase(
         (msg) => {
-          console.log('[Rankings progress]', msg);
           toast.info(msg);
         }
       );
