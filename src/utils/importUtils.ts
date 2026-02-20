@@ -299,35 +299,12 @@ export const importDeporsiteOptimized = async (
   });
 
   // ── FASE 4: Calcular i guardar rankings ───────────────────────────────────
-  onProgress?.('Calculant rankings...');
-
-  const usersForRanking: UserForRanking[] = Array.from(finalUsersData.entries()).map(([id, data]) => ({
-    id,
-    email: data.email || '',
-    sessions: data.sessions || [],
-    center: data.center || '',
-  }));
-
-  // Afegir també els usuaris existents que NO s'han actualitzat en aquesta importació
-  snapshot.docs.forEach(d => {
-    if (!finalUsersData.has(d.id)) {
-      const data = d.data();
-      usersForRanking.push({
-        id: d.id,
-        email: data.email || '',
-        sessions: data.sessions || [],
-        center: data.center || '',
-      });
-    }
-  });
-
-  console.log('[Importació] Fase 4: usersForRanking té', usersForRanking.length, 'usuaris');
+  // Llegim de nou tots els usuaris de Firebase (ja amb les sessions actualitzades)
+  // per garantir que els rankings es calculen sobre les dades definitives
   try {
-    await recalculateAndSaveRankings(usersForRanking);
-    onProgress?.(`Rankings calculats per ${usersForRanking.length} usuaris`);
+    await recalculateAllRankingsFromFirebase(onProgress);
   } catch (rankingError) {
     console.error('Error calculant rankings:', rankingError);
-    // No llencem l'error: la importació ha estat correcta, els rankings fallaran silenciosament
     onProgress?.('Advertència: els rankings no s\'han pogut calcular');
   }
 
