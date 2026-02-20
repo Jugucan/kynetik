@@ -1,11 +1,10 @@
-import { importDeporsiteOptimized, recalculateAllRankingsFromFirebase } from '@/utils/importUtils';
+import { importDeporsiteOptimized } from '@/utils/importUtils';
 import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { Users as UsersIcon, Search, Plus, Pencil, Trash2, Upload, Info, ChevronDown, ChevronUp, MapPin, Download, RefreshCw } from "lucide-react";
+import { Users as UsersIcon, Search, Plus, Pencil, Trash2, Upload, Info, ChevronDown, ChevronUp, MapPin, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUsers, User } from "@/hooks/useUsers";
-import { useAuth } from "@/contexts/AuthContext";
 import { UserFormModal } from "@/components/UserFormModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
@@ -16,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const Users = () => {
   const { users, loading, addUser, updateUser, deleteUser } = useUsers();
-  const { userProfile } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [centerFilter, setCenterFilter] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,7 +22,6 @@ const Users = () => {
   const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
-  const [isRecalculating, setIsRecalculating] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [showDeporsiteInstructions, setShowDeporsiteInstructions] = useState(false);
 
@@ -66,25 +63,6 @@ const Users = () => {
   const handleAddNew = () => {
     setEditingUser(null);
     setIsModalOpen(true);
-  };
-
-  const handleRecalculateRankings = async () => {
-    setIsRecalculating(true);
-    console.log('[Rankings] Botó recalcular premut');
-    try {
-      const count = await recalculateAllRankingsFromFirebase(
-        (msg) => {
-          console.log('[Rankings progress]', msg);
-          toast.info(msg);
-        }
-      );
-      toast.success(`✅ Rankings recalculats per ${count} usuaris!`);
-    } catch (error) {
-      console.error('[Rankings] Error recalculant:', error);
-      toast.error('Error recalculant rankings');
-    } finally {
-      setIsRecalculating(false);
-    }
   };
 
   const handleImportDeporsite = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -192,7 +170,7 @@ const Users = () => {
           <label htmlFor="deporsite-upload" className="flex-1 sm:flex-none">
             <Button
               className="shadow-neo hover:shadow-neo-sm gap-2 w-full sm:w-auto bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white"
-              disabled={isImporting || isRecalculating}
+              disabled={isImporting}
               asChild
             >
               <span className="cursor-pointer">
@@ -208,7 +186,7 @@ const Users = () => {
             <Button
               className="shadow-neo hover:shadow-neo-sm gap-2 w-full sm:w-auto"
               variant="outline"
-              disabled={isImporting || isRecalculating}
+              disabled={isImporting}
               asChild
             >
               <span className="cursor-pointer">
@@ -220,18 +198,7 @@ const Users = () => {
           </label>
           <input id="excel-upload" type="file" accept=".xlsx,.xls" onChange={handleImportExcel} className="hidden" />
 
-          <Button
-            onClick={handleRecalculateRankings}
-            disabled={isImporting || isRecalculating}
-            variant="outline"
-            className="shadow-neo hover:shadow-neo-sm gap-2 flex-1 sm:flex-none border-purple-400 text-purple-700 hover:bg-purple-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRecalculating ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">{isRecalculating ? "Recalculant..." : "Recalcular Rankings"}</span>
-            <span className="sm:hidden">Rankings</span>
-          </Button>
-
-          <Button onClick={handleAddNew} className="shadow-neo hover:shadow-neo-sm gap-2 flex-1 sm:flex-none" disabled={isImporting || isRecalculating}>
+<Button onClick={handleAddNew} className="shadow-neo hover:shadow-neo-sm gap-2 flex-1 sm:flex-none" disabled={isImporting}>
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Afegir usuari</span>
             <span className="sm:hidden">Afegir</span>
