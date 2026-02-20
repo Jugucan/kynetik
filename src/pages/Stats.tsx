@@ -28,7 +28,7 @@ const StatsNew = () => {
   const { vacations, closuresByCenter, officialHolidays, loading: settingsLoading } = useSettings();
   const { schedules, loading: schedulesLoading } = useSchedules();
   const { activeCenters, loading: centersLoading } = useCenters();
-  
+
   const [centerFilter, setCenterFilter] = useState<string>("all");
   const [inactiveSortOrder, setInactiveSortOrder] = useState<'asc' | 'desc'>('desc');
   const [viewingUser, setViewingUser] = useState<any>(null);
@@ -38,24 +38,20 @@ const StatsNew = () => {
 
   useEffect(() => {
     const customSessionsDocRef = doc(db, 'settings', 'customSessions');
-
     const unsubscribe = onSnapshot(customSessionsDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         const sessionsMap: Record<string, Session[]> = {};
-
         Object.entries(data).forEach(([dateKey, sessions]) => {
           if (Array.isArray(sessions)) {
             sessionsMap[dateKey] = sessions as Session[];
           }
         });
-
         setCustomSessions(sessionsMap);
       } else {
         setCustomSessions({});
       }
     });
-
     return () => unsubscribe();
   }, []);
 
@@ -67,7 +63,8 @@ const StatsNew = () => {
     inactiveSortOrder,
     vacations,
     closuresByCenter,
-    officialHolidays
+    officialHolidays,
+    centers: activeCenters,  // ✅ ara es passa correctament
   });
 
   // Si estem en mode usuària, mostrar el component UserStats
@@ -144,15 +141,12 @@ const StatsNew = () => {
           <TabsContent value="overview">
             <TabOverview stats={stats} />
           </TabsContent>
-
           <TabsContent value="evolution">
             <TabEvolution stats={stats} />
           </TabsContent>
-
           <TabsContent value="programs">
             <TabPrograms stats={stats} onUserClick={setViewingUser} />
           </TabsContent>
-
           <TabsContent value="users">
             <TabUsers
               stats={stats}
@@ -161,18 +155,15 @@ const StatsNew = () => {
               onUserClick={setViewingUser}
             />
           </TabsContent>
-
           <TabsContent value="centers">
             <TabCenters stats={stats} />
           </TabsContent>
-
           <TabsContent value="weekdays">
             <TabWeekdays stats={stats} />
           </TabsContent>
-
           <TabsContent value="audit">
             <TabAudit stats={stats} />
-          </TabsContent>          
+          </TabsContent>
         </Tabs>
 
         <UserDetailModal
