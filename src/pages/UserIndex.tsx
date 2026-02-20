@@ -1,5 +1,5 @@
 import { Mail, Phone, Cake, MapPin, Award, Zap, Calendar, TrendingUp } from "lucide-react";
-import { useUsers } from "@/hooks/useUsers";
+import { useUsersWithSessions as useUsers } from "@/hooks/useUsers";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
