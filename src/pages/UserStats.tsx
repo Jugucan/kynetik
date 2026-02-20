@@ -1,9 +1,10 @@
 import { Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, ChevronDown, ChevronUp, MapPin } from "lucide-react";
-import { useUsersWithSessions as useUsers } from "@/hooks/useUsers";
+import { useCurrentUserWithSessions } from "@/hooks/useUsers";
+import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { calculateAdvancedStats, calculateProgramRanking, calculateYearlyTrend, calculateUserRanking } from '@/utils/advancedStats';
+import { calculateAdvancedStats, calculateYearlyTrend } from '@/utils/advancedStats';
 import {
   Collapsible,
   CollapsibleContent,
@@ -11,12 +12,11 @@ import {
 } from "@/components/ui/collapsible";
 
 const UserStats = () => {
+  const { firestoreUserId } = useAuth();
   const { userProfile } = useUserProfile();
-  const { users, loading } = useUsers();
+  const { user: currentUserData, loading } = useCurrentUserWithSessions(firestoreUserId);
   const [isMonthlyFrequencyOpen, setIsMonthlyFrequencyOpen] = useState(false);
   const [isHistorialOpen, setIsHistorialOpen] = useState(false);
-
-  const currentUserData = users.find(u => u.email === userProfile?.email);
 
   const stats = useMemo(() => {
     if (!currentUserData || !currentUserData.sessions) {
@@ -55,7 +55,6 @@ const UserStats = () => {
             percentageChange: '0'
           }
         },
-        generalRanking: { rank: 0, total: 0, percentile: 0 },
         programRankings: {}
       };
     }
@@ -81,13 +80,11 @@ const UserStats = () => {
     const { yearlyStats, trend, bestYear, worstYear } = calculateYearlyTrend(sessions);
     const advancedStats = calculateAdvancedStats(currentUserData);
 
-    const generalRanking = users.length > 0
-      ? calculateUserRanking(users, currentUserData, 'totalSessions')
-      : { rank: 0, total: 0, percentile: 0 };
-
+    // Llegim els rankings del cache (calculat durant la importació, sense cost de lectures)
     const programRankings: { [key: string]: any } = {};
     programStats.forEach(prog => {
-      programRankings[prog.name] = calculateProgramRanking(users, currentUserData, prog.name);
+      programRankings[prog.name] = currentUserData.rankingCache?.programs?.[prog.name]
+        || { rank: 0, total: 0, percentile: 0 };
     });
 
     return {
@@ -99,10 +96,9 @@ const UserStats = () => {
       worstYear,
       totalSessions: sessions.length,
       advancedStats,
-      generalRanking,
       programRankings
     };
-  }, [currentUserData, users]);
+  }, [currentUserData]);
 
   const sessionsByDate = useMemo(() => {
     if (!currentUserData || !currentUserData.sessions) return [];
@@ -159,7 +155,7 @@ const UserStats = () => {
         </div>
       </div>
 
-      {/* ── AUTODISCIPLINA ── fons de color dinàmic */}
+      {/* ── AUTODISCIPLINA ── */}
       <div className={`rounded-2xl shadow-neo p-5 ${stats.advancedStats.autodisciplineLevel.bgColor}`}>
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -194,8 +190,6 @@ const UserStats = () => {
             <Info className="w-4 h-4" />
           </button>
         </div>
-
-        {/* Barra de progrés */}
         <div className="h-3 rounded-full bg-gray-200 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-700 ${stats.advancedStats.autodisciplineLevel.barColor}`}
@@ -207,7 +201,7 @@ const UserStats = () => {
         </p>
       </div>
 
-      {/* ── EVOLUCIÓ RECENT + REGULARITAT — columna en mòbil, fila en pc ── */}
+      {/* ── EVOLUCIÓ RECENT + REGULARITAT ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="rounded-2xl shadow-neo bg-background p-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Evolució Recent</p>
@@ -260,7 +254,6 @@ const UserStats = () => {
               {isMonthlyFrequencyOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </div>
           </CollapsibleTrigger>
-
           <CollapsibleContent className="mt-4 space-y-2.5">
             {stats.advancedStats.monthlyFrequency.length > 0 ? (
               stats.advancedStats.monthlyFrequency.map((month, idx) => (
