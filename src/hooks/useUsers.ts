@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { toast } from 'sonner';
 
@@ -60,6 +60,12 @@ export interface UserSession {
   center: string;
 }
 
+export interface RankingCache {
+  totalSessions: { rank: number; total: number; percentile: number };
+  programs: { [program: string]: { rank: number; total: number; percentile: number } };
+  updatedAt: string;
+}
+
 // Usuari SENSE sessions (lleuger)
 export interface User {
   id: string;
@@ -77,7 +83,7 @@ export interface User {
   firstSession?: string;
   lastSession?: string;
   daysSinceLastSession?: number;
-  // sessions NO inclosa aquí intencionadament
+  rankingCache?: RankingCache;
 }
 
 // Usuari AMB sessions (pesat, només per a estadístiques)
@@ -106,11 +112,11 @@ const processUserDoc = (docId: string, data: any, includeSessions: boolean): Use
     firstSession: data.firstSession || '',
     lastSession: data.lastSession || '',
     daysSinceLastSession: data.daysSinceLastSession || 0,
+    rankingCache: data.rankingCache || null,
   };
 
   if (!includeSessions) return base;
 
-  // Versió amb sessions: recalculem estadístiques a partir de les sessions reals
   const sessions: UserSession[] = Array.isArray(data.sessions) ? data.sessions : [];
   let firstSession = '';
   let lastSession = '';
@@ -207,7 +213,6 @@ export const useUsers = () => {
     try {
       const dataToSave = prepareDataForFirestore(userData);
       const docRef = await addDoc(collection(db, 'users'), dataToSave);
-      // Afegim l'usuari nou a l'estat local sense tornar a llegir tot
       const newUser = processUserDoc(docRef.id, dataToSave, false) as User;
       setUsers(prev => [...prev, newUser]);
       toast.success('Usuari afegit correctament');
@@ -222,8 +227,7 @@ export const useUsers = () => {
     try {
       const dataToSave = prepareDataForFirestore(userData);
       await updateDoc(doc(db, 'users', id), dataToSave);
-      // Actualitzem l'usuari a l'estat local
-      setUsers(prev => prev.map(u => 
+      setUsers(prev => prev.map(u =>
         u.id === id ? { ...u, ...processUserDoc(id, { ...u, ...dataToSave }, false) } : u
       ));
       toast.success('Usuari actualitzat correctament');
@@ -249,8 +253,44 @@ export const useUsers = () => {
   return { users, loading, addUser, updateUser, deleteUser };
 };
 
-// ── Hook pesat: AMB sessions ────────────────────────────────────────────────
-// Usa aquest hook a: Stats.tsx, UserIndex.tsx, UserStats.tsx, Badges.tsx
+// ── Hook usuari actual: AMB sessions (1 sola lectura!) ──────────────────────
+// Usa aquest hook a: UserIndex.tsx, UserStats.tsx, Badges.tsx
+// Rep el firestoreUserId de AuthContext
+
+export const useCurrentUserWithSessions = (firestoreUserId: string | null) => {
+  const [user, setUser] = useState<UserWithSessions | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!firestoreUserId) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchUser = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'users', firestoreUserId));
+        if (docSnap.exists()) {
+          setUser(processUserDoc(docSnap.id, docSnap.data(), true) as UserWithSessions);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Error fetching current user:', error);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, [firestoreUserId]);
+
+  return { user, loading };
+};
+
+// ── Hook pesat: AMB sessions (NOMÉS per a instructora/admin) ───────────────
+// Usa aquest hook a: Stats.tsx
 
 export const useUsersWithSessions = () => {
   const [users, setUsers] = useState<UserWithSessions[]>([]);
