@@ -1,9 +1,33 @@
-import { Shield, Users, Building2, Clock, CheckCircle } from "lucide-react";
+import { useState } from "react";
+import { Shield, Users, Building2, Clock, CheckCircle, RefreshCw, Trophy } from "lucide-react";
 import { NeoCard } from "@/components/NeoCard";
+import { Button } from "@/components/ui/button";
 import { usePendingUsers } from "@/hooks/usePendingUsers";
+import { recalculateAllRankingsFromFirebase } from "@/utils/importUtils";
+import { toast } from "sonner";
 
 const Superadmin = () => {
   const { pendingUsers, loading, approveUser, rejectUser } = usePendingUsers();
+  const [isRecalculating, setIsRecalculating] = useState(false);
+
+  const handleRecalculateRankings = async () => {
+    setIsRecalculating(true);
+    console.log('[Rankings] Botó recalcular premut des de Superadmin');
+    try {
+      const count = await recalculateAllRankingsFromFirebase(
+        (msg) => {
+          console.log('[Rankings progress]', msg);
+          toast.info(msg);
+        }
+      );
+      toast.success(`✅ Rankings recalculats per ${count} usuaris!`);
+    } catch (error) {
+      console.error('[Rankings] Error recalculant:', error);
+      toast.error('Error recalculant rankings');
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -25,7 +49,6 @@ const Superadmin = () => {
 
       {/* Targetes de resum */}
       <div className="grid md:grid-cols-3 gap-6">
-
         <NeoCard>
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-yellow-100 flex items-center justify-center shadow-neo-inset">
@@ -65,7 +88,35 @@ const Superadmin = () => {
             </div>
           </div>
         </NeoCard>
+      </div>
 
+      {/* Eines de manteniment */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Eines de manteniment</h2>
+        <NeoCard>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center shadow-neo-inset">
+                <Trophy className="w-6 h-6 text-purple-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Recalcular Rankings</p>
+                <p className="text-sm text-muted-foreground">
+                  Recalcula les posicions al rànking de tots els usuaris a partir de les seves sessions actuals
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleRecalculateRankings}
+              disabled={isRecalculating}
+              variant="outline"
+              className="shadow-neo hover:shadow-neo-sm gap-2 border-purple-400 text-purple-700 hover:bg-purple-50 whitespace-nowrap"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRecalculating ? 'animate-spin' : ''}`} />
+              {isRecalculating ? "Recalculant..." : "Recalcular"}
+            </Button>
+          </div>
+        </NeoCard>
       </div>
 
       {/* Sol·licituds d'accés */}
@@ -103,9 +154,7 @@ const Superadmin = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 mb-3 text-sm text-muted-foreground">
-                  {user.phone && (
-                    <p>📞 {user.phone}</p>
-                  )}
+                  {user.phone && <p>📞 {user.phone}</p>}
                   {user.birthDate && (
                     <p>🎂 {user.birthDate.split('-').reverse().join('/')}</p>
                   )}
