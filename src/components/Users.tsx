@@ -79,7 +79,6 @@ const Users = () => {
       const { newCount, updatedCount, skippedCount } = await importDeporsiteOptimized(
         jsonData,
         (msg) => {
-          console.log('[Importació progress]', msg);
           toast.info(msg);
         }
       );
