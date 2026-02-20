@@ -9,10 +9,40 @@ interface UseStatsCalculationsProps {
   centerFilter: string;
   inactiveSortOrder: 'asc' | 'desc';
   vacations: any;
-  closuresByCenter: Record<string, Record<string, string>>;  // ✅ Afegir
+  closuresByCenter: Record<string, Record<string, string>>;
   officialHolidays: any;
-  centers: Center[];  // ✅ AFEGIR AQUESTA LÍNIA
+  centers: Center[];
 }
+
+// ── Funcions de normalització fora del hook (no es recreen mai) ──────────────
+
+const PROGRAM_MAP: { [key: string]: string } = {
+  'BODYPUMP': 'BP', 'BP': 'BP',
+  'BODYBALANCE': 'BB', 'BB': 'BB',
+  'BODYCOMBAT': 'BC', 'BC': 'BC',
+  'SHBAM': 'SB', 'DANCE': 'SB', 'SB': 'SB',
+  'ESTIRAMIENTOS': 'ES', 'STRETCH': 'ES', 'ESTIRAMENTS': 'ES', 'ES': 'ES',
+  'RPM': 'RPM',
+  'BODYSTEP': 'BS', 'BS': 'BS',
+  'CXWORX': 'CX', 'CX': 'CX',
+  'SPRINT': 'SPRINT',
+  'GRIT': 'GRIT',
+  'BARRE': 'BARRE',
+  'TONE': 'TONE',
+  'CORE': 'CORE',
+  'CROSSTRAINING': 'CROSS', 'CROSS': 'CROSS',
+};
+
+const normalizeProgram = (program: string): string => {
+  if (!program) return '';
+  const normalized = program.toUpperCase()
+    .replace(/\s+/g, '')
+    .replace(/OUTDOOR/g, '')
+    .replace(/'/g, '');
+  return PROGRAM_MAP[normalized] || normalized;
+};
+
+// ────────────────────────────────────────────────────────────────────────────
 
 export const useStatsCalculations = ({
   users,
@@ -21,18 +51,16 @@ export const useStatsCalculations = ({
   centerFilter,
   inactiveSortOrder,
   vacations,
-  closuresByCenter,          // ✅ Afegir
+  closuresByCenter,
   officialHolidays,
-  centers  // ✅ AFEGIR AQUESTA LÍNIA
+  centers,
 }: UseStatsCalculationsProps) => {
 
   const getScheduleForDate = useCallback((date: Date) => {
     const dateStr = dateToKey(date);
-
-    const sortedSchedules = [...schedules].sort((a, b) => {
-      return b.startDate.localeCompare(a.startDate);
-    });
-
+    const sortedSchedules = [...schedules].sort((a, b) =>
+      b.startDate.localeCompare(a.startDate)
+    );
     return sortedSchedules.find(schedule => {
       const startDate = schedule.startDate;
       const endDate = schedule.endDate || '9999-12-31';
@@ -52,8 +80,7 @@ export const useStatsCalculations = ({
 
   const isClosure = useCallback((date: Date) => {
     const dateKey = dateToKey(date);
-    // Comprovar si la data està tancada a QUALSEVOL centre
-    return Object.values(closuresByCenter).some(closures => 
+    return Object.values(closuresByCenter).some(closures =>
       closures && closures.hasOwnProperty(dateKey)
     );
   }, [closuresByCenter]);
@@ -70,12 +97,10 @@ export const useStatsCalculations = ({
     }
 
     const scheduleForDate = getScheduleForDate(date);
-
     if (scheduleForDate) {
       const dayOfWeek = date.getDay();
       const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
       const scheduleSessions = scheduleForDate.sessions[adjustedDay] || [];
-
       return scheduleSessions.map((s: any) => ({
         time: s.time,
         program: s.program,
@@ -91,53 +116,25 @@ export const useStatsCalculations = ({
   const getProgramFromCalendar = useCallback((date: string, time: string, center?: string): string => {
     const [year, month, day] = date.split('-').map(Number);
     const dateObj = new Date(year, month - 1, day);
-    
     const sessions = getSessionsForDate(dateObj);
-    
-    if (sessions.length === 0) {
-      return 'DESCONEGUT';
-    }
-    
-    // Millorar la neteja d'hores
-    const cleanTime = (t: string) => {
-      // Treure TOTS els espais, salts de línia, tabulacions, etc.
-      const cleaned = t.replace(/[\s\n\r\t]+/g, '');
-      // Agafar només la part abans del guió
-      const startTime = cleaned.split('-')[0];
-      return startTime;
-    };
-    
+
+    if (sessions.length === 0) return 'DESCONEGUT';
+
+    const cleanTime = (t: string) => t.replace(/[\s\n\r\t]+/g, '').split('-')[0];
     const attendanceStartTime = cleanTime(time);
-    
+
     const matchingSession = sessions.find(session => {
-      const sessionStartTime = cleanTime(session.time);
-      const timeMatches = sessionStartTime === attendanceStartTime;
+      const timeMatches = cleanTime(session.time) === attendanceStartTime;
       const centerMatches = !center || !session.center || centersMatch(session.center, center, centers);
-      
       return timeMatches && centerMatches;
     });
-    
-    // DEBUG temporal per les primeres 3 assistències
-    if (!matchingSession && sessions.length > 0) {
-      const randomDebug = Math.random();
-      if (randomDebug < 0.001) { // Només 0.1% de les vegades per no saturar
-        console.log('No match:', {
-          date,
-          attendanceTime: attendanceStartTime,
-          center,
-          availableSessions: sessions.map(s => ({
-            time: cleanTime(s.time),
-            program: s.program,
-            center: s.center
-          }))
-        });
-      }
-    }
-    
-    return matchingSession?.program || 'DESCONEGUT';
-  }, [getSessionsForDate]);
 
-  const stats = useMemo(() => {
+    return matchingSession?.program || 'DESCONEGUT';
+  }, [getSessionsForDate, centers]);
+
+  // ── Càlcul principal — SENSE inactiveSortOrder a les dependències ──────────
+  // inactiveSortOrder s'aplica FORA d'aquest useMemo per evitar recalcular tot
+  const baseStats = useMemo(() => {
     const allRealClasses: Array<{
       date: string;
       activity: string;
@@ -146,9 +143,9 @@ export const useStatsCalculations = ({
     }> = [];
 
     const oldestScheduleDate = schedules.length > 0
-      ? schedules.reduce((oldest, schedule) => {
-          return schedule.startDate < oldest ? schedule.startDate : oldest;
-        }, schedules[0].startDate)
+      ? schedules.reduce((oldest, schedule) =>
+          schedule.startDate < oldest ? schedule.startDate : oldest,
+          schedules[0].startDate)
       : '2020-01-01';
 
     const startDate = new Date(oldestScheduleDate);
@@ -158,25 +155,19 @@ export const useStatsCalculations = ({
     const currentDate = new Date(startDate);
     while (currentDate <= today) {
       const sessions = getSessionsForDate(currentDate);
-      const activeSessions = sessions.filter(s => !s.isDeleted);
-
-      activeSessions.forEach(session => {
+      sessions.filter(s => !s.isDeleted).forEach(session => {
         allRealClasses.push({
           date: dateToKey(currentDate),
           activity: session.program,
           time: session.time,
-          center: session.center || 'N/A'
+          center: session.center || 'N/A',
         });
       });
-
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
     const allUserAttendances = users.flatMap(user =>
-      (user.sessions || []).map(s => ({
-        ...s,
-        userName: user.name
-      }))
+      (user.sessions || []).map((s: any) => ({ ...s, userName: user.name }))
     );
 
     const filteredClasses = centerFilter === "all"
@@ -190,28 +181,27 @@ export const useStatsCalculations = ({
     const totalUsers = centerFilter === "all"
       ? users.length
       : users.filter(user =>
-          (user.sessions || []).some(s => centersMatch(s.center, centerFilter, centers))
+          (user.sessions || []).some((s: any) => centersMatch(s.center, centerFilter, centers))
         ).length;
 
     const totalSessions = filteredClasses.length;
     const totalAttendances = filteredAttendances.length;
 
+    // Dades anuals
     const sessionsByYear: { [year: string]: number } = {};
-    filteredClasses.forEach(classItem => {
-      const year = classItem.date.split('-')[0];
+    filteredClasses.forEach(c => {
+      const year = c.date.split('-')[0];
       sessionsByYear[year] = (sessionsByYear[year] || 0) + 1;
     });
-
     const yearlyData = Object.entries(sessionsByYear)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([year, count]) => ({ year, count }));
 
     const attendancesByYear: { [year: string]: number } = {};
-    filteredAttendances.forEach(attendance => {
-      const year = attendance.date.split('-')[0];
+    filteredAttendances.forEach(a => {
+      const year = a.date.split('-')[0];
       attendancesByYear[year] = (attendancesByYear[year] || 0) + 1;
     });
-
     const yearlyAttendanceData = Object.entries(attendancesByYear)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([year, count]) => ({ year, count }));
@@ -220,17 +210,18 @@ export const useStatsCalculations = ({
       ? (totalAttendances / yearlyAttendanceData.length).toFixed(1)
       : 0;
 
+    // Dades mensuals (últims 12 mesos)
     const now = new Date();
     const monthlyData: { month: string; classes: number; attendances: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthName = date.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
       const yearMonth = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-
-      const classesCount = filteredClasses.filter(c => c.date.startsWith(yearMonth)).length;
-      const attendancesCount = filteredAttendances.filter(a => a.date.startsWith(yearMonth)).length;
-
-      monthlyData.push({ month: monthName, classes: classesCount, attendances: attendancesCount });
+      monthlyData.push({
+        month: monthName,
+        classes: filteredClasses.filter(c => c.date.startsWith(yearMonth)).length,
+        attendances: filteredAttendances.filter(a => a.date.startsWith(yearMonth)).length,
+      });
     }
 
     const currentMonthSessions = monthlyData[monthlyData.length - 1]?.classes || 0;
@@ -239,42 +230,45 @@ export const useStatsCalculations = ({
       ? (((currentMonthSessions - previousMonthSessions) / previousMonthSessions) * 100).toFixed(1)
       : 0;
 
+    // Assistència mitjana per classe
     const uniqueClassesMap = new Map<string, number>();
-    filteredAttendances.forEach(attendance => {
-      const key = `${attendance.date}-${attendance.time}-${attendance.activity}-${attendance.center}`;
+    filteredAttendances.forEach(a => {
+      const key = `${a.date}-${a.time}-${a.activity}-${a.center}`;
       uniqueClassesMap.set(key, (uniqueClassesMap.get(key) || 0) + 1);
     });
-
-    const totalAttendeesInClasses = Array.from(uniqueClassesMap.values()).reduce((sum, count) => sum + count, 0);
+    const totalAttendeesInClasses = Array.from(uniqueClassesMap.values()).reduce((s, c) => s + c, 0);
     const avgAttendees = uniqueClassesMap.size > 0
       ? (totalAttendeesInClasses / uniqueClassesMap.size).toFixed(1)
       : 0;
 
+    // Usuaris actius (últims 30 dies)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const activeUsers = users.filter(user => {
+      const recentSessions = (user.sessions || []).filter((s: any) =>
+        new Date(s.date) >= thirtyDaysAgo
+      );
+      if (recentSessions.length === 0) return false;
+      if (centerFilter === "all") return true;
+      return recentSessions.some((s: any) => centersMatch(s.center, centerFilter, centers));
+    }).length;
+
+    // Usuaris recurrents i retenció
     const filteredUsers = centerFilter === "all"
       ? users
       : users.map(user => ({
           ...user,
-          totalSessions: (user.sessions || []).filter(s => centersMatch(s.center, centerFilter, centers)).length
+          totalSessions: (user.sessions || []).filter((s: any) =>
+            centersMatch(s.center, centerFilter, centers)
+          ).length,
         }));
 
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const activeUsers = users.filter(user => {
-      const recentSessions = (user.sessions || []).filter(s => {
-        const sessionDate = new Date(s.date);
-        return sessionDate >= thirtyDaysAgo;
-      });
-
-      if (recentSessions.length === 0) return false;
-
-      if (centerFilter === "all") return true;
-
-      return recentSessions.some(s => centersMatch(s.center, centerFilter, centers));
-    }).length;
-
     const recurrentUsersFiltered = filteredUsers.filter(u => (u.totalSessions || 0) > 1).length;
-    const retentionRate = totalUsers > 0 ? ((recurrentUsersFiltered / totalUsers) * 100).toFixed(1) : 0;
+    const retentionRate = totalUsers > 0
+      ? ((recurrentUsersFiltered / totalUsers) * 100).toFixed(1)
+      : 0;
 
+    // Nous usuaris per any
     const newUsersByYear: { [year: string]: number } = {};
     users.forEach(user => {
       if (!user.firstSession) return;
@@ -282,39 +276,37 @@ export const useStatsCalculations = ({
       newUsersByYear[year] = (newUsersByYear[year] || 0) + 1;
     });
 
+    // Programes
     const programCount: { [program: string]: number } = {};
-    filteredClasses.forEach(classItem => {
-      programCount[classItem.activity] = (programCount[classItem.activity] || 0) + 1;
+    filteredClasses.forEach(c => {
+      programCount[c.activity] = (programCount[c.activity] || 0) + 1;
     });
     const programData = Object.entries(programCount)
       .sort((a, b) => b[1] - a[1])
       .map(([name, count]) => ({ name, count }));
 
+    // Centres
     const centerCount: { [center: string]: number } = {};
-    allRealClasses.forEach(classItem => {
-      centerCount[classItem.center] = (centerCount[classItem.center] || 0) + 1;
+    allRealClasses.forEach(c => {
+      centerCount[c.center] = (centerCount[c.center] || 0) + 1;
     });
 
+    // Dies de la setmana
     const dayCount: { [day: string]: number } = {};
     const dayNames = ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte'];
-    filteredClasses.forEach(classItem => {
-      const [year, month, day] = classItem.date.split('-').map(Number);
-      const date = new Date(year, month - 1, day);
-      const dayName = dayNames[date.getDay()];
+    filteredClasses.forEach(c => {
+      const [y, m, d] = c.date.split('-').map(Number);
+      const dayName = dayNames[new Date(y, m - 1, d).getDay()];
       dayCount[dayName] = (dayCount[dayName] || 0) + 1;
     });
-
     const orderedDays = ['Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte', 'Diumenge'];
-    const classesByWeekday = orderedDays.map(day => ({
-      day,
-      count: dayCount[day] || 0
-    }));
-
+    const classesByWeekday = orderedDays.map(day => ({ day, count: dayCount[day] || 0 }));
     const mostPopularDay = Object.entries(dayCount).sort((a, b) => b[1] - a[1])[0];
 
-    const timeSlotCount: { morning: number; afternoon: number; evening: number } = { morning: 0, afternoon: 0, evening: 0 };
-    filteredClasses.forEach(classItem => {
-      const hour = parseInt(classItem.time.split(':')[0]);
+    // Franges horàries
+    const timeSlotCount = { morning: 0, afternoon: 0, evening: 0 };
+    filteredClasses.forEach(c => {
+      const hour = parseInt(c.time.split(':')[0]);
       if (hour < 12) timeSlotCount.morning++;
       else if (hour < 18) timeSlotCount.afternoon++;
       else timeSlotCount.evening++;
@@ -322,69 +314,42 @@ export const useStatsCalculations = ({
     const preferredTimeSlot = Object.entries(timeSlotCount).sort((a, b) => b[1] - a[1])[0];
     const timeSlotNames = { morning: 'Matí', afternoon: 'Tarda', evening: 'Vespre' };
 
+    // Top 10 usuaris
     const topUsers = [...filteredUsers]
       .sort((a, b) => (b.totalSessions || 0) - (a.totalSessions || 0))
       .slice(0, 10);
 
-    const inactiveUsers = users
-      .filter(user => {
-        if ((user.daysSinceLastSession || 0) <= 60) return false;
-        if (centerFilter === "all") return true;
-        return (user.sessions || []).some(s => centersMatch(s.center, centerFilter, centers));
-      })
-      .sort((a, b) => {
-        const diffA = a.daysSinceLastSession || 0;
-        const diffB = b.daysSinceLastSession || 0;
-        return inactiveSortOrder === 'desc' ? diffB - diffA : diffA - diffB;
-      });
+    // Usuaris inactius (>60 dies) — sense ordenar aquí, s'ordena fora
+    const inactiveUsersBase = users.filter(user => {
+      if ((user.daysSinceLastSession || 0) <= 60) return false;
+      if (centerFilter === "all") return true;
+      return (user.sessions || []).some((s: any) => centersMatch(s.center, centerFilter, centers));
+    });
 
-    // ✅ TENDÈNCIA BASADA EN MITJANES MENSUALS (any actual vs any anterior complet)
+    // Tendència
     let trend: 'up' | 'down' | 'stable' = 'stable';
     if (yearlyData.length >= 2) {
-      const now = new Date();
       const currentYear = now.getFullYear().toString();
-
       const currentYearEntry = yearlyData.find(y => y.year === currentYear);
       const previousYearEntry = yearlyData
         .filter(y => y.year !== currentYear)
         .sort((a, b) => b.year.localeCompare(a.year))[0];
 
       if (currentYearEntry && previousYearEntry) {
-        // Any actual: dividir per mesos transcorreguts (amb precisió de dies)
-        const daysInCurrentMonth = new Date(
-          now.getFullYear(), now.getMonth() + 1, 0
-        ).getDate();
+        const daysInCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         const monthsElapsed = now.getMonth() + (now.getDate() / daysInCurrentMonth);
         const currentAvg = currentYearEntry.count / Math.max(0.1, monthsElapsed);
-
-        // Any anterior: sempre dividir per 12 (any complet)
         const previousAvg = previousYearEntry.count / 12;
 
-        console.log('📊 Tendència instructora:', {
-          anyActual: currentYear,
-          sessionsActual: currentYearEntry.count,
-          mesosTranscorreguts: monthsElapsed.toFixed(2),
-          mitjanaActual: currentAvg.toFixed(2),
-          anyAnterior: previousYearEntry.year,
-          sessionsAnterior: previousYearEntry.count,
-          mitjanaAnterior: previousAvg.toFixed(2),
-          diferencia: (currentAvg - previousAvg).toFixed(2)
-        });
-
-        // Si portem menys de 2 mesos, la mostra és massa petita
-        // Usem un marge del 5% per evitar falsos positius
         if (monthsElapsed < 2) {
-          // Amb tan poc temps, només marquem tendència si la diferència és >5%
           const percentDiff = ((currentAvg - previousAvg) / previousAvg) * 100;
           if (percentDiff > 5) trend = 'up';
           else if (percentDiff < -5) trend = 'down';
-          // Si la diferència és menor del 5%, és "estable" (massa aviat per saber)
         } else {
           if (currentAvg > previousAvg) trend = 'up';
           else if (currentAvg < previousAvg) trend = 'down';
         }
       } else if (yearlyData.length >= 2) {
-        // Si no hi ha any actual, comparar els dos últims anys per total
         const last = yearlyData[yearlyData.length - 1];
         const prev = yearlyData[yearlyData.length - 2];
         if (last.count > prev.count) trend = 'up';
@@ -392,6 +357,7 @@ export const useStatsCalculations = ({
       }
     }
 
+    // Mitjanes mensuals per estacionalitat
     const attendancesByYearMonth: { [ym: string]: number } = {};
     filteredAttendances.forEach(a => {
       const ym = a.date.slice(0, 7);
@@ -399,333 +365,145 @@ export const useStatsCalculations = ({
     });
     const monthBuckets: { [m: string]: number[] } = {};
     Object.entries(attendancesByYearMonth).forEach(([ym, count]) => {
-      const month = parseInt(ym.split('-')[1], 10);
-      const key = month.toString().padStart(2, '0');
+      const key = parseInt(ym.split('-')[1], 10).toString().padStart(2, '0');
       monthBuckets[key] = monthBuckets[key] || [];
       monthBuckets[key].push(count);
     });
-    const monthNames = Array.from({length:12}).map((_, i) => {
-      const dt = new Date(2000, i, 1);
-      return dt.toLocaleDateString('ca-ES', { month: 'short' });
-    });
+    const monthNames = Array.from({ length: 12 }).map((_, i) =>
+      new Date(2000, i, 1).toLocaleDateString('ca-ES', { month: 'short' })
+    );
     const monthlyAverages = monthNames.map((name, idx) => {
       const key = (idx + 1).toString().padStart(2, '0');
       const arr = monthBuckets[key] || [];
-      const avg = arr.length > 0 ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length) : 0;
+      const avg = arr.length > 0
+        ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length)
+        : 0;
       return { month: name, avg };
     });
-    // NOUS CÀLCULS: Obtenir programes des del calendari
-    const realProgramNames = new Set<string>();
-    
-    // Funció per normalitzar noms de programes (treure OUTDOOR, variants, etc.)
-    const normalizeGymProgram = (program: string): string => {
-      if (!program) return '';
-      
-      const normalized = program.toUpperCase()
-        .replace(/\s+/g, '')
-        .replace(/OUTDOOR/g, '')
-        .replace(/'/g, '');
-      
-      // Mapa de normalització
-      const map: { [key: string]: string } = {
-        'BODYPUMP': 'BP',
-        'BP': 'BP',
-        'BODYBALANCE': 'BB',
-        'BB': 'BB',
-        'BODYCOMBAT': 'BC',
-        'BC': 'BC',
-        'SHBAM': 'SB',
-        'DANCE': 'SB',
-        'SB': 'SB',
-        'ESTIRAMIENTOS': 'ES',
-        'STRETCH': 'ES',
-        'ESTIRAMENTS': 'ES',
-        'ES': 'ES',
-        'RPM': 'RPM',
-        'BODYSTEP': 'BS',
-        'BS': 'BS',
-        'CXWORX': 'CX',
-        'CX': 'CX',
-        'SPRINT': 'SPRINT',
-        'GRIT': 'GRIT',
-        'BARRE': 'BARRE',
-        'TONE': 'TONE',
-        'CORE': 'CORE',
-        'CROSSTRAINING': 'CROSS',
-        'CROSS': 'CROSS'
-      };
-      
-      return map[normalized] || normalized;
-    };
 
+    // Programes del calendari amb assistències
     const attendancesWithCalendarProgram = filteredAttendances.map(attendance => {
-      // Buscar al calendari per hora exacta
       const programFromCalendar = getProgramFromCalendar(
-        attendance.date, 
-        attendance.time, 
+        attendance.date,
+        attendance.time,
         attendance.center
       );
-      
-      // Si NO està al calendari, normalitzar el nom del gimnàs però marcar-ho
-      let finalProgram = programFromCalendar;
-      let isInCalendar = programFromCalendar !== 'DESCONEGUT';
-      
-      if (!isInCalendar && attendance.activity) {
-        finalProgram = normalizeGymProgram(attendance.activity);
-      }
-      
-      return {
-        ...attendance,
-        calendarProgram: finalProgram,
-        isInCalendar: isInCalendar
-      };
-    }); 
-    
-    
-    attendancesWithCalendarProgram.forEach(attendance => {
-      // Només comptar programes que REALMENT estan al calendari
-      if (attendance.isInCalendar && attendance.calendarProgram && attendance.calendarProgram !== 'DESCONEGUT') {
-        realProgramNames.add(attendance.calendarProgram);
+      const isInCalendar = programFromCalendar !== 'DESCONEGUT';
+      const finalProgram = isInCalendar
+        ? programFromCalendar
+        : (attendance.activity ? normalizeProgram(attendance.activity) : 'DESCONEGUT');
+
+      return { ...attendance, calendarProgram: finalProgram, isInCalendar };
+    });
+
+    const realProgramNames = new Set<string>();
+    attendancesWithCalendarProgram.forEach(a => {
+      if (a.isInCalendar && a.calendarProgram && a.calendarProgram !== 'DESCONEGUT') {
+        realProgramNames.add(a.calendarProgram);
       }
     });
-    
-    // DEBUG: Veure què passa
-    console.log('=== DEBUG CALENDAR PROGRAMS ===');
-    console.log('Total filtered attendances:', filteredAttendances.length);
-    console.log('Sample attendances with calendar:', attendancesWithCalendarProgram.slice(0, 3).map(a => ({
-      date: a.date,
-      time: a.time,
-      gymActivity: a.activity,
-      calendarProgram: a.calendarProgram
-    })));
-    console.log('Real program names found:', Array.from(realProgramNames));
-    console.log('================================');
 
-    // NOUS CÀLCULS: Assistències per programa i mes/any
+    // Assistències per programa i mes/any
     const attendancesByProgramMonth: { [key: string]: { [month: string]: number } } = {};
     const attendancesByProgramYear: { [key: string]: { [year: string]: number } } = {};
-    
-    attendancesWithCalendarProgram.forEach(attendance => {
-      const program = attendance.calendarProgram;
+
+    attendancesWithCalendarProgram.forEach(a => {
+      const program = a.calendarProgram;
       if (!program || program === 'DESCONEGUT') return;
-      
-      const yearMonth = attendance.date.slice(0, 7);
-      const year = attendance.date.slice(0, 4);
-      
-      if (!attendancesByProgramMonth[program]) {
-        attendancesByProgramMonth[program] = {};
-      }
+      const yearMonth = a.date.slice(0, 7);
+      const year = a.date.slice(0, 4);
+
+      if (!attendancesByProgramMonth[program]) attendancesByProgramMonth[program] = {};
       attendancesByProgramMonth[program][yearMonth] = (attendancesByProgramMonth[program][yearMonth] || 0) + 1;
-      
-      if (!attendancesByProgramYear[program]) {
-        attendancesByProgramYear[program] = {};
-      }
+
+      if (!attendancesByProgramYear[program]) attendancesByProgramYear[program] = {};
       attendancesByProgramYear[program][year] = (attendancesByProgramYear[program][year] || 0) + 1;
     });
 
     const allMonthsSet = new Set<string>();
-    Object.values(attendancesByProgramMonth).forEach(programMonths => {
-      Object.keys(programMonths).forEach(month => allMonthsSet.add(month));
-    });
+    Object.values(attendancesByProgramMonth).forEach(pm =>
+      Object.keys(pm).forEach(m => allMonthsSet.add(m))
+    );
     const allMonthsSorted = Array.from(allMonthsSet).sort();
-
     const allMonthsLabels = allMonthsSorted.map(ym => {
-      const [year, month] = ym.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1, 1);
-      return date.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
+      const [y, m] = ym.split('-');
+      return new Date(parseInt(y), parseInt(m) - 1, 1)
+        .toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
     });
 
     const programsWithData = Array.from(realProgramNames).sort();
-
-    const programAttendancesOverTimeAll = programsWithData.map(programName => {
-      const data = allMonthsSorted.map(month => 
-        attendancesByProgramMonth[programName]?.[month] || 0
-      );
-      return {
-        program: programName,
-        data: data
-      };
-    });
 
     const last12Months: string[] = [];
     const last12MonthsLabels: string[] = [];
     for (let i = 11; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const yearMonth = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-      const label = date.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' });
-      last12Months.push(yearMonth);
-      last12MonthsLabels.push(label);
+      last12Months.push(`${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`);
+      last12MonthsLabels.push(date.toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' }));
     }
 
-    const programAttendancesOverTime12 = programsWithData.map(programName => {
-      const data = last12Months.map(month => 
-        attendancesByProgramMonth[programName]?.[month] || 0
-      );
-      return {
-        program: programName,
-        data: data
-      };
-    });
+    const programAttendancesOverTime12 = programsWithData.map(p => ({
+      program: p,
+      data: last12Months.map(m => attendancesByProgramMonth[p]?.[m] || 0),
+    }));
+
+    const programAttendancesOverTimeAll = programsWithData.map(p => ({
+      program: p,
+      data: allMonthsSorted.map(m => attendancesByProgramMonth[p]?.[m] || 0),
+    }));
 
     const allYearsSet = new Set<string>();
-    Object.values(attendancesByProgramYear).forEach(programYears => {
-      Object.keys(programYears).forEach(year => allYearsSet.add(year));
-    });
+    Object.values(attendancesByProgramYear).forEach(py =>
+      Object.keys(py).forEach(y => allYearsSet.add(y))
+    );
     const allYearsSorted = Array.from(allYearsSet).sort();
 
-    const programAttendancesByYear = programsWithData.map(programName => {
-      const data = allYearsSorted.map(year => 
-        attendancesByProgramYear[programName]?.[year] || 0
-      );
-      return {
-        program: programName,
-        data: data
-      };
-    });
+    const programAttendancesByYear = programsWithData.map(p => ({
+      program: p,
+      data: allYearsSorted.map(y => attendancesByProgramYear[p]?.[y] || 0),
+    }));
 
-    // NOUS CÀLCULS: Top usuaris per programa
+    // Top usuaris per programa
     const topUsersByProgram: { [program: string]: any[] } = {};
-    
     Array.from(realProgramNames).forEach(programName => {
-      const userSessionsCount: { [userId: string]: { user: any; count: number } } = {};
-      
-      attendancesWithCalendarProgram.forEach(attendance => {
-        if (attendance.calendarProgram === programName) {
-          const userName = attendance.userName;
-          
-          if (!userSessionsCount[userName]) {
-            const user = users.find(u => u.name === userName);
-            if (user) {
-              userSessionsCount[userName] = {
-                user: user,
-                count: 0
-              };
-            }
-          }
-          
-          if (userSessionsCount[userName]) {
-            userSessionsCount[userName].count++;
-          }
+      const userCount: { [name: string]: { user: any; count: number } } = {};
+      attendancesWithCalendarProgram.forEach(a => {
+        if (a.calendarProgram !== programName) return;
+        if (!userCount[a.userName]) {
+          const user = users.find(u => u.name === a.userName);
+          if (user) userCount[a.userName] = { user, count: 0 };
         }
+        if (userCount[a.userName]) userCount[a.userName].count++;
       });
-      
-      const usersWithSessions = Object.values(userSessionsCount)
-        .filter(item => item.count > 0)
+      topUsersByProgram[programName] = Object.values(userCount)
+        .filter(i => i.count > 0)
         .sort((a, b) => b.count - a.count)
         .slice(0, 10)
-        .map(item => ({
-          ...item.user,
-          sessionsInProgram: item.count
-        }));
-      
-      topUsersByProgram[programName] = usersWithSessions;
+        .map(i => ({ ...i.user, sessionsInProgram: i.count }));
     });
 
-    // NOVA FUNCIONALITAT: Detectar discrepàncies calendari vs gimnàs
-    const normalizeForComparison = (program: string): string => {
-      if (!program) return '';
-      
-      // Primer netegem espais, outdoor, apòstrofs
-      let normalized = program.toUpperCase()
-        .replace(/\s+/g, '')
-        .replace(/OUTDOOR/g, '')
-        .replace(/'/g, '');
-      
-      // Mapa de normalització AMPLIAT
-      const map: { [key: string]: string } = {
-        // BODYPUMP
-        'BODYPUMP': 'BP',
-        'BP': 'BP',
-        
-        // BODYBALANCE
-        'BODYBALANCE': 'BB',
-        'BB': 'BB',
-        
-        // BODYCOMBAT
-        'BODYCOMBAT': 'BC',
-        'BC': 'BC',
-        
-        // SH'BAM
-        'SHBAM': 'SB',
-        'DANCE': 'SB',
-        'SB': 'SB',
-        
-        // ESTIRAMENTS (totes les variants!)
-        'ESTIRAMIENTOS': 'ES',
-        'ESTIRAMENTS': 'ES',
-        'STRETCH': 'ES',
-        'ES': 'ES',
-        
-        // Altres
-        'RPM': 'RPM',
-        'BODYSTEP': 'BS',
-        'BS': 'BS',
-        'CXWORX': 'CX',
-        'CX': 'CX',
-        'SPRINT': 'SPRINT',
-        'GRIT': 'GRIT',
-        'BARRE': 'BARRE',
-        'TONE': 'TONE',
-        'CORE': 'CORE',
-        'CROSSTRAINING': 'CROSS',
-        'CROSS': 'CROSS'
-      };
-      
-      return map[normalized] || normalized;
-    };
-
-    const calendarDiscrepancies: Array<{
-      date: string;
-      time: string;
-      center: string;
-      gymProgram: string;
-      calendarProgram: string;
-      userName: string;
-      count: number;
-    }> = [];
-
+    // Discrepàncies calendari vs gimnàs
     const discrepancyMap = new Map<string, any>();
+    attendancesWithCalendarProgram.forEach(a => {
+      if (!a.isInCalendar || !a.activity) return;
+      if (normalizeProgram(a.calendarProgram) === normalizeProgram(a.activity)) return;
 
-    attendancesWithCalendarProgram.forEach(attendance => {
-      if (attendance.calendarProgram === 'DESCONEGUT' || !attendance.activity) {
-        return;
-      }
-      
-      const normalizedCalendar = normalizeForComparison(attendance.calendarProgram);
-      const normalizedGym = normalizeForComparison(attendance.activity);
-      
-      // Només marcar com a discrepància si està al calendari PERÒ és diferent
-      // NO marcar si simplement no està al calendari (això ja és normal)
-      if (attendance.isInCalendar && normalizedCalendar !== normalizedGym) {
-        const key = `${attendance.date}-${attendance.time}-${attendance.center}`;
-        
-        if (!discrepancyMap.has(key)) {
-          discrepancyMap.set(key, {
-            date: attendance.date,
-            time: attendance.time,
-            center: attendance.center,
-            gymProgram: attendance.activity,
-            calendarProgram: attendance.calendarProgram,
-            userName: attendance.userName,
-            count: 1
-          });
-        } else {
-          const existing = discrepancyMap.get(key);
-          existing.count++;
-          if (!existing.userName.includes(attendance.userName)) {
-            existing.userName += `, ${attendance.userName}`;
-          }
+      const key = `${a.date}-${a.time}-${a.center}`;
+      if (!discrepancyMap.has(key)) {
+        discrepancyMap.set(key, {
+          date: a.date, time: a.time, center: a.center,
+          gymProgram: a.activity, calendarProgram: a.calendarProgram,
+          userName: a.userName, count: 1,
+        });
+      } else {
+        const existing = discrepancyMap.get(key);
+        existing.count++;
+        if (!existing.userName.includes(a.userName)) {
+          existing.userName += `, ${a.userName}`;
         }
       }
     });
-
-    Array.from(discrepancyMap.values()).forEach(disc => {
-      calendarDiscrepancies.push(disc);
-    });
-
-    calendarDiscrepancies.sort((a, b) => a.date.localeCompare(b.date));
-
-    
+    const calendarDiscrepancies = Array.from(discrepancyMap.values())
+      .sort((a, b) => a.date.localeCompare(b.date));
 
     return {
       totalUsers,
@@ -742,11 +520,13 @@ export const useStatsCalculations = ({
       programData,
       centerCount,
       topUsers,
-      inactiveUsers,
+      inactiveUsersBase,   // sense ordenar, s'ordena a sota
       trend,
       retentionRate,
       mostPopularDay,
-      preferredTimeSlot: preferredTimeSlot ? timeSlotNames[preferredTimeSlot[0] as keyof typeof timeSlotNames] : 'N/A',
+      preferredTimeSlot: preferredTimeSlot
+        ? timeSlotNames[preferredTimeSlot[0] as keyof typeof timeSlotNames]
+        : 'N/A',
       recurrentUsers: recurrentUsersFiltered,
       classesByWeekday,
       monthlyAverages,
@@ -757,10 +537,21 @@ export const useStatsCalculations = ({
       allMonthsLabels,
       allYearsSorted,
       topUsersByProgram,
-      calendarDiscrepancies
-      
+      calendarDiscrepancies,
     };
-  }, [users, centerFilter, inactiveSortOrder, schedules, customSessions, getSessionsForDate, getProgramFromCalendar]);
+  // inactiveSortOrder INTENCIONADAMENT fora de les dependències
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [users, centerFilter, schedules, customSessions, getSessionsForDate, getProgramFromCalendar]);
 
-  return stats;
+  // ── Ordenació dels usuaris inactius SEPARADA del càlcul principal ──────────
+  // Canviar l'ordre NO recalcula les 1.800 dies ni els 600 usuaris
+  const inactiveUsers = useMemo(() => {
+    return [...baseStats.inactiveUsersBase].sort((a, b) => {
+      const diffA = a.daysSinceLastSession || 0;
+      const diffB = b.daysSinceLastSession || 0;
+      return inactiveSortOrder === 'desc' ? diffB - diffA : diffA - diffB;
+    });
+  }, [baseStats.inactiveUsersBase, inactiveSortOrder]);
+
+  return { ...baseStats, inactiveUsers };
 };
