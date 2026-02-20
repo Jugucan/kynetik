@@ -5,7 +5,7 @@
 
 import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { calculateAutodiscipline } from '@/utils/advancedStats';
+
 
 interface UserForRanking {
   id: string;
@@ -101,7 +101,7 @@ export const recalculateAndSaveRankings = async (users: UserForRanking[]): Promi
       updatedAt: new Date().toISOString().split('T')[0]
     };
 
-    batch.update(doc(db, 'users', user.id), { rankingCache });
+    batch.set(doc(db, 'users', user.id), { rankingCache }, { merge: true });
     operationsInBatch++;
 
     if (operationsInBatch === BATCH_SIZE) {
@@ -268,7 +268,7 @@ export const importDeporsiteOptimized = async (
 
   for (const op of operations) {
     if (op.type === 'update' && op.id) {
-      batch.set(doc(db, 'users', op.id), op.data);
+      batch.update(doc(db, 'users', op.id), op.data);
       ops++;
     } else if (op.type === 'add') {
       const newRef = doc(collection(db, 'users'));
@@ -316,7 +316,14 @@ export const importDeporsiteOptimized = async (
     }
   });
 
-  await recalculateAndSaveRankings(usersForRanking);
+  try {
+    await recalculateAndSaveRankings(usersForRanking);
+    onProgress?.(`Rankings calculats per ${usersForRanking.length} usuaris`);
+  } catch (rankingError) {
+    console.error('Error calculant rankings:', rankingError);
+    // No llencem l'error: la importació ha estat correcta, els rankings fallaran silenciosament
+    onProgress?.('Advertència: els rankings no s\'han pogut calcular');
+  }
 
   return { newCount, updatedCount, skippedCount };
 };
