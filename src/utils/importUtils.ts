@@ -16,9 +16,7 @@ interface UserForRanking {
 
 // Calcula i escriu els rankings a tots els usuaris en lots de 500
 export const recalculateAndSaveRankings = async (users: UserForRanking[]): Promise<void> => {
-  console.log('[Rankings] Inici càlcul amb', users.length, 'usuaris');
   if (users.length === 0) {
-    console.warn('[Rankings] Cap usuari, sortint');
     return;
   }
 
@@ -118,7 +116,6 @@ export const recalculateAndSaveRankings = async (users: UserForRanking[]): Promi
   if (operationsInBatch > 0) {
     await batch.commit();
   }
-  console.log('[Rankings] Batch completat. rankingCache guardat a', users.length, 'usuaris');
 };
 
 
@@ -319,13 +316,10 @@ export const recalculateAllRankingsFromFirebase = async (
   onProgress?: (msg: string) => void
 ): Promise<number> => {
   onProgress?.('Llegint tots els usuaris de Firebase...');
-  console.log('[Rankings] Llegint tots els usuaris de Firebase...');
 
   const snapshot = await getDocs(collection(db, 'users'));
-  console.log('[Rankings] Usuaris trobats a Firebase:', snapshot.docs.length);
 
   if (snapshot.docs.length === 0) {
-    console.warn('[Rankings] Cap usuari trobat!');
     return 0;
   }
 
@@ -339,7 +333,6 @@ export const recalculateAllRankingsFromFirebase = async (
     };
   });
 
-  console.log('[Rankings] Primer usuari exemple:', {
     id: users[0].id,
     email: users[0].email,
     sessions: users[0].sessions.length,
