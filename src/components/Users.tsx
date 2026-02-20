@@ -1,3 +1,4 @@
+import { importDeporsiteOptimized } from '@/utils/importUtils';
 import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { Users as UsersIcon, Search, Plus, Pencil, Trash2, Upload, Info, ChevronDown, ChevronUp, MapPin, Download } from "lucide-react";
@@ -71,7 +72,7 @@ const Users = () => {
     setIsModalOpen(true);
   };
 
-  const handleImportDeporsite = async (event: React.ChangeEvent<HTMLInputElement>) => {
+const handleImportDeporsite = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -82,137 +83,10 @@ const Users = () => {
       const text = await file.text();
       const jsonData = JSON.parse(text);
 
-      if (!jsonData.users || !Array.isArray(jsonData.users)) {
-        toast.error("Format de fitxer incorrecte");
-        return;
-      }
-
-      const importedUsers = jsonData.users;
-      let newCount = 0;
-      let updatedCount = 0;
-      let skippedCount = 0;
-
-      for (const importedUser of importedUsers) {
-        try {
-          let existingUser = null;
-
-          if (importedUser.email) {
-            const q = query(collection(db, 'users'), where('email', '==', importedUser.email));
-            const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty) {
-              existingUser = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as User;
-            }
-          }
-
-          if (!existingUser && importedUser.name) {
-            const q = query(collection(db, 'users'), where('name', '==', importedUser.name));
-            const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty) {
-              existingUser = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as User;
-            }
-          }
-
-          if (!importedUser.name) {
-            skippedCount++;
-            continue;
-          }
-
-          if (existingUser) {
-            const mergedData: Partial<User> = {};
-            mergedData.name = existingUser.name || importedUser.name;
-            mergedData.email = existingUser.email || importedUser.email || '';
-            mergedData.phone = existingUser.phone || importedUser.phone || '';
-            mergedData.birthday = existingUser.birthday || importedUser.birthday || '';
-            mergedData.center = existingUser.center || importedUser.center || 'Sant Hilari';
-
-            if (importedUser.profileImageUrl && importedUser.profileImageUrl.includes('candelfi.deporsite.net')) {
-              mergedData.profileImageUrl = importedUser.profileImageUrl;
-              mergedData.avatar = importedUser.profileImageUrl;
-            } else {
-              mergedData.profileImageUrl = existingUser.profileImageUrl || importedUser.profileImageUrl || '';
-              mergedData.avatar = existingUser.avatar || existingUser.profileImageUrl || importedUser.avatar || '';
-            }
-
-            const existingPrograms = Array.isArray(existingUser.preferredPrograms) ? existingUser.preferredPrograms : [];
-            const importedPrograms = Array.isArray(importedUser.preferredPrograms) ? importedUser.preferredPrograms : [];
-            mergedData.preferredPrograms = [...new Set([...existingPrograms, ...importedPrograms])];
-
-            const existingNotes = existingUser.notes || '';
-            const importedNotes = importedUser.notes || '';
-            const notesToMerge = [existingNotes, importedNotes].filter(n => n && n.trim().length > 0);
-            mergedData.notes = notesToMerge.join('\n\n---\n\n');
-
-            const existingSessions = Array.isArray(existingUser.sessions) ? existingUser.sessions : [];
-            const importedSessions = Array.isArray(importedUser.sessions) ? importedUser.sessions : [];
-            const normalizedImportedSessions = importedSessions.map((session: any) => ({
-              date: session.date || '',
-              activity: session.activity || '',
-              time: session.time || '',
-              sala: session.sala || '',
-              center: session.center || importedUser.center || 'Sant Hilari'
-            }));
-
-            const sessionMap = new Map();
-            [...existingSessions, ...normalizedImportedSessions].forEach(session => {
-              const key = `${session.date}-${session.activity}-${session.time || 'no-time'}`;
-              sessionMap.set(key, session);
-            });
-            mergedData.sessions = Array.from(sessionMap.values());
-            mergedData.totalSessions = mergedData.sessions.length;
-
-            if (mergedData.sessions.length > 0) {
-              const dates = mergedData.sessions.map((s: any) => s.date).sort();
-              mergedData.firstSession = dates[0];
-              mergedData.lastSession = dates[dates.length - 1];
-              const lastDate = new Date(mergedData.lastSession);
-              const today = new Date();
-              mergedData.daysSinceLastSession = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-            }
-
-            await updateUser(existingUser.id, mergedData);
-            updatedCount++;
-          } else {
-            const importedSessions = Array.isArray(importedUser.sessions) ? importedUser.sessions : [];
-            const normalizedSessions = importedSessions.map((session: any) => ({
-              date: session.date || '',
-              activity: session.activity || '',
-              time: session.time || '',
-              sala: session.sala || '',
-              center: session.center || importedUser.center || 'Sant Hilari'
-            }));
-
-            const userData: Omit<User, 'id'> = {
-              name: importedUser.name || '',
-              email: importedUser.email || '',
-              phone: importedUser.phone || '',
-              birthday: importedUser.birthday || '',
-              age: importedUser.age || 0,
-              center: importedUser.center || 'Sant Hilari',
-              preferredPrograms: Array.isArray(importedUser.preferredPrograms) ? importedUser.preferredPrograms : [],
-              profileImageUrl: importedUser.profileImageUrl || '',
-              avatar: importedUser.profileImageUrl || importedUser.avatar || '',
-              notes: importedUser.notes || '',
-              sessions: normalizedSessions,
-              totalSessions: normalizedSessions.length,
-              firstSession: normalizedSessions.length > 0 ? normalizedSessions.map((s: any) => s.date).sort()[0] : '',
-              lastSession: normalizedSessions.length > 0 ? normalizedSessions.map((s: any) => s.date).sort()[normalizedSessions.length - 1] : '',
-              daysSinceLastSession: 0
-            };
-
-            if (userData.lastSession) {
-              const lastDate = new Date(userData.lastSession);
-              const today = new Date();
-              userData.daysSinceLastSession = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-            }
-
-            await addUser(userData);
-            newCount++;
-          }
-        } catch (error) {
-          console.error('Error processant usuari:', importedUser.name, error);
-          skippedCount++;
-        }
-      }
+      const { newCount, updatedCount, skippedCount } = await importDeporsiteOptimized(
+        jsonData,
+        (msg) => toast.info(msg)
+      );
 
       const messages = [];
       if (newCount > 0) messages.push(`${newCount} nous usuaris`);
