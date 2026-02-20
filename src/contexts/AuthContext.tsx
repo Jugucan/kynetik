@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { UserProfile, UserStatus } from '@/types/user';
 
@@ -24,6 +24,7 @@ interface AuthContextType {
   signup: (email: string, password: string, data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   userStatus: UserStatus | null;
+  firestoreUserId: string | null; // ID del document a la col·lecció 'users'
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,13 +42,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
-  
+  const [firestoreUserId, setFirestoreUserId] = useState<string | null>(null);
+
   const profileUnsubscribeRef = useRef<(() => void) | null>(null);
 
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem('viewMode');
     return (saved === 'user' || saved === 'instructor' || saved === 'superadmin') ? saved : 'instructor';
   });
+
+  // Cerca i vincula el document de 'users' amb el perfil autenticat
+  const linkFirestoreUserId = async (email: string, uid: string, existingId: string | null) => {
+    // Si ja el tenim guardat al perfil, no cal fer res
+    if (existingId) {
+      setFirestoreUserId(existingId);
+      return;
+    }
+
+    try {
+      const q = query(collection(db, 'users'), where('email', '==', email));
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        const foundId = snapshot.docs[0].id;
+        setFirestoreUserId(foundId);
+
+        // Guardem l'ID al userProfile perquè les properes vegades no calgui la query
+        await updateDoc(doc(db, 'userProfiles', uid), {
+          firestoreUserId: foundId
+        });
+      } else {
+        // L'usuari té compte però encara no té document a 'users' (no s'ha importat)
+        setFirestoreUserId(null);
+      }
+    } catch (error) {
+      console.warn('No s\'ha pogut vincular firestoreUserId:', error);
+      setFirestoreUserId(null);
+    }
+  };
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -57,6 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       setCurrentUser(user);
+      setFirestoreUserId(null);
 
       if (user) {
         const profileRef = doc(db, 'userProfiles', user.uid);
@@ -67,7 +100,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               const data = docSnap.data();
               const status: UserStatus = data.status || 'approved';
               setUserStatus(status);
-              setUserProfile({
+
+              const profile: UserProfile = {
                 uid: user.uid,
                 email: user.email || '',
                 role: data.role || 'user',
@@ -82,7 +116,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 status: status,
                 createdAt: data.createdAt?.toDate() || new Date(),
                 updatedAt: data.updatedAt?.toDate() || new Date(),
-              });
+              };
+              setUserProfile(profile);
+
+              // Vincular firestoreUserId només per usuaris normals (role='user')
+              // Els instructors/admins no necessiten accedir al seu document de 'users'
+              if (data.role === 'user' && user.email) {
+                linkFirestoreUserId(user.email, user.uid, data.firestoreUserId || null);
+              }
             } else {
               setUserStatus('pending');
             }
@@ -98,6 +139,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setUserProfile(null);
         setUserStatus(null);
+        setFirestoreUserId(null);
         setLoading(false);
       }
     });
@@ -150,6 +192,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       status: 'pending',
       createdAt: new Date(),
       updatedAt: new Date(),
+      // firestoreUserId s'afegirà automàticament quan faci login
+      // si el seu email ja existeix a la col·lecció 'users'
     });
   };
 
@@ -160,6 +204,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     setUserProfile(null);
     setUserStatus(null);
+    setFirestoreUserId(null);
     await signOut(auth);
   };
 
@@ -173,6 +218,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signup,
     logout,
     userStatus,
+    firestoreUserId,
   };
 
   return (
