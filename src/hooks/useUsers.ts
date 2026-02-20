@@ -100,6 +100,16 @@ const processUserDoc = (docId: string, data: any, includeSessions: boolean): Use
   const profileImageUrl: string = typeof data.profileImageUrl === 'string' ? data.profileImageUrl : '';
   const notes: string = typeof data.notes === 'string' ? data.notes : '';
 
+  // Calcular daysSinceLastSession en temps real (no llegir el valor estàtic de Firebase)
+  const lastSessionStr = data.lastSession || '';
+  const daysSinceLastSessionLive = (() => {
+    if (!lastSessionStr) return 0;
+    const lastDate = new Date(lastSessionStr);
+    if (isNaN(lastDate.getTime())) return 0;
+    const today = new Date();
+    return Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+  })();
+
   const base: User = {
     id: docId,
     ...data,
@@ -110,8 +120,8 @@ const processUserDoc = (docId: string, data: any, includeSessions: boolean): Use
     notes,
     totalSessions: data.totalSessions || 0,
     firstSession: data.firstSession || '',
-    lastSession: data.lastSession || '',
-    daysSinceLastSession: data.daysSinceLastSession || 0,
+    lastSession: lastSessionStr,
+    daysSinceLastSession: daysSinceLastSessionLive,
     rankingCache: data.rankingCache || null,
   };
 
@@ -120,24 +130,30 @@ const processUserDoc = (docId: string, data: any, includeSessions: boolean): Use
   const sessions: UserSession[] = Array.isArray(data.sessions) ? data.sessions : [];
   let firstSession = '';
   let lastSession = '';
-  let daysSinceLastSession = 0;
 
   if (sessions.length > 0) {
     const sortedDates = sessions.map(s => s.date).sort((a, b) => a.localeCompare(b));
     firstSession = sortedDates[0];
     lastSession = sortedDates[sortedDates.length - 1];
-    const lastDate = new Date(lastSession);
-    const today = new Date();
-    daysSinceLastSession = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
   }
+
+  // daysSinceLastSession ja calculat en temps real al base (a partir de lastSession de Firebase)
+  // Si tenim sessions, recalculem a partir de la data real de les sessions
+  const daysSinceLastSessionFromSessions = (() => {
+    if (!lastSession) return daysSinceLastSessionLive;
+    const lastDate = new Date(lastSession);
+    if (isNaN(lastDate.getTime())) return daysSinceLastSessionLive;
+    const today = new Date();
+    return Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+  })();
 
   return {
     ...base,
     sessions,
     totalSessions: sessions.length,
-    firstSession,
-    lastSession,
-    daysSinceLastSession,
+    firstSession: firstSession || base.firstSession,
+    lastSession: lastSession || base.lastSession,
+    daysSinceLastSession: daysSinceLastSessionFromSessions,
   } as UserWithSessions;
 };
 
