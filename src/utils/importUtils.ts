@@ -333,12 +333,6 @@ export const recalculateAllRankingsFromFirebase = async (
     };
   });
 
-    id: users[0].id,
-    email: users[0].email,
-    sessions: users[0].sessions.length,
-    center: users[0].center,
-  });
-
   onProgress?.(`Calculant rankings per ${users.length} usuaris...`);
   await recalculateAndSaveRankings(users);
 
