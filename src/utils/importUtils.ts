@@ -16,7 +16,11 @@ interface UserForRanking {
 
 // Calcula i escriu els rankings a tots els usuaris en lots de 500
 export const recalculateAndSaveRankings = async (users: UserForRanking[]): Promise<void> => {
-  if (users.length === 0) return;
+  console.log('[Rankings] Inici càlcul amb', users.length, 'usuaris');
+  if (users.length === 0) {
+    console.warn('[Rankings] Cap usuari, sortint');
+    return;
+  }
 
   // ── 1. Ranking general per totalSessions ─────────────────────────────────
   const byTotalSessions = [...users]
@@ -114,6 +118,7 @@ export const recalculateAndSaveRankings = async (users: UserForRanking[]): Promi
   if (operationsInBatch > 0) {
     await batch.commit();
   }
+  console.log('[Rankings] Batch completat. rankingCache guardat a', users.length, 'usuaris');
 };
 
 
@@ -316,6 +321,7 @@ export const importDeporsiteOptimized = async (
     }
   });
 
+  console.log('[Importació] Fase 4: usersForRanking té', usersForRanking.length, 'usuaris');
   try {
     await recalculateAndSaveRankings(usersForRanking);
     onProgress?.(`Rankings calculats per ${usersForRanking.length} usuaris`);
