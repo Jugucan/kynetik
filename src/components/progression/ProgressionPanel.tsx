@@ -2,8 +2,9 @@
 // PANEL VISUAL DE PROGRESSIÓ (Nivell + Ratxa + XP)
 // ============================================================
 
-import { ProgressionData } from '@/types/progression';
-import { Flame, Star, Zap, TrendingUp } from 'lucide-react';
+import { useState } from 'react';
+import { ProgressionData, LEVELS } from '@/types/progression';
+import { Flame, Star, Zap, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ProgressionPanelProps {
   data: ProgressionData;
@@ -13,57 +14,194 @@ interface ProgressionPanelProps {
 const ProgressionPanel = ({ data, userName }: ProgressionPanelProps) => {
   const { level, streak, xp, totalClasses, classesUntilNextLevel } = data;
 
+  // Index del nivell actual dins LEVELS
+  const currentLevelIndex = LEVELS.findIndex(l => l.id === level.id);
+  const [visibleIndex, setVisibleIndex] = useState(currentLevelIndex);
+
+  const visibleLevel = LEVELS[visibleIndex];
+  const isCurrentLevel = visibleIndex === currentLevelIndex;
+  const isPastLevel = visibleIndex < currentLevelIndex;
+  const isFutureLevel = visibleIndex > currentLevelIndex;
+
+  const canGoLeft = visibleIndex > 0;
+  const canGoRight = visibleIndex < LEVELS.length - 1;
+
+  // Càlcul del progrés per al nivell visible
+  const getLevelProgress = (idx: number): number => {
+    const lvl = LEVELS[idx];
+    if (totalClasses < lvl.minClasses) return 0;
+    if (lvl.maxClasses === null) return 100;
+    if (totalClasses > lvl.maxClasses) return 100;
+    const range = lvl.maxClasses - lvl.minClasses + 1;
+    return Math.min(100, Math.round(((totalClasses - lvl.minClasses) / range) * 100));
+  };
+
+  const getClassesInfo = (idx: number): string => {
+    const lvl = LEVELS[idx];
+    if (isPastLevel || (isCurrentLevel && lvl.maxClasses === null)) {
+      return `${lvl.minClasses}${lvl.maxClasses ? ` – ${lvl.maxClasses}` : '+'} classes`;
+    }
+    if (isCurrentLevel) {
+      return classesUntilNextLevel !== null
+        ? `Et falten ${classesUntilNextLevel} classes per pujar`
+        : 'Nivell màxim assolit!';
+    }
+    // Nivell futur
+    return `Cal arribar a ${lvl.minClasses} classes`;
+  };
+
   return (
     <div className="space-y-3">
 
-      {/* NIVELL PRINCIPAL */}
-      <div className={`p-5 rounded-2xl shadow-neo bg-gradient-to-br ${level.bgGradient} border border-white/50`}>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <span className="text-4xl">{level.emoji}</span>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                Nivell actual
-              </p>
-              <h2 className={`text-2xl font-black ${level.color}`}>
-                {level.name}
-              </h2>
+      {/* CARRUSEL DE NIVELLS */}
+      <div className="relative">
+
+        {/* Fletxa esquerra */}
+        <button
+          onClick={() => canGoLeft && setVisibleIndex(v => v - 1)}
+          disabled={!canGoLeft}
+          className={`
+            absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10
+            w-8 h-8 rounded-full flex items-center justify-center
+            shadow-neo transition-all
+            ${canGoLeft
+              ? 'bg-background hover:shadow-neo-sm text-foreground'
+              : 'opacity-0 pointer-events-none'
+            }
+          `}
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        {/* Targeta de nivell */}
+        <div
+          className={`
+            mx-4 p-5 rounded-2xl shadow-neo border transition-all duration-300
+            ${isCurrentLevel
+              ? `bg-gradient-to-br ${visibleLevel.bgGradient} border-white/50`
+              : isPastLevel
+                ? 'bg-muted/30 border-muted/50'
+                : 'bg-muted/20 border-muted/40 opacity-70'
+            }
+          `}
+        >
+          {/* Etiqueta d'estat */}
+          <div className="flex items-center justify-between mb-3">
+            <span className={`
+              text-xs font-bold px-2 py-0.5 rounded-full
+              ${isCurrentLevel
+                ? 'bg-white/40 text-foreground'
+                : isPastLevel
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-muted text-muted-foreground'
+              }
+            `}>
+              {isCurrentLevel ? '📍 Nivell actual' : isPastLevel ? '✅ Superat' : '🔒 Per aconseguir'}
+            </span>
+
+            {/* Indicadors de punts de navegació */}
+            <div className="flex gap-1">
+              {LEVELS.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setVisibleIndex(idx)}
+                  className={`
+                    w-2 h-2 rounded-full transition-all
+                    ${idx === visibleIndex
+                      ? 'bg-primary scale-125'
+                      : idx <= currentLevelIndex
+                        ? 'bg-primary/40'
+                        : 'bg-muted-foreground/30'
+                    }
+                  `}
+                />
+              ))}
             </div>
           </div>
-          <div className="text-right">
-            <div className={`text-3xl font-black ${level.color}`}>
-              {totalClasses}
+
+          {/* Contingut principal */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <span className={`text-5xl ${isFutureLevel ? 'grayscale opacity-50' : ''}`}>
+                {visibleLevel.emoji}
+              </span>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                  {visibleIndex + 1} de {LEVELS.length}
+                </p>
+                <h2 className={`text-2xl font-black ${isCurrentLevel ? visibleLevel.color : 'text-muted-foreground'}`}>
+                  {visibleLevel.name}
+                </h2>
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground">classes</div>
+
+            {/* Classes necessàries / aconseguides */}
+            <div className="text-right">
+              {isCurrentLevel && (
+                <>
+                  <div className={`text-3xl font-black ${visibleLevel.color}`}>
+                    {totalClasses}
+                  </div>
+                  <div className="text-xs text-muted-foreground">classes</div>
+                </>
+              )}
+              {isPastLevel && (
+                <div className="text-green-600 font-bold text-sm">✓ Completat</div>
+              )}
+              {isFutureLevel && (
+                <>
+                  <div className="text-2xl font-black text-muted-foreground">
+                    {visibleLevel.minClasses}
+                  </div>
+                  <div className="text-xs text-muted-foreground">classes</div>
+                </>
+              )}
+            </div>
           </div>
-        </div>
 
-        <p className="text-sm text-muted-foreground mb-3 italic">
-          "{level.description}"
-        </p>
+          {/* Descripció */}
+          <p className={`text-sm mb-3 italic ${isCurrentLevel ? 'text-muted-foreground' : 'text-muted-foreground/60'}`}>
+            "{visibleLevel.description}"
+          </p>
 
-        {/* Barra de progrés cap al següent nivell */}
-        {classesUntilNextLevel !== null && (
+          {/* Info de classes */}
+          <p className="text-xs text-muted-foreground mb-2">
+            {getClassesInfo(visibleIndex)}
+          </p>
+
+          {/* Barra de progrés */}
           <div className="space-y-1">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Progrés cap a {getNextLevelName(level.id)}</span>
-              <span>{classesUntilNextLevel} classes per pujar</span>
-            </div>
-            <div className="w-full bg-white/50 rounded-full h-2.5 shadow-neo-inset">
+            <div className="w-full bg-white/40 rounded-full h-2.5 shadow-neo-inset">
               <div
-                className={`h-2.5 rounded-full transition-all duration-700 ${level.color.replace('text-', 'bg-')}`}
-                style={{ width: `${calcLevelProgress(totalClasses, level)}%` }}
+                className={`h-2.5 rounded-full transition-all duration-700 ${
+                  isCurrentLevel
+                    ? visibleLevel.color.replace('text-', 'bg-')
+                    : isPastLevel
+                      ? 'bg-green-500'
+                      : 'bg-muted-foreground/20'
+                }`}
+                style={{ width: `${getLevelProgress(visibleIndex)}%` }}
               />
             </div>
           </div>
-        )}
-        {classesUntilNextLevel === null && (
-          <div className="text-center py-1">
-            <span className="text-xs font-bold text-purple-600">
-              ✦ Nivell màxim assolit ✦
-            </span>
-          </div>
-        )}
+        </div>
+
+        {/* Fletxa dreta */}
+        <button
+          onClick={() => canGoRight && setVisibleIndex(v => v + 1)}
+          disabled={!canGoRight}
+          className={`
+            absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10
+            w-8 h-8 rounded-full flex items-center justify-center
+            shadow-neo transition-all
+            ${canGoRight
+              ? 'bg-background hover:shadow-neo-sm text-foreground'
+              : 'opacity-0 pointer-events-none'
+            }
+          `}
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
 
       {/* RATXA + XP en dues columnes */}
@@ -145,9 +283,8 @@ const ProgressionPanel = ({ data, userName }: ProgressionPanelProps) => {
         </div>
       </div>
 
-      {/* Missatge motivacional dinàmic */}
+      {/* Missatge motivacional */}
       <MotivationalMessage streak={streak} xp={xp} userName={userName} />
-
     </div>
   );
 };
@@ -201,24 +338,5 @@ const MotivationalMessage = ({
     </div>
   );
 };
-
-// Helpers visuals
-function getNextLevelName(currentLevelId: string): string {
-  const levelNames: Record<string, string> = {
-    principiant: 'Atleta',
-    atleta: 'Competidora',
-    competidora: 'Campiona',
-    campiona: 'Èlit',
-    elit: 'Llegenda',
-  };
-  return levelNames[currentLevelId] || '';
-}
-
-function calcLevelProgress(totalClasses: number, level: ProgressionData['level']): number {
-  if (level.maxClasses === null) return 100;
-  const range = level.maxClasses - level.minClasses + 1;
-  const progress = totalClasses - level.minClasses;
-  return Math.min(100, Math.round((progress / range) * 100));
-}
 
 export default ProgressionPanel;
