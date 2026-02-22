@@ -1,4 +1,4 @@
-import { Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, ChevronDown, ChevronUp, MapPin } from "lucide-react";
+import { Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, ChevronDown, ChevronUp, MapPin, X } from "lucide-react";
 import { useCurrentUserWithSessions } from "@/hooks/useUsers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -11,12 +11,44 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
+// ── Modal d'informació ───────────────────────────────────────
+const InfoModal = ({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) => (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+    onClick={onClose}
+  >
+    <div
+      className="bg-background rounded-2xl shadow-neo p-5 max-w-sm w-full space-y-3"
+      onClick={e => e.stopPropagation()}
+    >
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold text-lg">{title}</h3>
+        <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="text-sm text-muted-foreground space-y-2">
+        {children}
+      </div>
+    </div>
+  </div>
+);
+
 const UserStats = () => {
   const { firestoreUserId } = useAuth();
   const { userProfile } = useUserProfile();
   const { user: currentUserData, loading } = useCurrentUserWithSessions(firestoreUserId);
   const [isMonthlyFrequencyOpen, setIsMonthlyFrequencyOpen] = useState(false);
   const [isHistorialOpen, setIsHistorialOpen] = useState(false);
+  const [showAutodisciplineInfo, setShowAutodisciplineInfo] = useState(false);
 
   const stats = useMemo(() => {
     if (!currentUserData || !currentUserData.sessions) {
@@ -52,7 +84,7 @@ const UserStats = () => {
             lastMonth: 0,
             previousQuarterAverage: 0,
             trend: 'stable' as const,
-            percentageChange: '0'
+            percentageChange: 0
           }
         },
         programRankings: {}
@@ -80,7 +112,6 @@ const UserStats = () => {
     const { yearlyStats, trend, bestYear, worstYear } = calculateYearlyTrend(sessions);
     const advancedStats = calculateAdvancedStats(currentUserData);
 
-    // Llegim els rankings del cache (calculat durant la importació, sense cost de lectures)
     const programRankings: { [key: string]: any } = {};
     programStats.forEach(prog => {
       programRankings[prog.name] = currentUserData.rankingCache?.programs?.[prog.name]
@@ -143,6 +174,8 @@ const UserStats = () => {
     );
   }
 
+  const { autodisciplineDetails: d, autodiscipline } = stats.advancedStats;
+
   return (
     <div className="px-4 max-w-7xl mx-auto pb-12 space-y-4">
 
@@ -162,7 +195,7 @@ const UserStats = () => {
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">Autodisciplina</p>
             <div className="flex items-end gap-2">
               <span className={`text-5xl font-bold leading-none ${stats.advancedStats.autodisciplineLevel.color}`}>
-                {stats.advancedStats.autodiscipline}%
+                {autodiscipline}%
               </span>
               <span className="text-xl mb-0.5">{stats.advancedStats.autodisciplineLevel.emoji}</span>
             </div>
@@ -171,20 +204,7 @@ const UserStats = () => {
             </p>
           </div>
           <button
-            onClick={() => alert(
-              `COM ES CALCULA L'AUTODISCIPLINA?\n\n` +
-              `Es calcula combinant dos factors:\n\n` +
-              `🔹 Consistència Recent (70%): Compara les sessions de l'últim mes amb la teva mitjana dels últims 5 mesos.\n\n` +
-              `🔹 Context Històric (30%): Compara el teu ritme actual amb el teu millor any.\n\n` +
-              `Detalls del càlcul:\n` +
-              `• Últim mes: ${stats.advancedStats.autodisciplineDetails.lastMonthSessions} sessions\n` +
-              `• Mitjana mensual: ${stats.advancedStats.autodisciplineDetails.monthlyAverage} sessions\n` +
-              `• Millor any: ${stats.advancedStats.autodisciplineDetails.bestYearSessions} sessions\n` +
-              `• Projecció any actual: ${stats.advancedStats.autodisciplineDetails.currentYearProjection} sessions\n\n` +
-              `Puntuació Recent: ${stats.advancedStats.autodisciplineDetails.recentScore}%\n` +
-              `Puntuació Històrica: ${stats.advancedStats.autodisciplineDetails.historicScore}%\n` +
-              `TOTAL: ${stats.advancedStats.autodiscipline}%`
-            )}
+            onClick={() => setShowAutodisciplineInfo(true)}
             className="p-1.5 rounded-full hover:bg-white/50 transition-colors"
           >
             <Info className="w-4 h-4" />
@@ -200,6 +220,44 @@ const UserStats = () => {
           Mesura la regularitat amb què assisteixes al gimnàs
         </p>
       </div>
+
+      {/* Modal autodisciplina */}
+      {showAutodisciplineInfo && (
+        <InfoModal
+          title="📊 Com es calcula l'Autodisciplina?"
+          onClose={() => setShowAutodisciplineInfo(false)}
+        >
+          <p>Es calcula combinant dos factors:</p>
+
+          <div className="space-y-2">
+            <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+              <p className="font-semibold text-blue-700 mb-1">🔹 Consistència Recent · 70%</p>
+              <p className="text-blue-700">Compara les sessions de l'últim mes amb la teva mitjana dels últims 5 mesos.</p>
+            </div>
+            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+              <p className="font-semibold text-purple-700 mb-1">🔹 Context Històric · 30%</p>
+              <p className="text-purple-700">Compara el teu ritme actual amb el teu millor any.</p>
+            </div>
+          </div>
+
+          <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-xs">
+            <p className="font-semibold text-foreground mb-2">Detalls del teu càlcul:</p>
+            <div className="flex justify-between"><span>Últim mes:</span><span className="font-semibold text-foreground">{d.lastMonthSessions} sessions</span></div>
+            <div className="flex justify-between"><span>Mitjana mensual:</span><span className="font-semibold text-foreground">{d.monthlyAverage} sessions</span></div>
+            <div className="flex justify-between"><span>Millor any:</span><span className="font-semibold text-foreground">{d.bestYearSessions} sessions</span></div>
+            <div className="flex justify-between"><span>Projecció any actual:</span><span className="font-semibold text-foreground">{d.currentYearProjection} sessions</span></div>
+          </div>
+
+          <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-xs">
+            <p className="font-semibold text-foreground mb-2">Puntuació final:</p>
+            <div className="flex justify-between"><span>Consistència Recent:</span><span className="font-semibold text-foreground">{d.recentScore}% × 70%</span></div>
+            <div className="flex justify-between"><span>Context Històric:</span><span className="font-semibold text-foreground">{d.historicScore}% × 30%</span></div>
+            <div className="border-t border-muted pt-1 mt-1 flex justify-between font-semibold text-foreground">
+              <span>TOTAL:</span><span>{autodiscipline}%</span>
+            </div>
+          </div>
+        </InfoModal>
+      )}
 
       {/* ── EVOLUCIÓ RECENT + REGULARITAT ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
