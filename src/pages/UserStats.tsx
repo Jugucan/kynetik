@@ -1,4 +1,4 @@
-import { Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, ChevronDown, ChevronUp, MapPin, X } from "lucide-react";
+import { Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import { useCurrentUserWithSessions } from "@/hooks/useUsers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -10,37 +10,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-
-// ── Modal d'informació ───────────────────────────────────────
-const InfoModal = ({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) => (
-  <div
-    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-    onClick={onClose}
-  >
-    <div
-      className="bg-background rounded-2xl shadow-neo p-5 max-w-sm w-full space-y-3"
-      onClick={e => e.stopPropagation()}
-    >
-      <div className="flex items-center justify-between">
-        <h3 className="font-bold text-lg">{title}</h3>
-        <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted transition-colors">
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-      <div className="text-sm text-muted-foreground space-y-2">
-        {children}
-      </div>
-    </div>
-  </div>
-);
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const UserStats = () => {
   const { firestoreUserId } = useAuth();
@@ -221,43 +196,63 @@ const UserStats = () => {
         </p>
       </div>
 
-      {/* Modal autodisciplina */}
-      {showAutodisciplineInfo && (
-        <InfoModal
-          title="📊 Com es calcula l'Autodisciplina?"
-          onClose={() => setShowAutodisciplineInfo(false)}
-        >
-          <p>Es calcula combinant dos factors:</p>
+      {/* ── MODAL AUTODISCIPLINA ── */}
+      <Dialog open={showAutodisciplineInfo} onOpenChange={setShowAutodisciplineInfo}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base">Com es calcula l'Autodisciplina?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <p className="text-muted-foreground">Es calcula combinant dos factors:</p>
 
-          <div className="space-y-2">
-            <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-              <p className="font-semibold text-blue-700 mb-1">🔹 Consistència Recent · 70%</p>
-              <p className="text-blue-700">Compara les sessions de l'últim mes amb la teva mitjana dels últims 5 mesos.</p>
+            <div className="p-3 bg-blue-50 rounded-xl">
+              <p className="font-semibold text-blue-700 mb-1">🔹 Consistència Recent — 70%</p>
+              <p className="text-xs text-blue-600">Compara les sessions de l'últim mes amb la teva mitjana dels últims 5 mesos.</p>
             </div>
-            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
-              <p className="font-semibold text-purple-700 mb-1">🔹 Context Històric · 30%</p>
-              <p className="text-purple-700">Compara el teu ritme actual amb el teu millor any.</p>
+
+            <div className="p-3 bg-purple-50 rounded-xl">
+              <p className="font-semibold text-purple-700 mb-1">🔹 Context Històric — 30%</p>
+              <p className="text-xs text-purple-600">Compara el teu ritme actual amb el teu millor any.</p>
+            </div>
+
+            <div className="border-t pt-3 space-y-1.5">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Detalls del teu càlcul</p>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Últim mes:</span>
+                <span className="font-medium">{d.lastMonthSessions} sessions</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Mitjana mensual:</span>
+                <span className="font-medium">{d.monthlyAverage} sessions</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Millor any:</span>
+                <span className="font-medium">{d.bestYearSessions} sessions</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Projecció any actual:</span>
+                <span className="font-medium">{d.currentYearProjection} sessions</span>
+              </div>
+            </div>
+
+            <div className="border-t pt-3 space-y-1.5">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Puntuacions</p>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Pes Consistència Recent:</span>
+                <span className="font-medium text-blue-600">70%</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Pes Context Històric:</span>
+                <span className="font-medium text-purple-600">30%</span>
+              </div>
+              <div className="flex justify-between text-xs font-bold border-t pt-2 mt-1">
+                <span>Puntuació Total:</span>
+                <span className={stats.advancedStats.autodisciplineLevel.color}>{autodiscipline}%</span>
+              </div>
             </div>
           </div>
-
-          <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-xs">
-            <p className="font-semibold text-foreground mb-2">Detalls del teu càlcul:</p>
-            <div className="flex justify-between"><span>Últim mes:</span><span className="font-semibold text-foreground">{d.lastMonthSessions} sessions</span></div>
-            <div className="flex justify-between"><span>Mitjana mensual:</span><span className="font-semibold text-foreground">{d.monthlyAverage} sessions</span></div>
-            <div className="flex justify-between"><span>Millor any:</span><span className="font-semibold text-foreground">{d.bestYearSessions} sessions</span></div>
-            <div className="flex justify-between"><span>Projecció any actual:</span><span className="font-semibold text-foreground">{d.currentYearProjection} sessions</span></div>
-          </div>
-
-          <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-xs">
-            <p className="font-semibold text-foreground mb-2">Puntuació final:</p>
-            <div className="flex justify-between"><span>Consistència Recent:</span><span className="font-semibold text-foreground">{d.recentScore}% × 70%</span></div>
-            <div className="flex justify-between"><span>Context Històric:</span><span className="font-semibold text-foreground">{d.historicScore}% × 30%</span></div>
-            <div className="border-t border-muted pt-1 mt-1 flex justify-between font-semibold text-foreground">
-              <span>TOTAL:</span><span>{autodiscipline}%</span>
-            </div>
-          </div>
-        </InfoModal>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* ── EVOLUCIÓ RECENT + REGULARITAT ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
