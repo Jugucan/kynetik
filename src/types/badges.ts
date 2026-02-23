@@ -2,13 +2,17 @@
 // TIPUS I DEFINICIONS DEL SISTEMA D'INSÍGNIES
 // ============================================================
 
+import { getAdjectiu } from '@/utils/genderHelpers';
+
 export type BadgeCategory =
   | 'assistencia'
-  | 'ratxa'
+  | 'constancia'
   | 'antiguitat'
-  | 'programes'
-  | 'exploradora'
+  | 'exploracio'
   | 'especial';
+
+// Subcategories d'exploració (informatives, per mostrar a la UI)
+export type ExploracioSubcategory = 'horaris' | 'varietat' | 'intensitat';
 
 export type BadgeTier = 'bronze' | 'plata' | 'or' | 'diamant' | 'llegenda';
 
@@ -22,6 +26,7 @@ export interface BadgeDefinition {
   descriptionMasculi?: string;
   emoji: string;
   category: BadgeCategory;
+  subcategory?: ExploracioSubcategory;
   tier: BadgeTier;
   requirement: string;
 }
@@ -35,12 +40,12 @@ export interface BadgeWithStatus extends BadgeDefinition {
 }
 
 // ============================================================
-// DEFINICIÓ DE TOTES LES INSÍGNIES
+// TOTES LES INSÍGNIES
 // ============================================================
 
 export const ALL_BADGES: BadgeDefinition[] = [
 
-  // --- ASSISTÈNCIA ---
+  // ── ASSISTÈNCIA ────────────────────────────────────────────
   {
     id: 'ass_1',
     name: 'Primera Passa',
@@ -109,15 +114,6 @@ export const ALL_BADGES: BadgeDefinition[] = [
     requirement: '200 classes',
   },
   {
-    id: 'ass_aniversari',
-    name: 'Volta al Sol',
-    description: 'Un any sencer venint cada mes sense excuses. Has donat una volta al sol amb nosaltres!',
-    emoji: '☀️',
-    category: 'assistencia',
-    tier: 'diamant',
-    requirement: '1 any de membre amb mínim 1 classe per mes',
-  },
-  {
     id: 'ass_500',
     name: 'Llegenda del Kynetik',
     nameFemeni: 'Llegendària',
@@ -129,65 +125,65 @@ export const ALL_BADGES: BadgeDefinition[] = [
     requirement: '500 classes',
   },
 
-  // --- RATXA / CONSTÀNCIA ---
+  // ── CONSTÀNCIA ─────────────────────────────────────────────
   {
     id: 'ratxa_2',
-    name: 'Dos Cops Seguits',
-    description: 'Has vingut 2 setmanes seguides (mínim 1 cop/setmana).',
-    emoji: '📅',
-    category: 'ratxa',
+    name: 'Espurna Constant',
+    description: '2 setmanes seguides. L\'espurna ja crema!',
+    emoji: '✨',
+    category: 'constancia',
     tier: 'bronze',
     requirement: '2 setmanes consecutives',
   },
   {
     id: 'ratxa_4',
-    name: 'Un Mes Constant',
-    description: '4 setmanes seguides venint. Un mes sencer!',
+    name: 'Ritme Estable',
+    description: '4 setmanes seguides. Tens un ritme estable!',
     emoji: '📆',
-    category: 'ratxa',
+    category: 'constancia',
     tier: 'bronze',
     requirement: '4 setmanes consecutives',
   },
   {
     id: 'ratxa_8',
-    name: 'Dos Mesos de Foc',
-    description: '8 setmanes sense aturar-te. Ets foc pur!',
+    name: 'En Foc',
+    description: '8 setmanes sense aturar-te. Estàs en foc!',
     emoji: '🔥',
-    category: 'ratxa',
+    category: 'constancia',
     tier: 'plata',
     requirement: '8 setmanes consecutives',
   },
   {
     id: 'ratxa_12',
-    name: 'Tres Mesos Sense Aturar',
-    nameFemeni: 'Tres Mesos Invicta',
-    nameMasculi: 'Tres Mesos Invicte',
+    name: 'Invicte/a',
+    nameFemeni: 'Invicta',
+    nameMasculi: 'Invicte',
     description: 'Un trimestre sencer de constància absoluta.',
     emoji: '⚔️',
-    category: 'ratxa',
+    category: 'constancia',
     tier: 'plata',
     requirement: '12 setmanes consecutives',
   },
   {
     id: 'ratxa_26',
-    name: 'Mig Any Sense Parar',
+    name: 'Mig Any Ferm',
     description: '6 mesos venint setmana rere setmana. Espectacular!',
     emoji: '🏆',
-    category: 'ratxa',
+    category: 'constancia',
     tier: 'or',
     requirement: '26 setmanes consecutives',
   },
   {
     id: 'ratxa_52',
-    name: 'Any Perfecte',
-    description: 'Un any sencer sense perdre ni una sola setmana. Llegendari!',
+    name: 'Any Imparable',
+    description: 'Un any sencer sense perdre ni una sola setmana!',
     emoji: '💎',
-    category: 'ratxa',
+    category: 'constancia',
     tier: 'llegenda',
     requirement: '52 setmanes consecutives',
   },
 
-  // --- ANTIGUITAT ---
+  // ── ANTIGUITAT ─────────────────────────────────────────────
   {
     id: 'ant_1m',
     name: 'Nouvingut/da',
@@ -203,7 +199,9 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
   {
     id: 'ant_3m',
-    name: 'Arrelant',
+    name: 'Arrelat/da',
+    nameFemeni: 'Arrelada',
+    nameMasculi: 'Arrelat',
     description: '3 mesos al Kynetik. Ja ets part de la família!',
     emoji: '🌿',
     category: 'antiguitat',
@@ -271,48 +269,16 @@ export const ALL_BADGES: BadgeDefinition[] = [
     requirement: '10 anys com a membre',
   },
 
-  // --- PROGRAMES (per categories) ---
-  {
-    id: 'prog_cat_2',
-    name: 'Doble Poder',
-    description: 'Has provat programes de 2 categories diferents. T\'atreveixes amb tot!',
-    emoji: '⚡',
-    category: 'programes',
-    tier: 'plata',
-    requirement: '2 categories de programes diferents',
-  },
-  {
-    id: 'prog_cat_3',
-    name: 'Equilibri Total',
-    description: 'Has provat força, cardio i flexibilitat. Ets un/a esportista complet/a!',
-    descriptionFemeni: 'Has provat força, cardio i flexibilitat. Ets una esportista completa!',
-    descriptionMasculi: 'Has provat força, cardio i flexibilitat. Ets un esportista complet!',
-    emoji: '🌈',
-    category: 'programes',
-    tier: 'or',
-    requirement: 'Les 3 categories: força + cardio + flexibilitat',
-  },
-  {
-    id: 'prog_cat_all',
-    name: 'Atleta Complet/a',
-    nameFemeni: 'Atleta Completa',
-    nameMasculi: 'Atleta Complet',
-    description: 'Has fet força, cardio i flexibilitat en una mateixa setmana.',
-    emoji: '🏆',
-    category: 'programes',
-    tier: 'diamant',
-    requirement: 'Les 3 categories en una mateixa setmana',
-  },
-
-  // --- EXPLORADORA ---
+  // ── EXPLORACIÓ: HORARIS ────────────────────────────────────
   {
     id: 'exp_matidora',
     name: 'Matiner/a',
     nameFemeni: 'Matinera',
     nameMasculi: 'Matiner',
-    description: 'Has assistit a una classe de matí (abans de les 12h). Bon dia!',
+    description: 'Has assistit a una classe abans de les 12h. Bon dia!',
     emoji: '🌅',
-    category: 'exploradora',
+    category: 'exploracio',
+    subcategory: 'horaris',
     tier: 'bronze',
     requirement: 'Classe abans de les 12h',
   },
@@ -323,39 +289,109 @@ export const ALL_BADGES: BadgeDefinition[] = [
     nameMasculi: 'Nocturn',
     description: 'Has assistit a una classe a partir de les 20h.',
     emoji: '🌙',
-    category: 'exploradora',
+    category: 'exploracio',
+    subcategory: 'horaris',
     tier: 'bronze',
     requirement: 'Classe a les 20h o més tard',
   },
   {
     id: 'exp_doble',
-    name: 'Doble Sessió',
-    description: 'Has fet una classe de matí i una de tarda en la mateixa setmana. Increïble energia!',
+    name: 'Doble Torn',
+    description: 'Has fet classe de matí i de tarda en la mateixa setmana.',
     emoji: '💥',
-    category: 'exploradora',
+    category: 'exploracio',
+    subcategory: 'horaris',
     tier: 'plata',
     requirement: 'Classe de matí + tarda en la mateixa setmana',
+  },
+
+  // ── EXPLORACIÓ: VARIETAT ───────────────────────────────────
+  {
+    id: 'prog_cat_2',
+    name: 'Doble Poder',
+    description: 'Has provat programes de 2 categories diferents!',
+    emoji: '⚡',
+    category: 'exploracio',
+    subcategory: 'varietat',
+    tier: 'plata',
+    requirement: '2 categories de programes diferents',
+  },
+  {
+    id: 'prog_cat_3',
+    name: 'Equilibri Total',
+    description: 'Has provat força, cardio i flexibilitat!',
+    descriptionFemeni: 'Has provat força, cardio i flexibilitat. Ets una esportista completa!',
+    descriptionMasculi: 'Has provat força, cardio i flexibilitat. Ets un esportista complet!',
+    emoji: '🌈',
+    category: 'exploracio',
+    subcategory: 'varietat',
+    tier: 'or',
+    requirement: 'Les 3 categories: força + cardio + flexibilitat',
+  },
+  {
+    id: 'prog_cat_all',
+    name: 'Atleta Complet/a',
+    nameFemeni: 'Atleta Completa',
+    nameMasculi: 'Atleta Complet',
+    description: 'Força, cardio i flexibilitat en una mateixa setmana!',
+    emoji: '🏆',
+    category: 'exploracio',
+    subcategory: 'varietat',
+    tier: 'diamant',
+    requirement: 'Les 3 categories en una mateixa setmana',
+  },
+
+  // ── EXPLORACIÓ: INTENSITAT ─────────────────────────────────
+  {
+    id: 'exp_3dies_seguits',
+    name: 'Tres en Ratlla',
+    description: 'Has assistit 3 dies consecutius. Increïble!',
+    emoji: '🔥',
+    category: 'exploracio',
+    subcategory: 'intensitat',
+    tier: 'plata',
+    requirement: '3 dies consecutius',
+  },
+  {
+    id: 'exp_3dies_setmana',
+    name: 'Setmana Activa',
+    description: 'Has fet 3 classes en una mateixa setmana!',
+    emoji: '📅',
+    category: 'exploracio',
+    subcategory: 'intensitat',
+    tier: 'plata',
+    requirement: '3 dies en una mateixa setmana',
   },
   {
     id: 'exp_5dies',
     name: 'Setmana Completa',
-    description: 'Has assistit a classes els 5 dies laborables d\'una mateixa setmana.',
+    description: 'Has assistit els 5 dies laborables d\'una setmana!',
     emoji: '📋',
-    category: 'exploradora',
+    category: 'exploracio',
+    subcategory: 'intensitat',
     tier: 'or',
     requirement: '5 dies laborables en una mateixa setmana',
   },
-  {
-    id: 'exp_3dies_seguits',
-    name: 'Tres en Ratlla',
-    description: 'Has assistit 3 dies consecutius.',
-    emoji: '🔥',
-    category: 'exploradora',
-    tier: 'plata',
-    requirement: '3 dies consecutius',
-  },
 
-  // --- ESPECIALS ---
+  // ── ESPECIALS ──────────────────────────────────────────────
+  {
+    id: 'ass_aniversari',
+    name: 'Volta al Sol',
+    description: 'Un any sencer venint cada mes. Has donat una volta al sol amb nosaltres!',
+    emoji: '☀️',
+    category: 'especial',
+    tier: 'diamant',
+    requirement: '1 any de membre amb mínim 1 classe per mes',
+  },
+  {
+    id: 'esp_100en365',
+    name: '100 en 365',
+    description: 'Has fet 100 classes en un període de 365 dies. Dedicació absoluta!',
+    emoji: '💯',
+    category: 'especial',
+    tier: 'diamant',
+    requirement: '100 classes en qualsevol període de 365 dies consecutius',
+  },
   {
     id: 'esp_comeback',
     name: 'La Gran Tornada',
@@ -378,7 +414,8 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
 ];
 
-// Insígnies d'Any Nou col·leccionables
+// ── INSÍGNIES D'ANY NOU (col·leccionables) ──────────────────
+
 export function getNewYearBadges(): BadgeDefinition[] {
   const currentYear = new Date().getFullYear();
   const badges: BadgeDefinition[] = [];
@@ -400,7 +437,8 @@ export function getAllBadgesWithDynamic(): BadgeDefinition[] {
   return [...ALL_BADGES, ...getNewYearBadges()];
 }
 
-// Retorna el nom i descripció adaptats al gènere
+// ── HELPER DE GÈNERE ────────────────────────────────────────
+
 export const getBadgeTexts = (
   badge: BadgeDefinition,
   gender?: string | null
@@ -420,14 +458,23 @@ export const getBadgeTexts = (
   return { name: badge.name, description: badge.description };
 };
 
+// ── NOMS DE CATEGORIES ───────────────────────────────────────
+
 export const CATEGORY_NAMES: Record<BadgeCategory, string> = {
   assistencia: '💪 Assistència',
-  ratxa: '🔥 Constància',
+  constancia: '🔥 Constància',
   antiguitat: '⭐ Antiguitat',
-  programes: '🎯 Programes',
-  exploradora: '🗺️ Explorador/a',
+  exploracio: '🧭 Exploració i Hàbits',
   especial: '✨ Especials',
 };
+
+export const SUBCATEGORY_NAMES: Record<ExploracioSubcategory, string> = {
+  horaris: '🌅 Horaris',
+  varietat: '🧩 Varietat',
+  intensitat: '📆 Intensitat setmanal',
+};
+
+// ── COLORS DE TIERS ──────────────────────────────────────────
 
 export const TIER_COLORS: Record<BadgeTier, { bg: string; text: string; border: string; label: string }> = {
   bronze: {
