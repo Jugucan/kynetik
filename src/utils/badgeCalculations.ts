@@ -207,18 +207,18 @@ function hasNewYearClass(sessions: Session[], year: number): boolean {
   });
 }
 
-function calcBestWeekStreak(sessions: Session[]): number {
-  if (!sessions.length) return 0;
+function calcBestWeekStreak(sessions: Session[]): { count: number; endWeekLabel: string } {
+  if (!sessions.length) return { count: 0, endWeekLabel: '' };
   const weeks = Array.from(new Set(sessions.map(s => getWeekKey(new Date(s.date))))).sort();
-  let max = 1, cur = 1;
+  let max = 1, cur = 1, bestEndWk = weeks[0];
   for (let i = 1; i < weeks.length; i++) {
     const [yp, wp] = weeks[i - 1].split('-W').map(Number);
     const [yc, wc] = weeks[i].split('-W').map(Number);
     const consec = (yc === yp && wc === wp + 1) || (yc === yp + 1 && wp >= 52 && wc === 1);
     cur = consec ? cur + 1 : 1;
-    if (cur > max) max = cur;
+    if (cur > max) { max = cur; bestEndWk = weeks[i]; }
   }
-  return max;
+  return { count: max, endWeekLabel: weekKeyToDateLabel(bestEndWk) };
 }
 
 function weekKeyToDateLabel(weekKey: string): string {
@@ -313,7 +313,9 @@ export function calculateBadges(
   const yearsAsMember = monthsAsMember / 12;
   const daysSinceFirst = calcDaysSinceFirstSession(userData.firstSession);
   const maxWeekStreak = calcMaxWeekStreak(sessions);
-  const bestWeekStreak = calcBestWeekStreak(sessions);
+  const bestStreakData = calcBestWeekStreak(sessions);
+  const bestWeekStreak = bestStreakData.count;
+  const bestWeekStreakLabel = bestStreakData.endWeekLabel;
   const bestWeek = calcBestWeekClasses(sessions);
   const bestMonth = calcBestMonthClasses(sessions);
   const bestWeekXP = calcBestWeekXP(sessions);
@@ -572,7 +574,7 @@ export function calculateBadges(
         earned = true;
         progress = 100;
         progressLabel = bestWeekStreak > 0 ? `${bestWeekStreak} setmanes` : '–';
-        earnedAt = bestWeekStreak > 0 ? `Millor ratxa: ${bestWeekStreak} setmanes consecutives` : undefined;
+        earnedAt = bestWeekStreak > 0 ? `Fins la setmana del ${bestWeekStreakLabel}` : undefined;
         break;
       case 'personal_millor_setmana':
         earned = true;
