@@ -3,7 +3,7 @@
 // ============================================================
 
 export type ProgressionLevel =
-  | 'rookie'
+  | 'principiant'
   | 'actiu'
   | 'compromis'
   | 'determinat'
@@ -54,10 +54,10 @@ export interface ProgressionData {
 
 export const LEVELS: LevelDefinition[] = [
   {
-    id: 'rookie',
-    name: 'Rookie',
-    nameFemeni: 'Rookie',
-    nameMasculi: 'Rookie',
+    id: 'principiant',
+    name: 'Principiant',
+    nameFemeni: 'Principiant',
+    nameMasculi: 'Principiant',
     emoji: '🌱',
     minXP: 0,
     maxXP: 199,
