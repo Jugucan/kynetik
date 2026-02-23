@@ -65,7 +65,15 @@ const BadgeCard = ({ badge, gender }: BadgeCardProps) => {
       )}
 
       {/* Etiqueta de tier quan és guanyada */}
-      {isEarned && (
+      {isEarned && badge.category === 'personal' && badge.progressLabel && (
+        <div className="mt-2 text-center relative z-10">
+          <span className={`text-lg font-black ${tierStyle.text}`}>
+            {badge.progressLabel}
+          </span>
+        </div>
+      )}
+
+      {isEarned && badge.category !== 'personal' && (
         <div className="mt-2 text-center relative z-10">
           <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${tierStyle.text} bg-white/30 backdrop-blur-sm`}>
             ✦ {tierStyle.label} ✦
