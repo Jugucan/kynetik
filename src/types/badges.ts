@@ -413,6 +413,43 @@ export const ALL_BADGES: BadgeDefinition[] = [
     tier: 'or',
     requirement: 'Mateixa freqüència 3 mesos seguits',
   },
+  // ── RÈCORDS PERSONALS ──────────────────────────────────────
+  {
+    id: 'personal_ratxa',
+    name: 'Millor Ratxa',
+    description: 'El teu rècord personal de setmanes consecutives.',
+    emoji: '🔥',
+    category: 'personal',
+    tier: 'or',
+    requirement: 'Rècord personal',
+  },
+  {
+    id: 'personal_millor_setmana',
+    name: 'Millor Setmana',
+    description: 'La setmana amb més classes de la teva història.',
+    emoji: '⚡',
+    category: 'personal',
+    tier: 'or',
+    requirement: 'Rècord personal',
+  },
+  {
+    id: 'personal_millor_mes',
+    name: 'Millor Mes',
+    description: 'El mes amb més classes de la teva història.',
+    emoji: '📅',
+    category: 'personal',
+    tier: 'or',
+    requirement: 'Rècord personal',
+  },
+  {
+    id: 'personal_millor_xp',
+    name: 'Millor Setmana XP',
+    description: 'La setmana que vas acumular més punts d\'experiència.',
+    emoji: '⭐',
+    category: 'personal',
+    tier: 'or',
+    requirement: 'Rècord personal',
+  },
 ];
 
 // ── INSÍGNIES D'ANY NOU (col·leccionables) ──────────────────
