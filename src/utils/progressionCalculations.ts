@@ -36,71 +36,58 @@ function getCurrentWeekKey(): string {
   return getWeekKey(new Date());
 }
 
+function isConsecutiveWeek(wkPrev: string, wkCurr: string): boolean {
+  const [yearPrev, wPrev] = wkPrev.split('-W').map(Number);
+  const [yearCurr, wCurr] = wkCurr.split('-W').map(Number);
+  return (
+    (yearCurr === yearPrev && wCurr === wPrev + 1) ||
+    (yearCurr === yearPrev + 1 && wPrev >= 52 && wCurr === 1)
+  );
+}
+
 // ------------------------------------------------------------
-// CÀLCUL DEL NIVELL DE CLASSES
+// NIVELL BASAT EN XP
 // ------------------------------------------------------------
 
-export function calcLevel(totalClasses: number): LevelDefinition {
-  // Busquem el nivell més alt que compleix la condició
+export function calcLevelFromXP(totalXP: number): LevelDefinition {
   for (let i = LEVELS.length - 1; i >= 0; i--) {
-    if (totalClasses >= LEVELS[i].minClasses) {
-      return LEVELS[i];
-    }
+    if (totalXP >= LEVELS[i].minXP) return LEVELS[i];
   }
   return LEVELS[0];
 }
 
-export function calcClassesUntilNextLevel(totalClasses: number): number | null {
-  const currentLevel = calcLevel(totalClasses);
-  if (currentLevel.maxClasses === null) return null; // Llegenda, no hi ha següent
-  return currentLevel.maxClasses - totalClasses + 1;
+export function calcXPUntilNextLevel(totalXP: number): number | null {
+  const current = calcLevelFromXP(totalXP);
+  if (current.maxXP === null) return null;
+  return current.maxXP - totalXP + 1;
 }
 
 // ------------------------------------------------------------
-// CÀLCUL DE LA RATXA SETMANAL
+// RATXA SETMANAL
 // ------------------------------------------------------------
 
 export function calcWeekStreak(sessions: Session[]): WeekStreak {
   if (!sessions.length) {
-    return {
-      current: 0,
-      best: 0,
-      isActiveThisWeek: false,
-      lastActiveWeek: '',
-    };
+    return { current: 0, best: 0, isActiveThisWeek: false, lastActiveWeek: '' };
   }
 
-  // Obtenim totes les setmanes amb sessions, ordenades
   const weekSet = new Set(sessions.map(s => getWeekKey(new Date(s.date))));
   const weeks = Array.from(weekSet).sort();
   const currentWeek = getCurrentWeekKey();
+  const lastWeekKey = getWeekKey(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
 
-  // Comprovem si ha vingut aquesta setmana
   const isActiveThisWeek = weekSet.has(currentWeek);
   const lastActiveWeek = weeks[weeks.length - 1];
 
-  // Calculem la ratxa actual (des de la setmana més recent cap enrere)
+  // Ratxa actual: des de la setmana activa més recent cap enrere
   let currentStreak = 0;
-
-  // Determinem des d'on comptem (setmana actual o anterior)
-  // Si ha vingut aquesta setmana, comptem des d'ara
-  // Si no, comprovem si va venir la setmana passada (ratxa viva però no activa ara)
-  const lastWeekKey = getWeekKey(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
-
   if (isActiveThisWeek || weekSet.has(lastWeekKey)) {
-    // Comptem cap enrere des de la setmana activa més recent
     const startWeek = isActiveThisWeek ? currentWeek : lastWeekKey;
     const startIndex = weeks.indexOf(startWeek);
-
     if (startIndex >= 0) {
       currentStreak = 1;
       for (let i = startIndex - 1; i >= 0; i--) {
-        const [yearPrev, wPrev] = weeks[i].split('-W').map(Number);
-        const [yearCurr, wCurr] = weeks[i + 1].split('-W').map(Number);
-        const isConsecutive =
-          (yearCurr === yearPrev && wCurr === wPrev + 1) ||
-          (yearCurr === yearPrev + 1 && wPrev >= 52 && wCurr === 1);
-        if (isConsecutive) {
+        if (isConsecutiveWeek(weeks[i], weeks[i + 1])) {
           currentStreak++;
         } else {
           break;
@@ -108,18 +95,12 @@ export function calcWeekStreak(sessions: Session[]): WeekStreak {
       }
     }
   }
-  // Si no ha vingut ni aquesta setmana ni la passada, la ratxa és 0
 
-  // Calculem la millor ratxa històrica
-  let bestStreak = 1;
+  // Millor ratxa històrica
+  let bestStreak = weeks.length > 0 ? 1 : 0;
   let tempStreak = 1;
   for (let i = 1; i < weeks.length; i++) {
-    const [yearPrev, wPrev] = weeks[i - 1].split('-W').map(Number);
-    const [yearCurr, wCurr] = weeks[i].split('-W').map(Number);
-    const isConsecutive =
-      (yearCurr === yearPrev && wCurr === wPrev + 1) ||
-      (yearCurr === yearPrev + 1 && wPrev >= 52 && wCurr === 1);
-    if (isConsecutive) {
+    if (isConsecutiveWeek(weeks[i - 1], weeks[i])) {
       tempStreak++;
       if (tempStreak > bestStreak) bestStreak = tempStreak;
     } else {
@@ -137,6 +118,12 @@ export function calcWeekStreak(sessions: Session[]): WeekStreak {
 
 // ------------------------------------------------------------
 // CÀLCUL DE XP
+// Regles:
+//   +10 XP per classe
+//   +10 XP bonus si 2 sessions/setmana
+//   +20 XP bonus si 3+ sessions/setmana
+//   +30 XP bonus si 5+ sessions/setmana (acumulatiu sobre l'anterior)
+//   +15 XP per mantenir ratxa setmanal consecutiva
 // ------------------------------------------------------------
 
 export function calcXP(sessions: Session[]): XPInfo {
@@ -151,54 +138,36 @@ export function calcXP(sessions: Session[]): XPInfo {
     };
   }
 
-  // Agrupem sessions per setmana
   const sessionsByWeek: Record<string, number> = {};
   for (const s of sessions) {
     const wk = getWeekKey(new Date(s.date));
     sessionsByWeek[wk] = (sessionsByWeek[wk] || 0) + 1;
   }
 
-  // Calculem XP setmana per setmana
-  // Ordenem les setmanes per calcular ratxes i bonificacions
   const sortedWeeks = Object.keys(sessionsByWeek).sort();
-
   let totalXP = 0;
-  let weekStreakForXP = 0;
 
   for (let i = 0; i < sortedWeeks.length; i++) {
     const wk = sortedWeeks[i];
-    const sessionsThisWeek = sessionsByWeek[wk];
+    const n = sessionsByWeek[wk];
 
-    // XP base: 10 per classe
-    let weekXP = sessionsThisWeek * 10;
+    // Base
+    let weekXP = n * 10;
 
-    // Bonus per venir 2+ cops en una setmana
-    if (sessionsThisWeek >= 2) {
-      weekXP += 5;
-    }
+    // Bonus freqüència setmanal (acumulatius)
+    if (n >= 5) weekXP += 30;
+    else if (n >= 3) weekXP += 20;
+    else if (n >= 2) weekXP += 10;
 
-    // Comprovem si és setmana consecutiva (per bonus de ratxa)
-    if (i > 0) {
-      const prevWk = sortedWeeks[i - 1];
-      const [yearPrev, wPrev] = prevWk.split('-W').map(Number);
-      const [yearCurr, wCurr] = wk.split('-W').map(Number);
-      const isConsecutive =
-        (yearCurr === yearPrev && wCurr === wPrev + 1) ||
-        (yearCurr === yearPrev + 1 && wPrev >= 52 && wCurr === 1);
-
-      if (isConsecutive) {
-        weekStreakForXP++;
-        // Bonus de ratxa: +15 XP per mantenir la ratxa setmanal
-        weekXP += 15;
-      } else {
-        weekStreakForXP = 0;
-      }
+    // Bonus ratxa
+    if (i > 0 && isConsecutiveWeek(sortedWeeks[i - 1], sortedWeeks[i])) {
+      weekXP += 15;
     }
 
     totalXP += weekXP;
   }
 
-  // Calculem el nivell XP
+  // Nivell XP (subprogrés intern)
   let xpLevel = 1;
   for (let i = XP_LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
     if (totalXP >= XP_LEVEL_THRESHOLDS[i]) {
@@ -207,16 +176,15 @@ export function calcXP(sessions: Session[]): XPInfo {
     }
   }
 
-  // XP dins del nivell actual
   const currentThreshold = XP_LEVEL_THRESHOLDS[xpLevel - 1] || 0;
-  const nextThreshold = XP_LEVEL_THRESHOLDS[xpLevel] || XP_LEVEL_THRESHOLDS[XP_LEVEL_THRESHOLDS.length - 1];
+  const nextThreshold = XP_LEVEL_THRESHOLDS[xpLevel] ?? XP_LEVEL_THRESHOLDS[XP_LEVEL_THRESHOLDS.length - 1];
   const currentLevelXP = totalXP - currentThreshold;
   const nextLevelXP = nextThreshold - currentThreshold;
   const progressPercent = Math.min(100, Math.round((currentLevelXP / nextLevelXP) * 100));
 
   return {
     total: totalXP,
-    available: totalXP, // En Fase 1 tots estan disponibles (Fase 2 gestionarà els gastats)
+    available: totalXP,
     level: xpLevel,
     currentLevelXP,
     nextLevelXP,
@@ -230,16 +198,10 @@ export function calcXP(sessions: Session[]): XPInfo {
 
 export function calculateProgression(sessions: Session[]): ProgressionData {
   const totalClasses = sessions.length;
-  const level = calcLevel(totalClasses);
-  const streak = calcWeekStreak(sessions);
   const xp = calcXP(sessions);
-  const classesUntilNextLevel = calcClassesUntilNextLevel(totalClasses);
+  const level = calcLevelFromXP(xp.total);
+  const streak = calcWeekStreak(sessions);
+  const xpUntilNextLevel = calcXPUntilNextLevel(xp.total);
 
-  return {
-    level,
-    streak,
-    xp,
-    totalClasses,
-    classesUntilNextLevel,
-  };
+  return { level, streak, xp, totalClasses, xpUntilNextLevel };
 }
