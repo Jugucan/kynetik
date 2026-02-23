@@ -67,7 +67,11 @@ export function calcXPUntilNextLevel(totalXP: number): number | null {
 // ------------------------------------------------------------
 
 export function calcWeekStreak(sessions: Session[]): WeekStreak {
-  sessions = sessions.filter(s => s?.date);
+  sessions = sessions.filter(s => {
+  if (!s?.date) return false;
+  const d = new Date(s.date);
+  return !isNaN(d.getTime());
+});
   if (!sessions.length) {
     return { current: 0, best: 0, isActiveThisWeek: false, lastActiveWeek: '' };
   }
@@ -128,7 +132,11 @@ export function calcWeekStreak(sessions: Session[]): WeekStreak {
 // ------------------------------------------------------------
 
 export function calcXP(sessions: Session[]): XPInfo {
-  sessions = sessions.filter(s => s?.date);
+  sessions = sessions.filter(s => {
+  if (!s?.date) return false;
+  const d = new Date(s.date);
+  return !isNaN(d.getTime());
+});
   if (!sessions.length) {
     return {
       total: 0,
