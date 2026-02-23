@@ -221,6 +221,19 @@ function calcBestWeekStreak(sessions: Session[]): number {
   return max;
 }
 
+function weekKeyToDateLabel(weekKey: string): string {
+  if (!weekKey) return '';
+  const [year, week] = weekKey.split('-W').map(Number);
+  // Calculem el dilluns d'aquella setmana ISO
+  const jan4 = new Date(year, 0, 4);
+  const startOfWeek = new Date(jan4);
+  startOfWeek.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (week - 1) * 7);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  const monthNames = ['gen','feb','mar','abr','mai','jun','jul','ago','set','oct','nov','des'];
+  return `${startOfWeek.getDate()} ${monthNames[startOfWeek.getMonth()]} – ${endOfWeek.getDate()} ${monthNames[endOfWeek.getMonth()]} ${year}`;
+}
+
 function calcBestWeekClasses(sessions: Session[]): { count: number; weekLabel: string } {
   if (!sessions.length) return { count: 0, weekLabel: '' };
   const byWeek: Record<string, number> = {};
@@ -232,7 +245,7 @@ function calcBestWeekClasses(sessions: Session[]): { count: number; weekLabel: s
   for (const [wk, count] of Object.entries(byWeek)) {
     if (count > bestCount) { bestCount = count; bestWk = wk; }
   }
-  return { count: bestCount, weekLabel: bestWk };
+  return { count: bestCount, weekLabel: weekKeyToDateLabel(bestWk) };
 }
 
 function calcBestMonthClasses(sessions: Session[]): { count: number; monthLabel: string } {
@@ -277,7 +290,7 @@ function calcBestWeekXP(sessions: Session[]): { xp: number; weekLabel: string } 
     }
     if (weekXP > bestXP) { bestXP = weekXP; bestWk = wk; }
   }
-  return { xp: bestXP, weekLabel: bestWk };
+  return { xp: bestXP, weekLabel: weekKeyToDateLabel(bestWk) };
 }
 
 // ------------------------------------------------------------
@@ -558,21 +571,25 @@ export function calculateBadges(
         earned = true;
         progress = 100;
         progressLabel = bestWeekStreak > 0 ? `${bestWeekStreak} setmanes` : '–';
+        earnedAt = bestWeekStreak > 0 ? `Millor ratxa: ${bestWeekStreak} setmanes consecutives` : undefined;
         break;
       case 'personal_millor_setmana':
         earned = true;
         progress = 100;
         progressLabel = bestWeek.count > 0 ? `${bestWeek.count} classes` : '–';
+        earnedAt = bestWeek.weekLabel ? `Setmana del ${bestWeek.weekLabel}` : undefined;
         break;
       case 'personal_millor_mes':
         earned = true;
         progress = 100;
         progressLabel = bestMonth.count > 0 ? `${bestMonth.count} classes` : '–';
+        earnedAt = bestMonth.monthLabel ? `${bestMonth.monthLabel}` : undefined;
         break;
       case 'personal_millor_xp':
         earned = true;
         progress = 100;
         progressLabel = bestWeekXP.xp > 0 ? `${bestWeekXP.xp} XP` : '–';
+        earnedAt = bestWeekXP.weekLabel ? `Setmana del ${bestWeekXP.weekLabel}` : undefined;
         break;
         
       default:
