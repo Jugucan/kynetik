@@ -557,28 +557,22 @@ export function calculateBadges(
       case 'personal_ratxa':
         earned = true;
         progress = 100;
-        progressLabel = `Rècord: ${bestWeekStreak} setmanes`;
+        progressLabel = bestWeekStreak > 0 ? `${bestWeekStreak} setmanes` : '–';
         break;
       case 'personal_millor_setmana':
         earned = true;
         progress = 100;
-        progressLabel = bestWeek.count > 0
-          ? `${bestWeek.count} classes (${bestWeek.weekLabel})`
-          : 'Encara sense dades';
+        progressLabel = bestWeek.count > 0 ? `${bestWeek.count} classes` : '–';
         break;
       case 'personal_millor_mes':
         earned = true;
         progress = 100;
-        progressLabel = bestMonth.count > 0
-          ? `${bestMonth.count} classes (${bestMonth.monthLabel})`
-          : 'Encara sense dades';
+        progressLabel = bestMonth.count > 0 ? `${bestMonth.count} classes` : '–';
         break;
       case 'personal_millor_xp':
         earned = true;
         progress = 100;
-        progressLabel = bestWeekXP.xp > 0
-          ? `${bestWeekXP.xp} XP (${bestWeekXP.weekLabel})`
-          : 'Encara sense dades';
+        progressLabel = bestWeekXP.xp > 0 ? `${bestWeekXP.xp} XP` : '–';
         break;
         
       default:
