@@ -217,7 +217,7 @@ export function calculateBadges(
   totalAvailableCategories: number = 3
 ): BadgeWithStatus[] {
 
-  const sessions = userData.sessions || [];
+  const sessions = (userData.sessions || []).filter(s => s?.date);
   const totalSessions = sessions.length;
   const monthsAsMember = calcMonthsAsMember(userData.firstSession);
   const yearsAsMember = monthsAsMember / 12;
