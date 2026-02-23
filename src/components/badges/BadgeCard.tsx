@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BadgeWithStatus, TIER_COLORS, getBadgeTexts } from '@/types/badges';
-import { Lock, X } from 'lucide-react';
+import { Lock, X, Info } from 'lucide-react';
 
 interface BadgeCardProps {
   badge: BadgeWithStatus;
@@ -53,10 +53,9 @@ const BadgeCard = ({ badge, gender }: BadgeCardProps) => {
           </div>
         )}
 
-        {/* Indicador "toca per veure detall" */}
         {isPersonal && isEarned && (
-          <div className={`mt-2 text-center relative z-10 text-xs opacity-60 ${tierStyle.text}`}>
-            Toca per veure detall
+          <div className="absolute top-2 right-2 z-10">
+            <Info className={`w-3.5 h-3.5 opacity-60 ${tierStyle.text}`} />
           </div>
         )}
 
@@ -114,9 +113,11 @@ const BadgeCard = ({ badge, gender }: BadgeCardProps) => {
             </div>
             <p className="text-sm text-muted-foreground">{description}</p>
             {badge.progressLabel && (
-              <div className={`p-3 rounded-xl bg-gradient-to-br ${tierStyle.bg} text-center`}>
+              <div className={`p-3 rounded-xl bg-gradient-to-br ${tierStyle.bg} text-center space-y-1`}>
                 <div className={`text-2xl font-black ${tierStyle.text}`}>{badge.progressLabel}</div>
-                <div className={`text-xs mt-1 ${tierStyle.text} opacity-70`}>Rècord personal actual</div>
+                {badge.earnedAt && (
+                  <div className={`text-xs ${tierStyle.text} opacity-70`}>📅 {badge.earnedAt}</div>
+                )}
               </div>
             )}
           </div>
