@@ -128,6 +128,7 @@ export function calcWeekStreak(sessions: Session[]): WeekStreak {
 // ------------------------------------------------------------
 
 export function calcXP(sessions: Session[]): XPInfo {
+  sessions = sessions.filter(s => s?.date);
   if (!sessions.length) {
     return {
       total: 0,
