@@ -9,6 +9,11 @@ interface BadgeCardProps {
 
 const BadgeCard = ({ badge, gender }: BadgeCardProps) => {
   const navigate = useNavigate();
+
+  const handleClick = () => {
+    sessionStorage.setItem('badgesScrollY', String(window.scrollY));
+    navigate(`/badges/${badge.id}`);
+  };
   const { name, description } = getBadgeTexts(badge, gender);
   const tierStyle = TIER_COLORS[badge.tier];
   const isEarned = badge.earned;
@@ -16,7 +21,7 @@ const BadgeCard = ({ badge, gender }: BadgeCardProps) => {
 
   return (
     <div
-      onClick={() => navigate(`/badges/${badge.id}`)}
+      onClick={handleClick}
       className={`
         relative p-4 rounded-2xl border-2 transition-all duration-300 overflow-hidden cursor-pointer
         ${isEarned
