@@ -368,6 +368,7 @@ export function calculateBadges(
     let earned = false;
     let progress: number | undefined;
     let progressLabel: string | undefined;
+    let earnedAt: string | undefined;
     let unavailable = false;
 
     switch (badge.id) {
@@ -602,7 +603,7 @@ export function calculateBadges(
         break;
     }
 
-    return { ...badge, earned, progress, progressLabel, unavailable };
+    return { ...badge, earned, progress, progressLabel, earnedAt, unavailable };
   });
 }
 
