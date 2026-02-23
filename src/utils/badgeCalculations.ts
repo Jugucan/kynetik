@@ -293,6 +293,19 @@ function calcBestWeekXP(sessions: Session[]): { xp: number; weekLabel: string } 
   return { xp: bestXP, weekLabel: weekKeyToDateLabel(bestWk) };
 }
 
+function findEarnedDate(sessions: Session[], condition: (subset: Session[]) => boolean): string | undefined {
+  const sorted = [...sessions].sort((a, b) => a.date.localeCompare(b.date));
+  for (let i = 0; i < sorted.length; i++) {
+    const subset = sorted.slice(0, i + 1);
+    if (condition(subset)) {
+      const d = new Date(sorted[i].date);
+      const monthNames = ['gen','feb','mar','abr','mai','jun','jul','ago','set','oct','nov','des'];
+      return `${d.getDate()} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+    }
+  }
+  return undefined;
+}
+
 // ------------------------------------------------------------
 // FUNCIÓ PRINCIPAL
 // ------------------------------------------------------------
@@ -380,41 +393,49 @@ export function calculateBadges(
         earned = totalSessions >= 1;
         progress = Math.min(100, totalSessions * 100);
         progressLabel = `${totalSessions} / 1 classe`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => s.length >= 1);
         break;
       case 'ass_5':
         earned = totalSessions >= 5;
         progress = Math.min(100, Math.round((totalSessions / 5) * 100));
         progressLabel = `${totalSessions} / 5 classes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => s.length >= 5);
         break;
       case 'ass_10':
         earned = totalSessions >= 10;
         progress = Math.min(100, Math.round((totalSessions / 10) * 100));
         progressLabel = `${totalSessions} / 10 classes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => s.length >= 10);
         break;
       case 'ass_25':
         earned = totalSessions >= 25;
         progress = Math.min(100, Math.round((totalSessions / 25) * 100));
         progressLabel = `${totalSessions} / 25 classes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => s.length >= 25);
         break;
       case 'ass_50':
         earned = totalSessions >= 50;
         progress = Math.min(100, Math.round((totalSessions / 50) * 100));
         progressLabel = `${totalSessions} / 50 classes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => s.length >= 50);
         break;
       case 'ass_100':
         earned = totalSessions >= 100;
         progress = Math.min(100, Math.round((totalSessions / 100) * 100));
         progressLabel = `${totalSessions} / 100 classes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => s.length >= 100);
         break;
       case 'ass_200':
         earned = totalSessions >= 200;
         progress = Math.min(100, Math.round((totalSessions / 200) * 100));
         progressLabel = `${totalSessions} / 200 classes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => s.length >= 200);
         break;
       case 'ass_500':
         earned = totalSessions >= 500;
         progress = Math.min(100, Math.round((totalSessions / 500) * 100));
         progressLabel = `${totalSessions} / 500 classes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => s.length >= 500);
         break;
 
       // CONSTÀNCIA
@@ -422,31 +443,37 @@ export function calculateBadges(
         earned = maxWeekStreak >= 2;
         progress = Math.min(100, Math.round((maxWeekStreak / 2) * 100));
         progressLabel = `${maxWeekStreak} / 2 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => calcMaxWeekStreak(s) >= 2);
         break;
       case 'ratxa_4':
         earned = maxWeekStreak >= 4;
         progress = Math.min(100, Math.round((maxWeekStreak / 4) * 100));
         progressLabel = `${maxWeekStreak} / 4 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => calcMaxWeekStreak(s) >= 4);
         break;
       case 'ratxa_8':
         earned = maxWeekStreak >= 8;
         progress = Math.min(100, Math.round((maxWeekStreak / 8) * 100));
         progressLabel = `${maxWeekStreak} / 8 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => calcMaxWeekStreak(s) >= 8);
         break;
       case 'ratxa_12':
         earned = maxWeekStreak >= 12;
         progress = Math.min(100, Math.round((maxWeekStreak / 12) * 100));
         progressLabel = `${maxWeekStreak} / 12 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => calcMaxWeekStreak(s) >= 12);
         break;
       case 'ratxa_26':
         earned = maxWeekStreak >= 26;
         progress = Math.min(100, Math.round((maxWeekStreak / 26) * 100));
         progressLabel = `${maxWeekStreak} / 26 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => calcMaxWeekStreak(s) >= 26);
         break;
       case 'ratxa_52':
         earned = maxWeekStreak >= 52;
         progress = Math.min(100, Math.round((maxWeekStreak / 52) * 100));
         progressLabel = `${maxWeekStreak} / 52 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => calcMaxWeekStreak(s) >= 52);
         break;
 
       // ANTIGUITAT
@@ -454,41 +481,89 @@ export function calculateBadges(
         earned = monthsAsMember >= 1;
         progress = Math.min(100, monthsAsMember * 100);
         progressLabel = `${monthsAsMember} / 1 mes`;
+        if (earned && userData.firstSession) {
+          const d = new Date(userData.firstSession);
+          d.setMonth(d.getMonth() + 1);
+          const mn = ['gen','feb','mar','abr','mai','jun','jul','ago','set','oct','nov','des'];
+          earnedAt = `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
+        }
         break;
       case 'ant_3m':
         earned = monthsAsMember >= 3;
         progress = Math.min(100, Math.round((monthsAsMember / 3) * 100));
         progressLabel = `${monthsAsMember} / 3 mesos`;
+        if (earned && userData.firstSession) {
+          const d = new Date(userData.firstSession);
+          d.setMonth(d.getMonth() + 3);
+          const mn = ['gen','feb','mar','abr','mai','jun','jul','ago','set','oct','nov','des'];
+          earnedAt = `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
+        }
         break;
       case 'ant_6m':
         earned = monthsAsMember >= 6;
         progress = Math.min(100, Math.round((monthsAsMember / 6) * 100));
         progressLabel = `${monthsAsMember} / 6 mesos`;
+        if (earned && userData.firstSession) {
+          const d = new Date(userData.firstSession);
+          d.setMonth(d.getMonth() + 6);
+          const mn = ['gen','feb','mar','abr','mai','jun','jul','ago','set','oct','nov','des'];
+          earnedAt = `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
+        }
         break;
       case 'ant_1a':
         earned = yearsAsMember >= 1;
         progress = Math.min(100, Math.round((monthsAsMember / 12) * 100));
         progressLabel = `${monthsAsMember} / 12 mesos`;
+        if (earned && userData.firstSession) {
+          const d = new Date(userData.firstSession);
+          d.setFullYear(d.getFullYear() + 1);
+          const mn = ['gen','feb','mar','abr','mai','jun','jul','ago','set','oct','nov','des'];
+          earnedAt = `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
+        }
         break;
       case 'ant_2a':
         earned = yearsAsMember >= 2;
         progress = Math.min(100, Math.round((monthsAsMember / 24) * 100));
         progressLabel = `${monthsAsMember} / 24 mesos`;
+        if (earned && userData.firstSession) {
+          const d = new Date(userData.firstSession);
+          d.setFullYear(d.getFullYear() + 2);
+          const mn = ['gen','feb','mar','abr','mai','jun','jul','ago','set','oct','nov','des'];
+          earnedAt = `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
+        }
         break;
       case 'ant_3a':
         earned = yearsAsMember >= 3;
         progress = Math.min(100, Math.round((monthsAsMember / 36) * 100));
         progressLabel = `${monthsAsMember} / 36 mesos`;
+        if (earned && userData.firstSession) {
+          const d = new Date(userData.firstSession);
+          d.setFullYear(d.getFullYear() + 3);
+          const mn = ['gen','feb','mar','abr','mai','jun','jul','ago','set','oct','nov','des'];
+          earnedAt = `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
+        }
         break;
       case 'ant_5a':
         earned = yearsAsMember >= 5;
         progress = Math.min(100, Math.round((monthsAsMember / 60) * 100));
         progressLabel = `${monthsAsMember} / 60 mesos`;
+        if (earned && userData.firstSession) {
+          const d = new Date(userData.firstSession);
+          d.setFullYear(d.getFullYear() + 5);
+          const mn = ['gen','feb','mar','abr','mai','jun','jul','ago','set','oct','nov','des'];
+          earnedAt = `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
+        }
         break;
       case 'ant_10a':
         earned = yearsAsMember >= 10;
         progress = Math.min(100, Math.round((monthsAsMember / 120) * 100));
         progressLabel = `${monthsAsMember} / 120 mesos`;
+        if (earned && userData.firstSession) {
+          const d = new Date(userData.firstSession);
+          d.setFullYear(d.getFullYear() + 10);
+          const mn = ['gen','feb','mar','abr','mai','jun','jul','ago','set','oct','nov','des'];
+          earnedAt = `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
+        }
         break;
 
       // EXPLORACIÓ: HORARIS
@@ -496,16 +571,19 @@ export function calculateBadges(
         earned = hasMorningClass(sessions);
         progress = earned ? 100 : 0;
         progressLabel = earned ? 'Completat!' : 'Vine a una classe abans de les 12h';
+        if (earned) earnedAt = findEarnedDate(sessions, s => hasMorningClass(s));
         break;
       case 'exp_vespre':
         earned = hasEveningClass(sessions);
         progress = earned ? 100 : 0;
         progressLabel = earned ? 'Completat!' : 'Vine a una classe a les 20h o més tard';
+        if (earned) earnedAt = findEarnedDate(sessions, s => hasEveningClass(s));
         break;
       case 'exp_doble':
         earned = hasDoubleMorningEvening(sessions);
         progress = earned ? 100 : 0;
         progressLabel = earned ? 'Completat!' : 'Vine de matí i de tarda la mateixa setmana';
+        if (earned) earnedAt = findEarnedDate(sessions, s => hasDoubleMorningEvening(s));
         break;
 
       // EXPLORACIÓ: VARIETAT
@@ -514,20 +592,37 @@ export function calculateBadges(
         earned = !unavailable && uniqueCategories >= 2;
         progress = unavailable ? 0 : Math.min(100, Math.round((uniqueCategories / 2) * 100));
         progressLabel = unavailable ? 'No disponible al teu gym' : `${uniqueCategories} / 2 categories`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => {
+          const cats = new Set(s.map(x => findCategory(x.activity, programEntries)).filter(Boolean));
+          return cats.size >= 2;
+        });
         break;
       case 'prog_cat_3':
         unavailable = realTotalCategories < 3;
         earned = !unavailable && uniqueCategories >= 3;
         progress = unavailable ? 0 : Math.min(100, Math.round((uniqueCategories / 3) * 100));
         progressLabel = unavailable ? 'No disponible al teu gym' : `${uniqueCategories} / 3 categories`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => {
+          const cats = new Set(s.map(x => findCategory(x.activity, programEntries)).filter(Boolean));
+          return cats.size >= 3;
+        });
         break;
       case 'prog_cat_all':
         unavailable = realTotalCategories < 3;
         earned = !unavailable && hasAllCategoriesInOneWeek();
         progress = earned ? 100 : 0;
-        progressLabel = unavailable
-          ? 'No disponible al teu gym'
-          : earned ? 'Completat!' : 'Fes força, cardio i flexibilitat en una mateixa setmana';
+        progressLabel = unavailable ? 'No disponible al teu gym' : earned ? 'Completat!' : 'Fes força, cardio i flexibilitat en una mateixa setmana';
+        if (earned) earnedAt = findEarnedDate(sessions, s => {
+          const byWeek: Record<string, Set<string>> = {};
+          for (const x of s) {
+            const cat = findCategory(x.activity, programEntries);
+            if (!cat) continue;
+            const wk = getWeekKey(new Date(x.date));
+            if (!byWeek[wk]) byWeek[wk] = new Set();
+            byWeek[wk].add(cat);
+          }
+          return Object.values(byWeek).some(cats => ['força','cardio','flexibilitat'].every(c => cats.has(c)));
+        });
         break;
 
       // EXPLORACIÓ: INTENSITAT
@@ -535,16 +630,19 @@ export function calculateBadges(
         earned = hasThreeConsecutiveDays(sessions);
         progress = earned ? 100 : 0;
         progressLabel = earned ? 'Completat!' : 'Vine 3 dies seguits';
+        if (earned) earnedAt = findEarnedDate(sessions, s => hasThreeConsecutiveDays(s));
         break;
       case 'exp_3dies_setmana':
         earned = hasThreeDaysInOneWeek(sessions);
         progress = earned ? 100 : 0;
         progressLabel = earned ? 'Completat!' : 'Vine 3 dies en una mateixa setmana';
+        if (earned) earnedAt = findEarnedDate(sessions, s => hasThreeDaysInOneWeek(s));
         break;
       case 'exp_5dies':
         earned = hasFiveDaysInOneWeek(sessions);
         progress = earned ? 100 : 0;
         progressLabel = earned ? 'Completat!' : 'Vine 5 dies laborables en una setmana';
+        if (earned) earnedAt = findEarnedDate(sessions, s => hasFiveDaysInOneWeek(s));
         break;
 
       // ESPECIALS
@@ -552,21 +650,30 @@ export function calculateBadges(
         earned = hasActiveYearMember(sessions, userData.firstSession);
         progress = Math.min(100, Math.round((daysSinceFirst / 365) * 100));
         progressLabel = earned ? 'Completat!' : `${daysSinceFirst} / 365 dies actiu/va cada mes`;
+        if (earned && userData.firstSession) {
+          const d = new Date(userData.firstSession);
+          d.setFullYear(d.getFullYear() + 1);
+          const mn = ['gen','feb','mar','abr','mai','jun','jul','ago','set','oct','nov','des'];
+          earnedAt = `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
+        }
         break;
       case 'esp_100en365':
         earned = has100In365Days(sessions);
         progress = Math.min(100, Math.round((totalSessions / 100) * 100));
         progressLabel = earned ? 'Completat!' : `${totalSessions} classes acumulades`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => has100In365Days(s));
         break;
       case 'esp_comeback':
         earned = hasComeback(sessions);
         progress = earned ? 100 : 0;
         progressLabel = earned ? 'Completat!' : 'Torna després de 30 dies d\'absència';
+        if (earned) earnedAt = findEarnedDate(sessions, s => hasComeback(s));
         break;
       case 'esp_consistent':
         earned = hasConsistentMonths(sessions);
         progress = earned ? 100 : 0;
         progressLabel = earned ? 'Completat!' : 'Mantén la mateixa freqüència 3 mesos';
+        if (earned) earnedAt = findEarnedDate(sessions, s => hasConsistentMonths(s));
         break;
 
       // RÈCORDS PERSONALS
@@ -574,7 +681,7 @@ export function calculateBadges(
         earned = true;
         progress = 100;
         progressLabel = bestWeekStreak > 0 ? `${bestWeekStreak} setmanes` : '–';
-        earnedAt = bestWeekStreak > 0 ? `Fins la setmana del ${bestWeekStreakLabel}` : undefined;
+        earnedAt = bestWeekStreak > 0 ? `Setmana del ${bestWeekStreakLabel}` : undefined;
         break;
       case 'personal_millor_setmana':
         earned = true;
@@ -601,6 +708,12 @@ export function calculateBadges(
           earned = newYearBadgeEarned[year] || false;
           progress = earned ? 100 : 0;
           progressLabel = earned ? 'Completat!' : `Vine de l'1 al 15 de gener de ${year}`;
+          if (earned) earnedAt = findEarnedDate(sessions, s =>
+            s.some(x => {
+              const d = new Date(x.date);
+              return d.getFullYear() === year && d.getMonth() === 0 && d.getDate() <= 15;
+            })
+          );
         }
         break;
     }
