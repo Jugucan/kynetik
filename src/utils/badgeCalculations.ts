@@ -207,6 +207,79 @@ function hasNewYearClass(sessions: Session[], year: number): boolean {
   });
 }
 
+function calcBestWeekStreak(sessions: Session[]): number {
+  if (!sessions.length) return 0;
+  const weeks = Array.from(new Set(sessions.map(s => getWeekKey(new Date(s.date))))).sort();
+  let max = 1, cur = 1;
+  for (let i = 1; i < weeks.length; i++) {
+    const [yp, wp] = weeks[i - 1].split('-W').map(Number);
+    const [yc, wc] = weeks[i].split('-W').map(Number);
+    const consec = (yc === yp && wc === wp + 1) || (yc === yp + 1 && wp >= 52 && wc === 1);
+    cur = consec ? cur + 1 : 1;
+    if (cur > max) max = cur;
+  }
+  return max;
+}
+
+function calcBestWeekClasses(sessions: Session[]): { count: number; weekLabel: string } {
+  if (!sessions.length) return { count: 0, weekLabel: '' };
+  const byWeek: Record<string, number> = {};
+  for (const s of sessions) {
+    const wk = getWeekKey(new Date(s.date));
+    byWeek[wk] = (byWeek[wk] || 0) + 1;
+  }
+  let bestWk = '', bestCount = 0;
+  for (const [wk, count] of Object.entries(byWeek)) {
+    if (count > bestCount) { bestCount = count; bestWk = wk; }
+  }
+  return { count: bestCount, weekLabel: bestWk };
+}
+
+function calcBestMonthClasses(sessions: Session[]): { count: number; monthLabel: string } {
+  if (!sessions.length) return { count: 0, monthLabel: '' };
+  const byMonth: Record<string, number> = {};
+  for (const s of sessions) {
+    const d = new Date(s.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    byMonth[key] = (byMonth[key] || 0) + 1;
+  }
+  let bestMonth = '', bestCount = 0;
+  for (const [month, count] of Object.entries(byMonth)) {
+    if (count > bestCount) { bestCount = count; bestMonth = month; }
+  }
+  const [year, month] = bestMonth.split('-');
+  const monthNames = ['Gen','Feb','Mar','Abr','Mai','Jun','Jul','Ago','Set','Oct','Nov','Des'];
+  const label = bestMonth ? `${monthNames[parseInt(month) - 1]} ${year}` : '';
+  return { count: bestCount, monthLabel: label };
+}
+
+function calcBestWeekXP(sessions: Session[]): { xp: number; weekLabel: string } {
+  if (!sessions.length) return { xp: 0, weekLabel: '' };
+  const byWeek: Record<string, number> = {};
+  for (const s of sessions) {
+    const wk = getWeekKey(new Date(s.date));
+    byWeek[wk] = (byWeek[wk] || 0) + 1;
+  }
+  const sortedWeeks = Object.keys(byWeek).sort();
+  let bestWk = '', bestXP = 0;
+  for (let i = 0; i < sortedWeeks.length; i++) {
+    const wk = sortedWeeks[i];
+    const n = byWeek[wk];
+    let weekXP = n * 10;
+    if (n >= 5) weekXP += 30;
+    else if (n >= 3) weekXP += 20;
+    else if (n >= 2) weekXP += 10;
+    if (i > 0) {
+      const [yp, wp] = sortedWeeks[i-1].split('-W').map(Number);
+      const [yc, wc] = wk.split('-W').map(Number);
+      const consec = (yc === yp && wc === wp + 1) || (yc === yp + 1 && wp >= 52 && wc === 1);
+      if (consec) weekXP += 15;
+    }
+    if (weekXP > bestXP) { bestXP = weekXP; bestWk = wk; }
+  }
+  return { xp: bestXP, weekLabel: bestWk };
+}
+
 // ------------------------------------------------------------
 // FUNCIÓ PRINCIPAL
 // ------------------------------------------------------------
@@ -227,6 +300,10 @@ export function calculateBadges(
   const yearsAsMember = monthsAsMember / 12;
   const daysSinceFirst = calcDaysSinceFirstSession(userData.firstSession);
   const maxWeekStreak = calcMaxWeekStreak(sessions);
+  const bestWeekStreak = calcBestWeekStreak(sessions);
+  const bestWeek = calcBestWeekClasses(sessions);
+  const bestMonth = calcBestMonthClasses(sessions);
+  const bestWeekXP = calcBestWeekXP(sessions);
 
   const programEntries = programs
     .filter(p => p.name && p.category)
@@ -476,6 +553,34 @@ export function calculateBadges(
         progressLabel = earned ? 'Completat!' : 'Mantén la mateixa freqüència 3 mesos';
         break;
 
+      // RÈCORDS PERSONALS
+      case 'personal_ratxa':
+        earned = true;
+        progress = 100;
+        progressLabel = `Rècord: ${bestWeekStreak} setmanes`;
+        break;
+      case 'personal_millor_setmana':
+        earned = true;
+        progress = 100;
+        progressLabel = bestWeek.count > 0
+          ? `${bestWeek.count} classes (${bestWeek.weekLabel})`
+          : 'Encara sense dades';
+        break;
+      case 'personal_millor_mes':
+        earned = true;
+        progress = 100;
+        progressLabel = bestMonth.count > 0
+          ? `${bestMonth.count} classes (${bestMonth.monthLabel})`
+          : 'Encara sense dades';
+        break;
+      case 'personal_millor_xp':
+        earned = true;
+        progress = 100;
+        progressLabel = bestWeekXP.xp > 0
+          ? `${bestWeekXP.xp} XP (${bestWeekXP.weekLabel})`
+          : 'Encara sense dades';
+        break;
+        
       default:
         if (badge.id.startsWith('esp_any_nou_')) {
           const year = parseInt(badge.id.replace('esp_any_nou_', ''), 10);
