@@ -9,7 +9,8 @@ export type BadgeCategory =
   | 'constancia'
   | 'antiguitat'
   | 'exploracio'
-  | 'especial';
+  | 'especial'
+  | 'personal';
 
 // Subcategories d'exploració (informatives, per mostrar a la UI)
 export type ExploracioSubcategory = 'horaris' | 'varietat' | 'intensitat';
@@ -466,6 +467,7 @@ export const CATEGORY_NAMES: Record<BadgeCategory, string> = {
   antiguitat: '⭐ Antiguitat',
   exploracio: '🧭 Exploració i Hàbits',
   especial: '✨ Especials',
+  personal: '🏆 Rècords Personals',
 };
 
 export const SUBCATEGORY_NAMES: Record<ExploracioSubcategory, string> = {
