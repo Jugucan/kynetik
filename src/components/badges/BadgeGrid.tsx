@@ -13,10 +13,9 @@ interface BadgeGridProps {
 
 const CATEGORY_ORDER: BadgeCategory[] = [
   'assistencia',
-  'ratxa',
+  'constancia',
   'antiguitat',
-  'programes',
-  'exploradora',
+  'exploracio',
   'especial',
 ];
 
