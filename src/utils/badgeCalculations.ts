@@ -1,5 +1,5 @@
 // ============================================================
-// CÀLCULS PER DETERMINAR QUINES INSÍGNIES HA GUANYAT L'USUARI
+// CÀLCULS D'INSÍGNIES
 // ============================================================
 
 import { getAllBadgesWithDynamic, BadgeWithStatus } from '@/types/badges';
@@ -22,30 +22,24 @@ interface UserDataForBadges {
 }
 
 // ------------------------------------------------------------
-// HELPERS INTERNS
+// HELPERS
 // ------------------------------------------------------------
 
-/** Normalitza un text: minúscules, sense apòstrofs, guions ni espais */
 function normalize(str: string): string {
   return str
     .toLowerCase()
-    .replace(/['\-\s]/g, '')  // treu apòstrofs, guions i espais
+    .replace(/['\-\s]/g, '')
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, ''); // treu accents
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
-/** Troba la categoria d'una activitat buscant el programa que millor hi coincideix */
 function findCategory(
   activity: string,
   programEntries: Array<{ normalizedName: string; category: string }>
 ): string | null {
-  const normalizedActivity = normalize(activity);
+  const norm = normalize(activity);
   for (const entry of programEntries) {
-    // Coincideix si el nom del programa està contingut dins l'activitat
-    // Ex: "bodypump" dins "bodypumpoutdoor" → true
-    if (normalizedActivity.includes(entry.normalizedName)) {
-      return entry.category;
-    }
+    if (norm.includes(entry.normalizedName)) return entry.category;
   }
   return null;
 }
@@ -67,24 +61,16 @@ function getDayKey(date: Date): string {
 
 function calcMaxWeekStreak(sessions: Session[]): number {
   if (!sessions.length) return 0;
-  const weekSet = new Set(sessions.map(s => getWeekKey(new Date(s.date))));
-  const weeks = Array.from(weekSet).sort();
-  let maxStreak = 1;
-  let currentStreak = 1;
+  const weeks = Array.from(new Set(sessions.map(s => getWeekKey(new Date(s.date))))).sort();
+  let max = 1, cur = 1;
   for (let i = 1; i < weeks.length; i++) {
-    const [yearPrev, wPrev] = weeks[i - 1].split('-W').map(Number);
-    const [yearCurr, wCurr] = weeks[i].split('-W').map(Number);
-    const isConsecutive =
-      (yearCurr === yearPrev && wCurr === wPrev + 1) ||
-      (yearCurr === yearPrev + 1 && wPrev >= 52 && wCurr === 1);
-    if (isConsecutive) {
-      currentStreak++;
-      if (currentStreak > maxStreak) maxStreak = currentStreak;
-    } else {
-      currentStreak = 1;
-    }
+    const [yp, wp] = weeks[i - 1].split('-W').map(Number);
+    const [yc, wc] = weeks[i].split('-W').map(Number);
+    const consec = (yc === yp && wc === wp + 1) || (yc === yp + 1 && wp >= 52 && wc === 1);
+    cur = consec ? cur + 1 : 1;
+    if (cur > max) max = cur;
   }
-  return maxStreak;
+  return max;
 }
 
 function calcMonthsAsMember(firstSession?: string): number {
@@ -96,17 +82,13 @@ function calcMonthsAsMember(firstSession?: string): number {
 
 function calcDaysSinceFirstSession(firstSession?: string): number {
   if (!firstSession) return 0;
-  const first = new Date(firstSession);
-  const now = new Date();
-  return Math.floor((now.getTime() - first.getTime()) / 86400000);
+  return Math.floor((Date.now() - new Date(firstSession).getTime()) / 86400000);
 }
 
 function hasActiveYearMember(sessions: Session[], firstSession?: string): boolean {
   if (!firstSession) return false;
   const first = new Date(firstSession);
-  const now = new Date();
-  const daysSince = Math.floor((now.getTime() - first.getTime()) / 86400000);
-  if (daysSince < 365) return false;
+  if (Math.floor((Date.now() - first.getTime()) / 86400000) < 365) return false;
 
   const monthsWithSessions = new Set(
     sessions.map(s => {
@@ -114,35 +96,48 @@ function hasActiveYearMember(sessions: Session[], firstSession?: string): boolea
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     })
   );
-
-  const monthsToCheck: string[] = [];
+  const months: string[] = [];
   const cursor = new Date(first.getFullYear(), first.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth(), 1);
-
+  const end = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   while (cursor <= end) {
-    monthsToCheck.push(
-      `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`
-    );
+    months.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`);
     cursor.setMonth(cursor.getMonth() + 1);
   }
+  return months.every(m => monthsWithSessions.has(m));
+}
 
-  return monthsToCheck.every(m => monthsWithSessions.has(m));
+/** 100 classes en qualsevol finestra de 365 dies consecutius */
+function has100In365Days(sessions: Session[]): boolean {
+  if (sessions.length < 100) return false;
+  const sorted = [...sessions]
+    .map(s => new Date(s.date).getTime())
+    .sort((a, b) => a - b);
+  for (let i = 99; i < sorted.length; i++) {
+    if (sorted[i] - sorted[i - 99] <= 365 * 86400000) return true;
+  }
+  return false;
 }
 
 function hasThreeConsecutiveDays(sessions: Session[]): boolean {
   if (sessions.length < 3) return false;
-  const daySet = new Set(sessions.map(s => getDayKey(new Date(s.date))));
-  const days = Array.from(daySet).sort();
+  const days = Array.from(new Set(sessions.map(s => getDayKey(new Date(s.date))))).sort();
   for (let i = 2; i < days.length; i++) {
-    const d0 = new Date(days[i - 2]);
-    const d1 = new Date(days[i - 1]);
-    const d2 = new Date(days[i]);
-    if (
-      (d1.getTime() - d0.getTime()) / 86400000 === 1 &&
-      (d2.getTime() - d1.getTime()) / 86400000 === 1
-    ) return true;
+    const d0 = new Date(days[i - 2]).getTime();
+    const d1 = new Date(days[i - 1]).getTime();
+    const d2 = new Date(days[i]).getTime();
+    if (d1 - d0 === 86400000 && d2 - d1 === 86400000) return true;
   }
   return false;
+}
+
+function hasThreeDaysInOneWeek(sessions: Session[]): boolean {
+  const byWeek: Record<string, Set<string>> = {};
+  for (const s of sessions) {
+    const wk = getWeekKey(new Date(s.date));
+    if (!byWeek[wk]) byWeek[wk] = new Set();
+    byWeek[wk].add(getDayKey(new Date(s.date)));
+  }
+  return Object.values(byWeek).some(days => days.size >= 3);
 }
 
 function hasFiveDaysInOneWeek(sessions: Session[]): boolean {
@@ -162,9 +157,8 @@ function hasComeback(sessions: Session[]): boolean {
   if (sessions.length < 2) return false;
   const sorted = [...sessions].sort((a, b) => a.date.localeCompare(b.date));
   for (let i = 1; i < sorted.length; i++) {
-    const d1 = new Date(sorted[i - 1].date);
-    const d2 = new Date(sorted[i].date);
-    if ((d2.getTime() - d1.getTime()) / 86400000 > 30) return true;
+    const diff = (new Date(sorted[i].date).getTime() - new Date(sorted[i - 1].date).getTime()) / 86400000;
+    if (diff > 30) return true;
   }
   return false;
 }
@@ -178,41 +172,32 @@ function hasConsistentMonths(sessions: Session[]): boolean {
     monthCount[key] = (monthCount[key] || 0) + 1;
   }
   const keys = Object.keys(monthCount).sort();
-  if (keys.length < 3) return false;
   for (let i = 2; i < keys.length; i++) {
-    if (
-      monthCount[keys[i]] === monthCount[keys[i - 1]] &&
-      monthCount[keys[i]] === monthCount[keys[i - 2]]
-    ) return true;
+    if (monthCount[keys[i]] === monthCount[keys[i - 1]] &&
+        monthCount[keys[i]] === monthCount[keys[i - 2]]) return true;
   }
   return false;
 }
 
 function hasDoubleMorningEvening(sessions: Session[]): boolean {
-  const byWeek: Record<string, { hasMorning: boolean; hasEvening: boolean }> = {};
+  const byWeek: Record<string, { morning: boolean; evening: boolean }> = {};
   for (const s of sessions) {
     if (!s.time) continue;
     const hour = parseInt(s.time.split(':')[0], 10);
     const wk = getWeekKey(new Date(s.date));
-    if (!byWeek[wk]) byWeek[wk] = { hasMorning: false, hasEvening: false };
-    if (hour < 12) byWeek[wk].hasMorning = true;
-    if (hour >= 17) byWeek[wk].hasEvening = true;
+    if (!byWeek[wk]) byWeek[wk] = { morning: false, evening: false };
+    if (hour < 12) byWeek[wk].morning = true;
+    if (hour >= 17) byWeek[wk].evening = true;
   }
-  return Object.values(byWeek).some(w => w.hasMorning && w.hasEvening);
+  return Object.values(byWeek).some(w => w.morning && w.evening);
 }
 
 function hasMorningClass(sessions: Session[]): boolean {
-  return sessions.some(s => {
-    if (!s.time) return false;
-    return parseInt(s.time.split(':')[0], 10) < 12;
-  });
+  return sessions.some(s => s.time && parseInt(s.time.split(':')[0], 10) < 12);
 }
 
 function hasEveningClass(sessions: Session[]): boolean {
-  return sessions.some(s => {
-    if (!s.time) return false;
-    return parseInt(s.time.split(':')[0], 10) >= 20;
-  });
+  return sessions.some(s => s.time && parseInt(s.time.split(':')[0], 10) >= 20);
 }
 
 function hasNewYearClass(sessions: Session[], year: number): boolean {
@@ -239,7 +224,6 @@ export function calculateBadges(
   const daysSinceFirst = calcDaysSinceFirstSession(userData.firstSession);
   const maxWeekStreak = calcMaxWeekStreak(sessions);
 
-  // Construïm la llista de programes amb noms normalitzats per fer cerques flexibles
   const programEntries = programs
     .filter(p => p.name && p.category)
     .map(p => ({
@@ -247,7 +231,6 @@ export function calculateBadges(
       category: p.category!.trim().toLowerCase(),
     }));
 
-  // Calculem categories úniques de l'usuari amb la cerca flexible
   const uniqueCategoriesSet = new Set<string>();
   for (const s of sessions) {
     const cat = findCategory(s.activity, programEntries);
@@ -255,15 +238,11 @@ export function calculateBadges(
   }
   const uniqueCategories = uniqueCategoriesSet.size;
 
-  // Categories disponibles al gym
   const availableCategories = new Set(
-    programs
-      .map(p => p.category?.trim().toLowerCase())
-      .filter(Boolean) as string[]
+    programs.map(p => p.category?.trim().toLowerCase()).filter(Boolean) as string[]
   );
   const realTotalCategories = availableCategories.size || totalAvailableCategories;
 
-  // Atleta Completa: les 3 categories en una mateixa setmana
   const hasAllCategoriesInOneWeek = (): boolean => {
     const byWeek: Record<string, Set<string>> = {};
     for (const s of sessions) {
@@ -273,28 +252,22 @@ export function calculateBadges(
       if (!byWeek[wk]) byWeek[wk] = new Set();
       byWeek[wk].add(cat);
     }
-    const mainCategories = ['força', 'cardio', 'flexibilitat'];
     return Object.values(byWeek).some(cats =>
-      mainCategories.every(c => cats.has(c))
+      ['força', 'cardio', 'flexibilitat'].every(c => cats.has(c))
     );
   };
 
   const currentYear = new Date().getFullYear();
-
-  // Precalculem anys nous
   const newYearBadgeEarned: Record<number, boolean> = {};
   for (let year = 2020; year <= currentYear; year++) {
     newYearBadgeEarned[year] = hasNewYearClass(sessions, year);
   }
 
-  const allBadges = getAllBadgesWithDynamic();
-
-  // Filtrem anys nous: passats només si guanyats, actual sempre visible
-  const filteredBadges = allBadges.filter(badge => {
+  // Filtrem anys nous passats no aconseguits
+  const filteredBadges = getAllBadgesWithDynamic().filter(badge => {
     if (!badge.id.startsWith('esp_any_nou_')) return true;
     const year = parseInt(badge.id.replace('esp_any_nou_', ''), 10);
-    if (year === currentYear) return true;
-    return newYearBadgeEarned[year] === true;
+    return year === currentYear || newYearBadgeEarned[year] === true;
   });
 
   return filteredBadges.map((badge): BadgeWithStatus => {
@@ -303,207 +276,208 @@ export function calculateBadges(
     let progressLabel: string | undefined;
     let unavailable = false;
 
-    switch (true) {
+    switch (badge.id) {
 
       // ASSISTÈNCIA
-      case badge.id === 'ass_1':
+      case 'ass_1':
         earned = totalSessions >= 1;
         progress = Math.min(100, totalSessions * 100);
         progressLabel = `${totalSessions} / 1 classe`;
         break;
-      case badge.id === 'ass_5':
+      case 'ass_5':
         earned = totalSessions >= 5;
         progress = Math.min(100, Math.round((totalSessions / 5) * 100));
         progressLabel = `${totalSessions} / 5 classes`;
         break;
-      case badge.id === 'ass_10':
+      case 'ass_10':
         earned = totalSessions >= 10;
         progress = Math.min(100, Math.round((totalSessions / 10) * 100));
         progressLabel = `${totalSessions} / 10 classes`;
         break;
-      case badge.id === 'ass_25':
+      case 'ass_25':
         earned = totalSessions >= 25;
         progress = Math.min(100, Math.round((totalSessions / 25) * 100));
         progressLabel = `${totalSessions} / 25 classes`;
         break;
-      case badge.id === 'ass_50':
+      case 'ass_50':
         earned = totalSessions >= 50;
         progress = Math.min(100, Math.round((totalSessions / 50) * 100));
         progressLabel = `${totalSessions} / 50 classes`;
         break;
-      case badge.id === 'ass_100':
+      case 'ass_100':
         earned = totalSessions >= 100;
         progress = Math.min(100, Math.round((totalSessions / 100) * 100));
         progressLabel = `${totalSessions} / 100 classes`;
         break;
-      case badge.id === 'ass_200':
+      case 'ass_200':
         earned = totalSessions >= 200;
         progress = Math.min(100, Math.round((totalSessions / 200) * 100));
         progressLabel = `${totalSessions} / 200 classes`;
         break;
-      case badge.id === 'ass_aniversari':
-        earned = hasActiveYearMember(sessions, userData.firstSession);
-        progress = Math.min(100, Math.round((daysSinceFirst / 365) * 100));
-        progressLabel = earned
-          ? 'Completat!'
-          : `${daysSinceFirst} / 365 dies + activa cada mes`;
-        break;
-      case badge.id === 'ass_500':
+      case 'ass_500':
         earned = totalSessions >= 500;
         progress = Math.min(100, Math.round((totalSessions / 500) * 100));
         progressLabel = `${totalSessions} / 500 classes`;
         break;
 
-      // RATXA
-      case badge.id === 'ratxa_2':
+      // CONSTÀNCIA
+      case 'ratxa_2':
         earned = maxWeekStreak >= 2;
         progress = Math.min(100, Math.round((maxWeekStreak / 2) * 100));
         progressLabel = `${maxWeekStreak} / 2 setmanes`;
         break;
-      case badge.id === 'ratxa_4':
+      case 'ratxa_4':
         earned = maxWeekStreak >= 4;
         progress = Math.min(100, Math.round((maxWeekStreak / 4) * 100));
         progressLabel = `${maxWeekStreak} / 4 setmanes`;
         break;
-      case badge.id === 'ratxa_8':
+      case 'ratxa_8':
         earned = maxWeekStreak >= 8;
         progress = Math.min(100, Math.round((maxWeekStreak / 8) * 100));
         progressLabel = `${maxWeekStreak} / 8 setmanes`;
         break;
-      case badge.id === 'ratxa_12':
+      case 'ratxa_12':
         earned = maxWeekStreak >= 12;
         progress = Math.min(100, Math.round((maxWeekStreak / 12) * 100));
         progressLabel = `${maxWeekStreak} / 12 setmanes`;
         break;
-      case badge.id === 'ratxa_26':
+      case 'ratxa_26':
         earned = maxWeekStreak >= 26;
         progress = Math.min(100, Math.round((maxWeekStreak / 26) * 100));
         progressLabel = `${maxWeekStreak} / 26 setmanes`;
         break;
-      case badge.id === 'ratxa_52':
+      case 'ratxa_52':
         earned = maxWeekStreak >= 52;
         progress = Math.min(100, Math.round((maxWeekStreak / 52) * 100));
         progressLabel = `${maxWeekStreak} / 52 setmanes`;
         break;
 
       // ANTIGUITAT
-      case badge.id === 'ant_1m':
+      case 'ant_1m':
         earned = monthsAsMember >= 1;
-        progress = Math.min(100, Math.round((monthsAsMember / 1) * 100));
+        progress = Math.min(100, monthsAsMember * 100);
         progressLabel = `${monthsAsMember} / 1 mes`;
         break;
-      case badge.id === 'ant_3m':
+      case 'ant_3m':
         earned = monthsAsMember >= 3;
         progress = Math.min(100, Math.round((monthsAsMember / 3) * 100));
         progressLabel = `${monthsAsMember} / 3 mesos`;
         break;
-      case badge.id === 'ant_6m':
+      case 'ant_6m':
         earned = monthsAsMember >= 6;
         progress = Math.min(100, Math.round((monthsAsMember / 6) * 100));
         progressLabel = `${monthsAsMember} / 6 mesos`;
         break;
-      case badge.id === 'ant_1a':
+      case 'ant_1a':
         earned = yearsAsMember >= 1;
         progress = Math.min(100, Math.round((monthsAsMember / 12) * 100));
         progressLabel = `${monthsAsMember} / 12 mesos`;
         break;
-      case badge.id === 'ant_2a':
+      case 'ant_2a':
         earned = yearsAsMember >= 2;
         progress = Math.min(100, Math.round((monthsAsMember / 24) * 100));
         progressLabel = `${monthsAsMember} / 24 mesos`;
         break;
-      case badge.id === 'ant_3a':
+      case 'ant_3a':
         earned = yearsAsMember >= 3;
         progress = Math.min(100, Math.round((monthsAsMember / 36) * 100));
         progressLabel = `${monthsAsMember} / 36 mesos`;
         break;
-      case badge.id === 'ant_5a':
+      case 'ant_5a':
         earned = yearsAsMember >= 5;
         progress = Math.min(100, Math.round((monthsAsMember / 60) * 100));
         progressLabel = `${monthsAsMember} / 60 mesos`;
         break;
-      case badge.id === 'ant_10a':
+      case 'ant_10a':
         earned = yearsAsMember >= 10;
         progress = Math.min(100, Math.round((monthsAsMember / 120) * 100));
         progressLabel = `${monthsAsMember} / 120 mesos`;
         break;
 
-      // PROGRAMES PER CATEGORIES
-      case badge.id === 'prog_cat_2':
+      // EXPLORACIÓ: HORARIS
+      case 'exp_matidora':
+        earned = hasMorningClass(sessions);
+        progress = earned ? 100 : 0;
+        progressLabel = earned ? 'Completat!' : 'Vine a una classe abans de les 12h';
+        break;
+      case 'exp_vespre':
+        earned = hasEveningClass(sessions);
+        progress = earned ? 100 : 0;
+        progressLabel = earned ? 'Completat!' : 'Vine a una classe a les 20h o més tard';
+        break;
+      case 'exp_doble':
+        earned = hasDoubleMorningEvening(sessions);
+        progress = earned ? 100 : 0;
+        progressLabel = earned ? 'Completat!' : 'Vine de matí i de tarda la mateixa setmana';
+        break;
+
+      // EXPLORACIÓ: VARIETAT
+      case 'prog_cat_2':
         unavailable = realTotalCategories < 2;
         earned = !unavailable && uniqueCategories >= 2;
         progress = unavailable ? 0 : Math.min(100, Math.round((uniqueCategories / 2) * 100));
-        progressLabel = unavailable
-          ? 'No disponible al teu gym'
-          : `${uniqueCategories} / 2 categories`;
+        progressLabel = unavailable ? 'No disponible al teu gym' : `${uniqueCategories} / 2 categories`;
         break;
-      case badge.id === 'prog_cat_3':
+      case 'prog_cat_3':
         unavailable = realTotalCategories < 3;
         earned = !unavailable && uniqueCategories >= 3;
         progress = unavailable ? 0 : Math.min(100, Math.round((uniqueCategories / 3) * 100));
-        progressLabel = unavailable
-          ? 'No disponible al teu gym'
-          : `${uniqueCategories} / 3 categories`;
+        progressLabel = unavailable ? 'No disponible al teu gym' : `${uniqueCategories} / 3 categories`;
         break;
-      case badge.id === 'prog_cat_all':
+      case 'prog_cat_all':
         unavailable = realTotalCategories < 3;
         earned = !unavailable && hasAllCategoriesInOneWeek();
         progress = earned ? 100 : 0;
         progressLabel = unavailable
           ? 'No disponible al teu gym'
-          : earned
-            ? 'Completat!'
-            : 'Fes força, cardio i flexibilitat en una mateixa setmana';
+          : earned ? 'Completat!' : 'Fes força, cardio i flexibilitat en una mateixa setmana';
         break;
 
-      // EXPLORADORA
-      case badge.id === 'exp_matidora':
-        earned = hasMorningClass(sessions);
-        progress = earned ? 100 : 0;
-        progressLabel = earned ? 'Completat!' : 'Vine a una classe abans de les 12h';
-        break;
-      case badge.id === 'exp_vespre':
-        earned = hasEveningClass(sessions);
-        progress = earned ? 100 : 0;
-        progressLabel = earned ? 'Completat!' : 'Vine a una classe a les 20h o més tard';
-        break;
-      case badge.id === 'exp_doble':
-        earned = hasDoubleMorningEvening(sessions);
-        progress = earned ? 100 : 0;
-        progressLabel = earned ? 'Completat!' : 'Vine de matí i de tarda la mateixa setmana';
-        break;
-      case badge.id === 'exp_5dies':
-        earned = hasFiveDaysInOneWeek(sessions);
-        progress = earned ? 100 : 0;
-        progressLabel = earned ? 'Completat!' : 'Vine 5 dies laborables en una setmana';
-        break;
-      case badge.id === 'exp_3dies_seguits':
+      // EXPLORACIÓ: INTENSITAT
+      case 'exp_3dies_seguits':
         earned = hasThreeConsecutiveDays(sessions);
         progress = earned ? 100 : 0;
         progressLabel = earned ? 'Completat!' : 'Vine 3 dies seguits';
         break;
+      case 'exp_3dies_setmana':
+        earned = hasThreeDaysInOneWeek(sessions);
+        progress = earned ? 100 : 0;
+        progressLabel = earned ? 'Completat!' : 'Vine 3 dies en una mateixa setmana';
+        break;
+      case 'exp_5dies':
+        earned = hasFiveDaysInOneWeek(sessions);
+        progress = earned ? 100 : 0;
+        progressLabel = earned ? 'Completat!' : 'Vine 5 dies laborables en una setmana';
+        break;
 
       // ESPECIALS
-      case badge.id === 'esp_comeback':
+      case 'ass_aniversari':
+        earned = hasActiveYearMember(sessions, userData.firstSession);
+        progress = Math.min(100, Math.round((daysSinceFirst / 365) * 100));
+        progressLabel = earned ? 'Completat!' : `${daysSinceFirst} / 365 dies actiu/va cada mes`;
+        break;
+      case 'esp_100en365':
+        earned = has100In365Days(sessions);
+        progress = Math.min(100, Math.round((totalSessions / 100) * 100));
+        progressLabel = earned ? 'Completat!' : `${totalSessions} classes acumulades`;
+        break;
+      case 'esp_comeback':
         earned = hasComeback(sessions);
         progress = earned ? 100 : 0;
         progressLabel = earned ? 'Completat!' : 'Torna després de 30 dies d\'absència';
         break;
-      case badge.id === 'esp_consistent':
+      case 'esp_consistent':
         earned = hasConsistentMonths(sessions);
         progress = earned ? 100 : 0;
         progressLabel = earned ? 'Completat!' : 'Mantén la mateixa freqüència 3 mesos';
         break;
 
-      // ESPECIALS - ANY NOU
       default:
         if (badge.id.startsWith('esp_any_nou_')) {
           const year = parseInt(badge.id.replace('esp_any_nou_', ''), 10);
           earned = newYearBadgeEarned[year] || false;
           progress = earned ? 100 : 0;
-          progressLabel = earned
-            ? 'Completat!'
-            : `Vine de l'1 al 15 de gener de ${year}`;
+          progressLabel = earned ? 'Completat!' : `Vine de l'1 al 15 de gener de ${year}`;
         }
         break;
     }
@@ -520,7 +494,6 @@ export function getBadgeSummary(badges: BadgeWithStatus[]) {
     acc[b.category] = (acc[b.category] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
-
   return {
     earnedCount: earned.length,
     totalCount: total,
