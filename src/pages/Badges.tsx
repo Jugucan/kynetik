@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useCurrentUserWithSessions } from '@/hooks/useUsers';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -48,6 +48,17 @@ const Badges = () => {
       totalAvailableCategories
     );
   }, [currentUserData, programsForBadges, totalAvailableCategories]);
+
+  // Restaura la posició de scroll en tornar de la pàgina de detall
+  useEffect(() => {
+    const savedY = sessionStorage.getItem('badgesScrollY');
+    if (savedY) {
+      setTimeout(() => {
+        window.scrollTo({ top: parseInt(savedY), behavior: 'instant' });
+        sessionStorage.removeItem('badgesScrollY');
+      }, 100);
+    }
+  }, []);
 
   const loading = loadingUser || loadingPrograms;
 
