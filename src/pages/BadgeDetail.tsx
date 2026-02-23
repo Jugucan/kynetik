@@ -128,7 +128,7 @@ const BadgeDetail = () => {
       <div className="mt-6 p-5 rounded-2xl shadow-neo bg-background space-y-4">
         <div>
           <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wide mb-1">
-            {isEarned ? '✅ Com ho vas aconseguir' : '🎯 Com aconseguir-la'}
+            🎯 Objectiu
           </h2>
           <p className="text-base">
             {isEarned ? description : badge.requirement}
