@@ -19,6 +19,7 @@ import Stats from "./pages/Stats";
 import Settings from "./pages/Settings";
 import Notes from "./pages/Notes";
 import Badges from "./pages/Badges";
+import BadgeDetail from "./pages/BadgeDetail";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import PendingApproval from "./pages/PendingApproval";
@@ -117,6 +118,14 @@ const AppRoutes = () => {
                       element={
                         <ViewProtectedRoute allowedViews={['user']}>
                           <Badges />
+                        </ViewProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/badges/:badgeId"
+                      element={
+                        <ViewProtectedRoute allowedViews={['user']}>
+                          <BadgeDetail />
                         </ViewProtectedRoute>
                       }
                     />
