@@ -17,6 +17,7 @@ const CATEGORY_ORDER: BadgeCategory[] = [
   'antiguitat',
   'exploracio',
   'especial',
+  'personal',
 ];
 
 const BadgeGrid = ({ badges, gender }: BadgeGridProps) => {
