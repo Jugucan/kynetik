@@ -99,6 +99,7 @@ const Badges = () => {
         <ProgressionPanel
           data={progression}
           userName={userProfile?.displayName}
+          gender={userProfile?.gender}
         />
       )}
 
