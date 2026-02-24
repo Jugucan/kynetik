@@ -36,26 +36,21 @@ const getBillingPeriod = (referenceDate: Date): { start: Date; end: Date } => {
   let startMonth: number;
   let startYear: number;
   
-  // Si el dia és menor que 26, el període comença el mes anterior
   if (day < 26) {
     startMonth = month - 1;
     startYear = year;
-    // Si estem al gener (month=0) i day<26, anem a desembre de l'any anterior
     if (startMonth < 0) {
       startMonth = 11;
       startYear = year - 1;
     }
   } else {
-    // Si el dia és 26 o més, el període comença aquest mateix mes
     startMonth = month;
     startYear = year;
   }
   
-  // La data d'inici és sempre el dia 26 del startMonth/startYear
   const startDate = new Date(startYear, startMonth, 26);
   startDate.setHours(0, 0, 0, 0);
   
-  // La data final és el dia 25 del mes següent
   let endMonth = startMonth + 1;
   let endYear = startYear;
   if (endMonth > 11) {
@@ -69,9 +64,15 @@ const getBillingPeriod = (referenceDate: Date): { start: Date; end: Date } => {
   return { start: startDate, end: endDate };
 };
 
+// Mapeig entre l'ID intern del centre i el valor guardat a les sessions
+const CENTER_ID_TO_LEGACY: Record<string, string> = {
+  'arbucies': 'Arbucies',
+  'sant-hilari': 'SantHilari',
+};
+
 const Calendar = () => {
   const { viewMode } = useAuth();
-  const { vacations, closuresArbucies, closuresSantHilari, officialHolidays, loading: settingsLoading } = useSettings();
+  const { vacations, closuresArbucies, closuresSantHilari, closuresByCenter, officialHolidays, loading: settingsLoading } = useSettings();
   const { schedules, loading: schedulesLoading } = useSchedules();
   const { activeCenters, loading: centersLoading, getCenterByLegacyId } = useCenters();
   const { getProgramColor, getProgramName, getAllProgramColors } = useProgramColors();
@@ -81,51 +82,35 @@ const Calendar = () => {
   const [deletedSessions, setDeletedSessions] = useState<Record<string, Array<{sessionIndex: number, reason: string}>>>({});
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
   const [selectedCenterFilter, setSelectedCenterFilter] = useState<string>("all");
 
   const loading = settingsLoading || schedulesLoading || centersLoading;
 
   // Carregar sessions personalitzades de Firebase amb listener en temps real
   useEffect(() => {
-    console.log("🔄 Iniciant listener de sessions personalitzades...");
     const customSessionsDocRef = doc(db, 'settings', 'customSessions');
-    
     const unsubscribe = onSnapshot(customSessionsDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         const sessionsMap: Record<string, Session[]> = {};
-        
         Object.entries(data).forEach(([dateKey, sessions]) => {
           if (Array.isArray(sessions)) {
             sessionsMap[dateKey] = sessions as Session[];
           }
         });
-        
         setCustomSessions(sessionsMap);
-        console.log("✅ Sessions personalitzades carregades:", Object.keys(sessionsMap).length, "dies amb sessions modificades");
-        console.log("📅 Dies amb modificacions:", Object.keys(sessionsMap));
       } else {
         setCustomSessions({});
-        console.log("ℹ️ No hi ha sessions personalitzades guardades");
       }
     }, (error) => {
       console.error("❌ Error carregant sessions personalitzades:", error);
     });
-
-    return () => {
-      console.log("🛑 Tancant listener de sessions personalitzades");
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, []);
 
   const getScheduleForDate = useCallback((date: Date) => {
     const dateStr = dateToKey(date);
-    
-    const sortedSchedules = [...schedules].sort((a, b) => {
-      return b.startDate.localeCompare(a.startDate);
-    });
-    
+    const sortedSchedules = [...schedules].sort((a, b) => b.startDate.localeCompare(a.startDate));
     return sortedSchedules.find(schedule => {
       const startDate = schedule.startDate;
       const endDate = schedule.endDate || '9999-12-31';
@@ -156,76 +141,82 @@ const Calendar = () => {
     const dateKey = dateToKey(date);
     return vacations && vacations.hasOwnProperty(dateKey);
   }, [vacations]);
-  
-  const isClosure = useCallback((date: Date) => {
+
+  // ✅ Retorna quins centres estan tancats aquell dia (pot ser cap, un o tots)
+  const getClosedCentersForDate = useCallback((date: Date): string[] => {
     const dateKey = dateToKey(date);
-    return (closuresArbucies && closuresArbucies.hasOwnProperty(dateKey)) || 
-           (closuresSantHilari && closuresSantHilari.hasOwnProperty(dateKey));
-  }, [closuresArbucies, closuresSantHilari]);
+    const closedCenters: string[] = [];
+
+    // Format nou: closuresByCenter
+    if (closuresByCenter && Object.keys(closuresByCenter).length > 0) {
+      Object.entries(closuresByCenter).forEach(([centerId, closures]) => {
+        if (closures && closures.hasOwnProperty(dateKey)) {
+          closedCenters.push(centerId);
+        }
+      });
+    } else {
+      // Fallback format antic
+      if (closuresArbucies && closuresArbucies.hasOwnProperty(dateKey)) {
+        closedCenters.push('arbucies');
+      }
+      if (closuresSantHilari && closuresSantHilari.hasOwnProperty(dateKey)) {
+        closedCenters.push('sant-hilari');
+      }
+    }
+
+    return closedCenters;
+  }, [closuresByCenter, closuresArbucies, closuresSantHilari]);
+
+  // Per als indicadors visuals: hi ha tancament si ALGUN centre és tancat
+  const isClosure = useCallback((date: Date) => {
+    return getClosedCentersForDate(date).length > 0;
+  }, [getClosedCentersForDate]);
 
   const getSessionsForDate = useCallback((date: Date): Session[] => {
     const dateKey = dateToKey(date);
-    
-    console.log(`🔍 getSessionsForDate per ${dateKey}:`, {
-      teCustomSessions: !!customSessions[dateKey],
-      numCustomSessions: customSessions[dateKey]?.length || 0,
-      totalDiesAmbCustom: Object.keys(customSessions).length
-    });
-    
+
+    // Sessions personalitzades tenen prioritat absoluta
     if (customSessions[dateKey]) {
-      console.log("📌 Usant sessions personalitzades per:", dateKey, customSessions[dateKey]);
       return customSessions[dateKey];
     }
-    
-    if (isHoliday(date) || isVacation(date) || isClosure(date)) {
-      console.log("🚫 Dia especial (festiu/vacances/tancament):", dateKey);
+
+    // Festiu o vacances → cap sessió (afecta tots els centres)
+    if (isHoliday(date) || isVacation(date)) {
       return [];
     }
-    
+
     const scheduleForDate = getScheduleForDate(date);
-    
-    if (scheduleForDate) {
-      const dayOfWeek = date.getDay();
-      const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
-      const scheduleSessions = scheduleForDate.sessions[adjustedDay] || [];
-      
-      console.log("📅 Usant horari estàndard per:", dateKey, scheduleSessions.length, "sessions");
-      
-      return scheduleSessions.map(s => ({
+    if (!scheduleForDate) return [];
+
+    const dayOfWeek = date.getDay();
+    const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
+    const scheduleSessions = scheduleForDate.sessions[adjustedDay] || [];
+
+    // ✅ Obtenim quins centres estan tancats i convertim al format legacy
+    const closedCenters = getClosedCentersForDate(date);
+    const closedLegacyIds = closedCenters.map(id => CENTER_ID_TO_LEGACY[id]).filter(Boolean);
+
+    // ✅ Eliminem sessions del centre tancat, mantenim les dels altres centres
+    return scheduleSessions
+      .filter(s => !closedLegacyIds.includes(s.center))
+      .map(s => ({
         time: s.time,
         program: s.program,
         center: s.center,
         isCustom: false,
         isDeleted: false,
       }));
-    }
-    
-    console.log("⚠️ No s'ha trobat cap sessió per:", dateKey);
-    return [];
-  }, [customSessions, getScheduleForDate, isHoliday, isVacation, isClosure]);
+  }, [customSessions, getScheduleForDate, isHoliday, isVacation, getClosedCentersForDate]);
 
   const filterSessionsByCenter = useCallback((sessions: Session[]): Session[] => {
-    if (selectedCenterFilter === "all") {
-      return sessions;
-    }
-    
-    const centerMapping: Record<string, string> = {
-      'arbucies': 'Arbucies',
-      'sant-hilari': 'SantHilari',
-    };
-    
-    const legacyId = centerMapping[selectedCenterFilter];
-    
+    if (selectedCenterFilter === "all") return sessions;
+    const legacyId = CENTER_ID_TO_LEGACY[selectedCenterFilter];
     return sessions.filter(session => session.center === legacyId);
   }, [selectedCenterFilter]);
 
   const handleUpdateSessions = (date: Date, sessions: Session[]) => {
     const dateKey = dateToKey(date);
-    console.log("📝 Actualitzant sessions locals per:", dateKey, sessions.length, "sessions");
-    setCustomSessions((prev) => ({
-      ...prev,
-      [dateKey]: sessions,
-    }));
+    setCustomSessions((prev) => ({ ...prev, [dateKey]: sessions }));
   };
 
   const handleDeleteSession = (date: Date, sessionIndex: number, reason: string) => {
@@ -252,63 +243,48 @@ const Calendar = () => {
   };
 
   const getClosureReason = (date: Date) => {
-    const dateKey = dateToKey(date);
-    if (closuresArbucies && closuresArbucies[dateKey]) {
-      return `Arbúcies: ${closuresArbucies[dateKey]}`;
-    }
-    if (closuresSantHilari && closuresSantHilari[dateKey]) {
-      return `Sant Hilari: ${closuresSantHilari[dateKey]}`;
-    }
-    return "";
+    const closedCenters = getClosedCentersForDate(date);
+    if (closedCenters.length === 0) return "";
+    const names = closedCenters.map(id => {
+      const center = activeCenters.find(c => c.id === id);
+      return center ? center.name : id;
+    });
+    return `Tancament: ${names.join(", ")}`;
   };
 
   const sessionStats = useMemo(() => {
     const stats: Record<string, { sessions: number; days: number }> = {};
-    
-    activeCenters.forEach(center => {
-      stats[center.id] = { sessions: 0, days: 0 };
-    });
+    activeCenters.forEach(center => { stats[center.id] = { sessions: 0, days: 0 }; });
 
     const currentDate = new Date(viewBillingPeriod.start);
-    
     while (currentDate <= viewBillingPeriod.end) {
       const sessions = getSessionsForDate(currentDate);
       const activeSessions = sessions.filter(s => !s.isDeleted);
-      
       if (activeSessions.length > 0) {
         const centerDaysCount: Record<string, boolean> = {};
-        
         activeSessions.forEach(session => {
-          const centerMapping: Record<string, string> = {
+          const legacyToId: Record<string, string> = {
             'Arbucies': 'arbucies',
             'SantHilari': 'sant-hilari',
           };
-          
-          const centerId = session.center ? centerMapping[session.center] : null;
-          
+          const centerId = session.center ? legacyToId[session.center] : null;
           if (centerId && stats[centerId]) {
             stats[centerId].sessions++;
             centerDaysCount[centerId] = true;
           }
         });
-        
-        Object.keys(centerDaysCount).forEach(centerId => {
-          stats[centerId].days++;
-        });
+        Object.keys(centerDaysCount).forEach(centerId => { stats[centerId].days++; });
       }
-      
       currentDate.setDate(currentDate.getDate() + 1);
     }
-
     return stats;
   }, [viewBillingPeriod, getSessionsForDate, activeCenters]);
 
   const upcomingEvents = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
     const events: Array<{ date: Date; type: 'holiday' | 'vacation' | 'closure'; name: string; reason: string }> = [];
-    
+
     if (officialHolidays) {
       Object.entries(officialHolidays).forEach(([dateKey, reason]) => {
         const date = new Date(dateKey);
@@ -318,7 +294,6 @@ const Calendar = () => {
         }
       });
     }
-    
     if (vacations) {
       Object.entries(vacations).forEach(([dateKey, reason]) => {
         const date = new Date(dateKey);
@@ -328,7 +303,6 @@ const Calendar = () => {
         }
       });
     }
-    
     if (closuresArbucies) {
       Object.entries(closuresArbucies).forEach(([dateKey, reason]) => {
         const date = new Date(dateKey);
@@ -338,7 +312,6 @@ const Calendar = () => {
         }
       });
     }
-    
     if (closuresSantHilari) {
       Object.entries(closuresSantHilari).forEach(([dateKey, reason]) => {
         const date = new Date(dateKey);
@@ -348,26 +321,23 @@ const Calendar = () => {
         }
       });
     }
-    
     return events.sort((a, b) => a.date.getTime() - b.date.getTime()).slice(0, 5);
   }, [officialHolidays, vacations, closuresArbucies, closuresSantHilari]);
 
   const year = currentViewDate.getFullYear();
   const month = currentViewDate.getMonth();
-  
   const firstDayOfMonth = new Date(year, month, 1);
   const lastDayOfMonth = new Date(year, month + 1, 0);
   const daysInCurrentMonth = lastDayOfMonth.getDate();
-  
   const firstDayOfWeek = firstDayOfMonth.getDay();
   const adjustedFirstDay = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
-  
+
   const calendarDays: Array<{ day: number | null; date: Date | null; sessions: Session[]; holiday: boolean; vacation: boolean; closure: boolean }> = [];
-  
+
   for (let i = 0; i < adjustedFirstDay; i++) {
     calendarDays.push({ day: null, date: null, sessions: [], holiday: false, vacation: false, closure: false });
   }
-  
+
   for (let day = 1; day <= daysInCurrentMonth; day++) {
     const date = new Date(year, month, day);
     const allSessions = getSessionsForDate(date);
@@ -375,17 +345,16 @@ const Calendar = () => {
     const holiday = isHoliday(date);
     const vacation = isVacation(date);
     const closure = isClosure(date);
-    
     calendarDays.push({ day, date, sessions, holiday, vacation, closure });
   }
 
   const dayNames = ["Dl", "Dt", "Dc", "Dj", "Dv", "Ds", "Dg"];
-  
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-6 w-6 animate-spin mr-2" />
-          Carregant dades...
+        <Loader2 className="h-6 w-6 animate-spin mr-2" />
+        Carregant dades...
       </div>
     );
   }
@@ -411,9 +380,7 @@ const Calendar = () => {
             <button
               onClick={() => setSelectedCenterFilter("all")}
               className={`px-4 py-2 rounded-lg shadow-neo hover:shadow-neo-sm transition-all font-medium ${
-                selectedCenterFilter === "all" 
-                  ? "bg-primary text-white" 
-                  : "bg-white text-foreground"
+                selectedCenterFilter === "all" ? "bg-primary text-white" : "bg-white text-foreground"
               }`}
             >
               Tots els centres
@@ -423,9 +390,7 @@ const Calendar = () => {
                 key={center.id}
                 onClick={() => setSelectedCenterFilter(center.id)}
                 className={`px-4 py-2 rounded-lg shadow-neo hover:shadow-neo-sm transition-all font-medium ${
-                  selectedCenterFilter === center.id 
-                    ? "bg-primary text-white" 
-                    : "bg-white text-foreground"
+                  selectedCenterFilter === center.id ? "bg-primary text-white" : "bg-white text-foreground"
                 }`}
               >
                 {center.name}
@@ -448,7 +413,7 @@ const Calendar = () => {
               </button>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-7 gap-2 mb-4">
             {dayNames.map((day) => (
               <div key={day} className="text-center font-semibold text-sm text-muted-foreground py-2">
@@ -459,10 +424,9 @@ const Calendar = () => {
               const today = new Date();
               today.setHours(0, 0, 0, 0);
               const isToday = dayInfo.date && dayInfo.date.getTime() === today.getTime();
-              
               const dateKey = dayInfo.date ? dateToKey(dayInfo.date) : '';
               const hasModifications = customSessions[dateKey] && customSessions[dateKey].length > 0;
-              
+
               return (
                 <button
                   key={idx}
@@ -484,17 +448,12 @@ const Calendar = () => {
                       : ""
                   }`}
                   title={
-                    isToday
-                      ? "Avui"
-                      : hasModifications
-                      ? "Dia amb modificacions a l'horari"
-                      : dayInfo.holiday 
-                      ? `Festiu: ${getHolidayName(dayInfo.date!)}`
-                      : dayInfo.vacation
-                      ? "Vacances"  // ✅ Sense motiu per als usuaris
-                      : dayInfo.closure
-                      ? "Tancament"  // ✅ Sense motiu per als usuaris
-                      : ""
+                    isToday ? "Avui"
+                    : hasModifications ? "Dia amb modificacions a l'horari"
+                    : dayInfo.holiday ? `Festiu: ${getHolidayName(dayInfo.date!)}`
+                    : dayInfo.vacation ? "Vacances"
+                    : dayInfo.closure ? getClosureReason(dayInfo.date!)
+                    : ""
                   }
                 >
                   {dayInfo.day && (
@@ -503,7 +462,10 @@ const Calendar = () => {
                       {isToday && <span className="text-[8px] text-primary font-bold mb-1">AVUI</span>}
                       {dayInfo.holiday && <span className="text-[8px] text-yellow-700 font-bold mb-1">FESTIU</span>}
                       {dayInfo.vacation && <span className="text-[8px] text-blue-700 font-bold mb-1">VACANCES</span>}
-                      {dayInfo.closure && <span className="text-[8px] text-gray-700 font-bold mb-1">TANCAT</span>}
+                      {/* ✅ "TANCAT" només si hi ha tancament però NO queden sessions d'altres centres */}
+                      {dayInfo.closure && dayInfo.sessions.length === 0 && (
+                        <span className="text-[8px] text-gray-700 font-bold mb-1">TANCAT</span>
+                      )}
                       {dayInfo.sessions.length > 0 && (
                         <div className="flex gap-0.5 flex-wrap justify-center w-full">
                           {dayInfo.sessions.map((session, idx) => {
@@ -515,7 +477,6 @@ const Calendar = () => {
                                   session.isDeleted ? 'bg-gray-300 dark:bg-gray-600 opacity-50' : ''
                                 } text-white text-[10px] flex items-center justify-center font-bold shadow-sm ${session.isDeleted ? 'line-through' : ''}`}
                                 style={!session.isDeleted ? { backgroundColor: programColor } : {}}
-                                // ✅ Si la sessió és eliminada, NO mostrem el motiu en el tooltip
                                 title={session.isDeleted
                                   ? `Cancel·lada: ${session.time} - ${getProgramName(session.program)}`
                                   : `${session.time} - ${getProgramName(session.program)} - ${session.center || 'N/A'}`
@@ -539,8 +500,7 @@ const Calendar = () => {
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded border-2 border-green-500"></div><span>Activitats modificades</span></div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-yellow-500/50"></div><span>Festiu</span></div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-500/50"></div><span>Vacances</span></div>
-            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-gray-500/50"></div><span>Tancament</span></div>
-            {/* Programes - NOMÉS vista instructora */}
+            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-gray-500/50"></div><span>Tancament (un o més centres)</span></div>
             {viewMode === 'instructor' && Object.entries(getAllProgramColors()).map(([code, color]) => (
               <div key={code} className="flex items-center gap-1"><div className="w-3 h-3 rounded" style={{ backgroundColor: color }}></div><span>{code}</span></div>
             ))}
@@ -573,13 +533,11 @@ const Calendar = () => {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const daysUntil = Math.ceil((event.date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                let daysText = daysUntil === 0 ? "Avui" : daysUntil === 1 ? "Demà" : `Falten ${daysUntil} dies`;
-                
+                const daysText = daysUntil === 0 ? "Avui" : daysUntil === 1 ? "Demà" : `Falten ${daysUntil} dies`;
                 return (
                   <div key={idx} className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset">
                     <div className="flex-1">
                       <p className="font-medium">{event.name}</p>
-                      {/* ✅ Mostrem el motiu NOMÉS si és la vista d'instructora */}
                       {viewMode === 'instructor' && (
                         <p className="text-sm text-muted-foreground">{event.reason}</p>
                       )}
