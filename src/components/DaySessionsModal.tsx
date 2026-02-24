@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, Save, Edit2, X, RotateCcw, Eye } from "lucide-react";
+import { Trash2, Plus, Save, Edit2, X, RotateCcw } from "lucide-react";
 import { useProgramColors } from "@/hooks/useProgramColors";
 import { Textarea } from "@/components/ui/textarea";
 import { db } from "@/lib/firebase";
@@ -48,7 +48,7 @@ interface DaySessionsModalProps {
   sessions: Session[];
   onUpdateSessions: (date: Date, sessions: Session[]) => void;
   onDeleteSession?: (date: Date, sessionIndex: number, reason: string) => void;
-  readOnly?: boolean; // ✅ NOU: Mode de només lectura
+  readOnly?: boolean;
 }
 
 const CUSTOM_SESSIONS_DOC = doc(db, 'settings', 'customSessions');
@@ -67,7 +67,7 @@ export const DaySessionsModal = ({
   date,
   sessions,
   onUpdateSessions,
-  readOnly = false, // ✅ Per defecte false (mode edició)
+  readOnly = false,
 }: DaySessionsModalProps) => {
   const { getProgramColor, getProgramName, getAllProgramColors } = useProgramColors();
   const [localSessions, setLocalSessions] = useState<Session[]>([]);
@@ -80,7 +80,6 @@ export const DaySessionsModal = ({
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Carregar sessions quan s'obre el modal
   useEffect(() => {
     if (isOpen && sessions) {
       const sessionsWithIndex = sessions.map((s, idx) => ({
@@ -93,7 +92,6 @@ export const DaySessionsModal = ({
     }
   }, [isOpen, sessions]);
 
-  // Ordenar sessions per hora
   const sortSessionsByTime = (sessions: Session[]): Session[] => {
     return [...sessions].sort((a, b) => {
       const timeA = a.time.split(':').map(Number);
@@ -128,7 +126,6 @@ export const DaySessionsModal = ({
       setLocalSessions(newSessions);
       setIsAddingNew(false);
     }
-    
     setEditingIndex(null);
     setSessionToModify(null);
     setModifyReason("");
@@ -494,7 +491,7 @@ export const DaySessionsModal = ({
                           </div>
                         </div>
                       ) : (
-                        /* Vista de lectura - MÉS GRAN I VISUAL per gent gran */
+                        /* Vista de lectura */
                         <div className="space-y-3">
                           <div className="grid grid-cols-2 gap-3">
                             <div className="p-2 bg-muted/30 rounded-lg">
@@ -511,15 +508,17 @@ export const DaySessionsModal = ({
                             </div>
                           </div>
                           
-                          {session.isDeleted && session.deleteReason && (
+                          {/* ✅ Motiu cancel·lació: NOMÉS visible per a la instructora (no readOnly) */}
+                          {!readOnly && session.isDeleted && session.deleteReason && (
                             <div className="p-3 rounded-lg bg-red-500/10 border-2 border-red-500/30">
                               <p className="text-sm text-red-700 font-medium">
                                 ❌ Motiu cancel·lació: {session.deleteReason}
                               </p>
                             </div>
                           )}
-                          
-                          {session.addReason && !session.isDeleted && (
+
+                          {/* ✅ Motiu sessió extra: NOMÉS visible per a la instructora (no readOnly) */}
+                          {!readOnly && session.addReason && !session.isDeleted && (
                             <div className="p-3 rounded-lg bg-blue-500/10 border-2 border-blue-500/30">
                               <p className="text-sm text-blue-700 font-medium">
                                 ℹ️ Classe extra: {session.addReason}
@@ -546,7 +545,7 @@ export const DaySessionsModal = ({
               )}
             </div>
 
-            {/* Botons del footer - DIFERENTS segons readOnly */}
+            {/* Botons del footer */}
             <div className="flex justify-end gap-2 pt-4 border-t">
               {readOnly ? (
                 <Button onClick={onClose} className="w-full sm:w-auto">
