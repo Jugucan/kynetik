@@ -70,7 +70,7 @@ const getBillingPeriod = (referenceDate: Date): { start: Date; end: Date } => {
 };
 
 const Calendar = () => {
-  const { viewMode } = useAuth(); // ✅ AFEGIR AQUESTA LÍNIA
+  const { viewMode } = useAuth();
   const { vacations, closuresArbucies, closuresSantHilari, officialHolidays, loading: settingsLoading } = useSettings();
   const { schedules, loading: schedulesLoading } = useSchedules();
   const { activeCenters, loading: centersLoading, getCenterByLegacyId } = useCenters();
@@ -82,7 +82,6 @@ const Calendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // 🆕 Estat per al filtre de centres
   const [selectedCenterFilter, setSelectedCenterFilter] = useState<string>("all");
 
   const loading = settingsLoading || schedulesLoading || centersLoading;
@@ -123,12 +122,10 @@ const Calendar = () => {
   const getScheduleForDate = useCallback((date: Date) => {
     const dateStr = dateToKey(date);
     
-    // 🎯 CANVI IMPORTANT: Ordenar horaris per data d'inici (més recent primer)
     const sortedSchedules = [...schedules].sort((a, b) => {
       return b.startDate.localeCompare(a.startDate);
     });
     
-    // Buscar el primer horari que compleixi les condicions
     return sortedSchedules.find(schedule => {
       const startDate = schedule.startDate;
       const endDate = schedule.endDate || '9999-12-31';
@@ -207,13 +204,11 @@ const Calendar = () => {
     return [];
   }, [customSessions, getScheduleForDate, isHoliday, isVacation, isClosure]);
 
-  // 🆕 Funció per filtrar sessions segons el centre seleccionat
   const filterSessionsByCenter = useCallback((sessions: Session[]): Session[] => {
     if (selectedCenterFilter === "all") {
       return sessions;
     }
     
-    // Mapear l'ID del centre al format antic (per compatibilitat)
     const centerMapping: Record<string, string> = {
       'arbucies': 'Arbucies',
       'sant-hilari': 'SantHilari',
@@ -267,11 +262,9 @@ const Calendar = () => {
     return "";
   };
 
-  // 🆕 Estadístiques filtrades per centre
   const sessionStats = useMemo(() => {
     const stats: Record<string, { sessions: number; days: number }> = {};
     
-    // Inicialitzar estadístiques per cada centre actiu
     activeCenters.forEach(center => {
       stats[center.id] = { sessions: 0, days: 0 };
     });
@@ -286,7 +279,6 @@ const Calendar = () => {
         const centerDaysCount: Record<string, boolean> = {};
         
         activeSessions.forEach(session => {
-          // Mapear center antic al nou ID
           const centerMapping: Record<string, string> = {
             'Arbucies': 'arbucies',
             'SantHilari': 'sant-hilari',
@@ -300,7 +292,6 @@ const Calendar = () => {
           }
         });
         
-        // Incrementar dies treballats
         Object.keys(centerDaysCount).forEach(centerId => {
           stats[centerId].days++;
         });
@@ -322,7 +313,6 @@ const Calendar = () => {
       Object.entries(officialHolidays).forEach(([dateKey, reason]) => {
         const date = new Date(dateKey);
         const dayOfWeek = date.getDay();
-        // 🎉 NOU: Filtrar caps de setmana (0=diumenge, 6=dissabte)
         if (date >= today && dayOfWeek !== 0 && dayOfWeek !== 6) {
           events.push({ date, type: 'holiday', name: reason, reason: 'Festiu oficial' });
         }
@@ -333,7 +323,6 @@ const Calendar = () => {
       Object.entries(vacations).forEach(([dateKey, reason]) => {
         const date = new Date(dateKey);
         const dayOfWeek = date.getDay();
-        // 🎉 NOU: Filtrar caps de setmana
         if (date >= today && dayOfWeek !== 0 && dayOfWeek !== 6) {
           events.push({ date, type: 'vacation', name: 'Vacances', reason: reason || 'Vacances generals' });
         }
@@ -344,7 +333,6 @@ const Calendar = () => {
       Object.entries(closuresArbucies).forEach(([dateKey, reason]) => {
         const date = new Date(dateKey);
         const dayOfWeek = date.getDay();
-        // 🎉 NOU: Filtrar caps de setmana
         if (date >= today && dayOfWeek !== 0 && dayOfWeek !== 6) {
           events.push({ date, type: 'closure', name: 'Tancament Arbúcies', reason: reason || 'Tancament' });
         }
@@ -355,7 +343,6 @@ const Calendar = () => {
       Object.entries(closuresSantHilari).forEach(([dateKey, reason]) => {
         const date = new Date(dateKey);
         const dayOfWeek = date.getDay();
-        // 🎉 NOU: Filtrar caps de setmana
         if (date >= today && dayOfWeek !== 0 && dayOfWeek !== 6) {
           events.push({ date, type: 'closure', name: 'Tancament Sant Hilari', reason: reason || 'Tancament' });
         }
@@ -413,7 +400,6 @@ const Calendar = () => {
         </div>
       </div>
 
-      {/* 🆕 SELECTOR DE CENTRES */}
       {/* Selector de centres - NOMÉS vista instructora */}
       {viewMode === 'instructor' && (
         <NeoCard>
@@ -470,12 +456,10 @@ const Calendar = () => {
               </div>
             ))}
             {calendarDays.map((dayInfo, idx) => {
-              // 🎉 NOU: Comprovar si és el dia actual
               const today = new Date();
               today.setHours(0, 0, 0, 0);
               const isToday = dayInfo.date && dayInfo.date.getTime() === today.getTime();
               
-              // 🎉 NOU: Comprovar si té sessions modificades
               const dateKey = dayInfo.date ? dateToKey(dayInfo.date) : '';
               const hasModifications = customSessions[dateKey] && customSessions[dateKey].length > 0;
               
@@ -507,9 +491,9 @@ const Calendar = () => {
                       : dayInfo.holiday 
                       ? `Festiu: ${getHolidayName(dayInfo.date!)}`
                       : dayInfo.vacation
-                      ? `Vacances: ${getVacationReason(dayInfo.date!)}`
+                      ? "Vacances"  // ✅ Sense motiu per als usuaris
                       : dayInfo.closure
-                      ? `Tancament: ${getClosureReason(dayInfo.date!)}`
+                      ? "Tancament"  // ✅ Sense motiu per als usuaris
                       : ""
                   }
                 >
@@ -531,7 +515,11 @@ const Calendar = () => {
                                   session.isDeleted ? 'bg-gray-300 dark:bg-gray-600 opacity-50' : ''
                                 } text-white text-[10px] flex items-center justify-center font-bold shadow-sm ${session.isDeleted ? 'line-through' : ''}`}
                                 style={!session.isDeleted ? { backgroundColor: programColor } : {}}
-                                title={session.isDeleted ? `ELIMINADA: ${session.time} - ${getProgramName(session.program)} - ${session.deleteReason || 'Sense motiu'}` : `${session.time} - ${getProgramName(session.program)} - ${session.center || 'N/A'}`}
+                                // ✅ Si la sessió és eliminada, NO mostrem el motiu en el tooltip
+                                title={session.isDeleted
+                                  ? `Cancel·lada: ${session.time} - ${getProgramName(session.program)}`
+                                  : `${session.time} - ${getProgramName(session.program)} - ${session.center || 'N/A'}`
+                                }
                               >
                                 {session.program}
                               </div>
@@ -591,7 +579,10 @@ const Calendar = () => {
                   <div key={idx} className="flex items-center justify-between p-3 rounded-xl shadow-neo-inset">
                     <div className="flex-1">
                       <p className="font-medium">{event.name}</p>
-                      <p className="text-sm text-muted-foreground">{event.reason}</p>
+                      {/* ✅ Mostrem el motiu NOMÉS si és la vista d'instructora */}
+                      {viewMode === 'instructor' && (
+                        <p className="text-sm text-muted-foreground">{event.reason}</p>
+                      )}
                     </div>
                     <div className="text-right ml-3">
                       <span className={`block text-sm font-medium ${event.type === 'holiday' ? 'text-yellow-600' : event.type === 'vacation' ? 'text-blue-600' : 'text-gray-600'}`}>
@@ -616,7 +607,7 @@ const Calendar = () => {
         sessions={selectedDate ? getSessionsForDate(selectedDate) : []}
         onUpdateSessions={handleUpdateSessions}
         onDeleteSession={handleDeleteSession}
-        readOnly={viewMode === 'user'} // ✅ AFEGIR AQUESTA LÍNIA
+        readOnly={viewMode === 'user'}
       />
     </div>
   );
