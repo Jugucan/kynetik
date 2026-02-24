@@ -16,3 +16,13 @@ export const getAdjectiu = (
   if (gender === 'Masculí') return masculí || neutral || '';
   return neutral || '';
 };
+
+// Retorna "activa" / "actiu" / "actiu/va"
+export const getActiu = (gender?: string | null): string =>
+  getAdjectiu(gender, 'activa', 'actiu', 'actiu/va');
+
+// Retorna "increïble" (invariable en català)
+export const getIncreible = (_gender?: string | null): string => 'increïble';
+
+// Retorna "imparable" (invariable en català)
+export const getImparable = (_gender?: string | null): string => 'imparable';
