@@ -13,6 +13,7 @@ import {
 
 interface UserStatsForPhrase {
   name: string;
+  gender?: string | null;
   totalSessions: number;
   autodiscipline: number;
   autodisciplineLabel: string;
@@ -78,24 +79,50 @@ const selectPhrase = (stats: UserStatsForPhrase): Phrase => {
   return personalizePhrase(selectedPhrase, stats);
 };
 
+// Retorna la forma correcta de "fort/forta/fort" segons el gènere
+const getFort = (gender?: string | null): string => {
+  if (gender === 'Femení') return 'forta';
+  if (gender === 'Masculí') return 'fort';
+  return 'fort'; // neutre tendeix al masculí en català
+};
+
+// Retorna "protagonista" (invariable en català)
+const getProtagonista = (_gender?: string | null): string => 'protagonista';
+
+// Retorna el salut "Benvinguda/Benvingut/Benvingut/da"
+const getBenvingutLocal = (gender?: string | null): string => {
+  if (gender === 'Femení') return 'Benvinguda de nou';
+  if (gender === 'Masculí') return 'Benvingut de nou';
+  return 'Benvingut/da de nou';
+};
+
 const personalizePhrase = (phrase: Phrase, stats: UserStatsForPhrase): Phrase => {
   const firstName = stats.name.split(' ')[0];
   const yearsTraining = stats.memberSinceYear 
     ? new Date().getFullYear() - stats.memberSinceYear 
     : 0;
 
+  const fort = getFort(stats.gender);
+  const protagonista = getProtagonista(stats.gender);
+  const benvingut = getBenvingutLocal(stats.gender);
+
   let title = phrase.title
     .replace('{nom}', firstName)
     .replace('{programa}', stats.activePrograms[0] || 'els teus programes')
     .replace('{anys}', yearsTraining.toString())
-    .replace('{anyInici}', stats.memberSinceYear?.toString() || '');
+    .replace('{anyInici}', stats.memberSinceYear?.toString() || '')
+    .replace('{fort}', fort)
+    .replace('{Benvingut}', benvingut);
 
   let text = phrase.phrase
     .replace('{nom}', firstName)
     .replace('{sessions}', stats.totalSessions.toString())
     .replace('{programa}', stats.activePrograms[0] || 'els teus programes')
     .replace('{anys}', yearsTraining.toString())
-    .replace('{anyInici}', stats.memberSinceYear?.toString() || '');
+    .replace('{anyInici}', stats.memberSinceYear?.toString() || '')
+    .replace('{fort}', fort)
+    .replace('{protagonista}', protagonista)
+    .replace('{Benvingut}', benvingut);
 
   return { title, phrase: text, emoji: phrase.emoji };
 };
@@ -117,7 +144,8 @@ export const useMotivationalPhrase = (userStats: UserStatsForPhrase | null) => {
         const data = JSON.parse(stored);
         if (data.date === today &&
             data.sessionsSnapshot === userStats.totalSessions &&
-            data.autodisciplineSnapshot === userStats.autodiscipline) {
+            data.autodisciplineSnapshot === userStats.autodiscipline &&
+            data.genderSnapshot === (userStats.gender ?? null)) {
           setTitle(data.title || '');
           setPhrase(data.phrase);
           setEmoji(data.emoji || '💪');
@@ -139,12 +167,13 @@ export const useMotivationalPhrase = (userStats: UserStatsForPhrase | null) => {
         emoji: result.emoji,
         date: today,
         sessionsSnapshot: userStats.totalSessions,
-        autodisciplineSnapshot: userStats.autodiscipline
+        autodisciplineSnapshot: userStats.autodiscipline,
+        genderSnapshot: userStats.gender ?? null,
       }));
     } catch (e) {}
 
     setIsLoading(false);
-  }, [userStats?.totalSessions, userStats?.autodiscipline, userStats?.name]);
+  }, [userStats?.totalSessions, userStats?.autodiscipline, userStats?.name, userStats?.gender]);
 
   return { title, phrase, emoji, isLoading };
 };
