@@ -303,16 +303,20 @@ const MotivationalMessage = ({
   gender?: string | null;
 }) => {
   const name = userName ? `, ${userName.split(' ')[0]}` : '';
-  const seguida = getAdjectiu(gender, 'seguida', 'seguit', 'seguint');
+
+  // Adjectius que fan referència a LA PERSONA (s'adapten al gènere de l'usuari)
+  const increible = getAdjectiu(gender, 'increïble', 'increïble', 'increïble'); // invariable
   const benvinguda = getBenvingut(gender);
 
   let message = '', emoji = '', colorClass = '';
 
   if (streak.current >= 10) {
-    message = `${streak.current} setmanes ${seguida}${name}! Ets increïble.`;
+    // "setmanes" és femení però "seguides" fa referència a les setmanes → femení sempre
+    message = `${streak.current} setmanes seguides${name}! Ets ${increible}.`;
     emoji = '🔥'; colorClass = 'text-orange-700 bg-orange-50 border-orange-200';
   } else if (streak.current >= 4) {
-    message = `Un mes ${seguida}${name}! La constància és el teu superpower.`;
+    // "mes" és masculí → "seguit" sempre, independentment del gènere de l'usuari
+    message = `Un mes seguit${name}! La constància és el teu superpower.`;
     emoji = '⚡'; colorClass = 'text-blue-700 bg-blue-50 border-blue-200';
   } else if (streak.current >= 2) {
     message = `Segueix així${name}! Estàs construint un gran hàbit.`;
