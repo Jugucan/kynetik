@@ -4,6 +4,10 @@ export interface Phrase {
   emoji: string;
 }
 
+// Nota: Les frases que contenen adjectius referits a la persona
+// usen el marcador {activa} o {imparable} etc., que es substitueixen
+// a personalizePhrase() de useMotivationalPhrase.ts segons el gènere.
+
 export const FRASES_MOLT_ACTIVA: Phrase[] = [
   { title: "Imparable!", phrase: "{sessions} sessions ho diuen tot. Ets de les que no es rendeixen mai.", emoji: "🔥" },
   { title: "Ritme de campiona", phrase: "La constància que tens és el que marca la diferència. Continua així.", emoji: "🏆" },
@@ -38,7 +42,7 @@ export const FRASES_MILLORANT: Phrase[] = [
   { title: "Pujant com l'escuma", phrase: "El teu esforç està donant els seus fruits. Segueix així!", emoji: "🎉" },
   { title: "L'espurna ha tornat", phrase: "I es nota. Segueix avivant aquesta flama.", emoji: "✨" },
   { title: "Està passant", phrase: "La transformació no és sobtada. És això que estàs fent ara.", emoji: "🪄" },
-  { title: "El canvi és real", phrase: "I tu en ets la protagonista. Segueix endavant.", emoji: "💥" },
+  { title: "El canvi és real", phrase: "I tu n'ets {protagonista}. Segueix endavant.", emoji: "💥" },
   { title: "Impuls imparable", phrase: "Has agafat velocitat. Ara no pots aturar-te.", emoji: "⚡" },
   { title: "En el millor moment", phrase: "Aprofita aquesta ratxa. Els moments així són or pur.", emoji: "🏆" },
 ];
@@ -51,19 +55,19 @@ export const FRASES_ESTABLE: Phrase[] = [
   { title: "Fiabilitat absoluta", phrase: "Saber que tornaràs és el que et fa diferent.", emoji: "💖" },
   { title: "El ritme correcte", phrase: "No fa falta córrer. Fa falta no aturar-se. I tu no t'atures.", emoji: "🐢" },
   { title: "Sòlid com sempre", phrase: "La teva consistència és la base del teu progrés.", emoji: "🪨" },
-  { title: "Fidelitat amb tu", phrase: "Cada vegada que compleixes amb tu, et fas més fort.", emoji: "💫" },
+  { title: "Fidelitat amb tu", phrase: "Cada vegada que compleixes amb tu, et fas més {fort}.", emoji: "💫" },
   { title: "La maratona, no l'sprint", phrase: "I tu ho entens millor que ningú.", emoji: "🎯" },
   { title: "Sense alts ni baixos", phrase: "La línia recta és el camí més ràpid. I tu la segueixes.", emoji: "📊" },
 ];
 
 export const FRASES_TORNANT: Phrase[] = [
-  { title: "Benvingut de nou!", phrase: "Fa uns dies que no et veiem, però el més important és que has tornat!", emoji: "🤗" },
+  { title: "{Benvingut}!", phrase: "Fa uns dies que no et veiem, però el més important és que has tornat!", emoji: "🤗" },
   { title: "De nou al ruedo", phrase: "Cada cop que tornes és una victòria. El teu cos et dóna les gràcies.", emoji: "💪" },
   { title: "Tornada al camí", phrase: "No importa el temps que ha passat. El que importa és que ets aquí.", emoji: "🫵" },
   { title: "El gimnàs t'esperava", phrase: "I tu has tornat. Això és el que compta.", emoji: "💖" },
   { title: "Segon acte", phrase: "La història no s'acaba quan fas una pausa. Continua quan tornes.", emoji: "🎬" },
   { title: "La teva tornada", phrase: "No cal explicar-la. Només cal viure-la.", emoji: "✨" },
-  { title: "Reaparició triomfal", phrase: "Potser has estat fora, però has tornat més fort.", emoji: "🦸" },
+  { title: "Reaparició triomfal", phrase: "Potser has estat fora, però has tornat més {fort}.", emoji: "🦸" },
   { title: "El que importa", phrase: "No és quants dies has faltat. És que avui ets aquí.", emoji: "🌟" },
   { title: "La decisió correcta", phrase: "Tornar sempre és més difícil que continuar. Però tu ho has fet.", emoji: "👏" },
   { title: "Començar de nou", phrase: "I aquesta vegada amb tota l'experiència del camí recorregut.", emoji: "🔄" },
@@ -78,7 +82,7 @@ export const FRASES_PROGRAMES: Phrase[] = [
 ];
 
 export const FRASES_ANYS_EXPERIENCIA: Phrase[] = [
-  { title: "{anys} anys i fort!", phrase: "Des de {anyInici} que formes part d'aquesta família. Gràcies per ser-hi!", emoji: "🎂" },
+  { title: "{anys} anys i {fort}!", phrase: "Des de {anyInici} que formes part d'aquesta família. Gràcies per ser-hi!", emoji: "🎂" },
   { title: "Veterania que inspira", phrase: "{anys} anys d'entrenament no són casualitat. Són caràcter.", emoji: "🏅" },
   { title: "El temps ho diu tot", phrase: "{anys} anys demostren que això no és una moda. És part de tu.", emoji: "⏳" },
   { title: "La teva història", phrase: "Comença el {anyInici} i continua escrivint-se cada dia que véns.", emoji: "📖" },
@@ -92,7 +96,7 @@ export const FRASES_UNIVERSALS: Phrase[] = [
   { title: "La diferència", phrase: "Entre voler i fer. Tu fas.", emoji: "✅" },
   { title: "Silenci que transforma", phrase: "El teu esforç no fa soroll, però canvia qui ets per dins.", emoji: "🪄" },
   { title: "Inversió en tu", phrase: "Cada sessió és temps invertit en la millor versió de tu.", emoji: "💎" },
-  { title: "El que ningú veu", phrase: "És el camí fins aquí. Però tu el coneixes. I et fa fort.", emoji: "🗺️" },
+  { title: "El que ningú veu", phrase: "És el camí fins aquí. Però tu el coneixes. I et fa {fort}.", emoji: "🗺️" },
   { title: "Segueix endavant", phrase: "{sessions} sessions i comptant. La constància és la teva força.", emoji: "🚀" },
   { title: "Caràcter", phrase: "Saps com es diu això que fas? Es diu caràcter. I tu en tens.", emoji: "💥" },
   { title: "No cal explicar-ho", phrase: "Els que saben, ho veuen. Els que no, mai ho entendran.", emoji: "🫵" },
