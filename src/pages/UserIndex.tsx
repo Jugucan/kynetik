@@ -71,6 +71,7 @@ const UserIndex = () => {
 
     return {
       name: currentUserData.name || userProfile?.displayName || '',
+      gender: currentUserData.gender || userProfile?.gender || null,
       totalSessions: sessions.length,
       autodiscipline: advancedStats.autodiscipline,
       autodisciplineLabel: advancedStats.autodisciplineLevel.label,
