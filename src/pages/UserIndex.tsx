@@ -1,79 +1,50 @@
-import { useRef, useEffect } from "react";
-import { calculateBadges } from "@/utils/badgeCalculations";
-import { calculateProgression } from "@/utils/progressionCalculations";
-import { useAchievement } from "@/contexts/AchievementContext";
-import { usePrograms } from "@/hooks/usePrograms";
+import { useMemo } from "react";
 import { Mail, Phone, Cake, MapPin, Award, Zap, Calendar, TrendingUp } from "lucide-react";
 import { useCurrentUserWithSessions } from "@/hooks/useUsers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { calculateAdvancedStats, calculateYearlyTrend } from '@/utils/advancedStats';
 import { getBenvingut } from "@/utils/genderHelpers";
 import { useMotivationalPhrase } from '@/hooks/useMotivationalPhrase';
+import { useAchievement } from "@/contexts/AchievementContext";
 
 const UserIndex = () => {
   const { firestoreUserId } = useAuth();
   const { userProfile } = useUserProfile();
   const { user: currentUserData, loading } = useCurrentUserWithSessions(firestoreUserId);
+  const { triggerAchievement } = useAchievement();
 
-  // Calcular estadístiques bàsiques
+  // PROVA TEMPORAL — esborra aquesta funció i el botó quan hagis vist les animacions
+  const testAchievements = () => {
+    triggerAchievement({ type: "badge", title: "Primera Classe!", description: "Has completat la teva primera sessió", icon: "🏅" });
+    setTimeout(() => triggerAchievement({ type: "level", title: "Nivell 2: Aprendiz", description: "Has pujat de nivell!", icon: "⬆️" }), 4500);
+    setTimeout(() => triggerAchievement({ type: "discipline", title: "Autodisciplina Alta", description: "La teva constància és exemplar", icon: "🔥" }), 9000);
+    setTimeout(() => triggerAchievement({ type: "streak", title: "4 Setmanes seguides!", description: "Ratxa increïble", icon: "⚡" }), 13500);
+  };
+
   const basicStats = useMemo(() => {
     if (!currentUserData || !currentUserData.sessions) {
-      return {
-        totalSessions: 0,
-        uniquePrograms: 0,
-        activePrograms: [],
-        generalRanking: { rank: 0, total: 0, percentile: 0 }
-      };
+      return { totalSessions: 0, uniquePrograms: 0, activePrograms: [], generalRanking: { rank: 0, total: 0, percentile: 0 } };
     }
-
-    const sessions = currentUserData.sessions || [];
-
-    // Programes únics totals
+    const sessions = Array.isArray(currentUserData.sessions) ? currentUserData.sessions : [];
     const allPrograms = new Set(sessions.map(s => s.activity));
-
-    // Programes actius (últims 30 dies)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const recentSessions = sessions.filter(s => {
-      const sessionDate = new Date(s.date);
-      return sessionDate >= thirtyDaysAgo;
-    });
-
+    const recentSessions = sessions.filter(s => new Date(s.date) >= thirtyDaysAgo);
     const programCount: { [program: string]: number } = {};
-    recentSessions.forEach(s => {
-      programCount[s.activity] = (programCount[s.activity] || 0) + 1;
-    });
-
-    const activePrograms = Object.entries(programCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([name]) => name);
-
-    // Llegim el ranking del cache (calculat durant la importació, sense cost de lectures)
-    const generalRanking = currentUserData.rankingCache?.totalSessions
-      || { rank: 0, total: 0, percentile: 0 };
-
-    return {
-      totalSessions: sessions.length,
-      uniquePrograms: allPrograms.size,
-      activePrograms,
-      generalRanking
-    };
+    recentSessions.forEach(s => { programCount[s.activity] = (programCount[s.activity] || 0) + 1; });
+    const activePrograms = Object.entries(programCount).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name]) => name);
+    const generalRanking = currentUserData.rankingCache?.totalSessions || { rank: 0, total: 0, percentile: 0 };
+    return { totalSessions: sessions.length, uniquePrograms: allPrograms.size, activePrograms, generalRanking };
   }, [currentUserData]);
 
-  // Preparar dades per la frase motivacional
   const phraseStats = useMemo(() => {
     if (!currentUserData || !currentUserData.sessions) return null;
-
-    const sessions = currentUserData.sessions || [];
+    const sessions = Array.isArray(currentUserData.sessions) ? currentUserData.sessions : [];
     const advancedStats = calculateAdvancedStats(currentUserData);
     const { trend: yearlyTrend } = calculateYearlyTrend(sessions);
-
     return {
       name: currentUserData.name || userProfile?.displayName || '',
       gender: currentUserData.gender || userProfile?.gender || null,
@@ -85,62 +56,11 @@ const UserIndex = () => {
       activePrograms: basicStats.activePrograms,
       yearlyTrend,
       daysBetweenSessions: advancedStats.daysBetweenSessions,
-      memberSinceYear: currentUserData.firstSession
-        ? new Date(currentUserData.firstSession).getFullYear()
-        : null
+      memberSinceYear: currentUserData.firstSession ? new Date(currentUserData.firstSession).getFullYear() : null
     };
   }, [currentUserData, userProfile, basicStats.activePrograms]);
 
   const { title, phrase, emoji, isLoading: phraseLoading } = useMotivationalPhrase(phraseStats);
-
-  // ── Detecció de fites (zero lectures Firebase addicionals) ──────────────
-const { triggerAchievement } = useAchievement();
-const { programs } = usePrograms();
-
-const prevBadgeIds = useRef<Set<string> | null>(null);
-const prevLevel = useRef<number | null>(null);
-const prevDisciplineLevel = useRef<string | null>(null);
-
-useEffect(() => {
-  if (!currentUserData?.sessions || loading) return;
-
-  const sessions = currentUserData.sessions;
-
-  // Càlculs en memòria, sense Firebase
-  const badges = calculateBadges({ sessions, firstSession: currentUserData.firstSession }, programs || []);
-  const progression = calculateProgression(sessions);
-
-  const earnedIds = new Set(badges.filter(b => b.earned && !b.unavailable).map(b => b.id));
-
-  // — Insígnies noves —
-  if (prevBadgeIds.current !== null) {
-    for (const id of earnedIds) {
-      if (!prevBadgeIds.current.has(id)) {
-        const badge = badges.find(b => b.id === id);
-        triggerAchievement({
-          type: "badge",
-          title: badge?.name || "Nova Insígnia!",
-          description: badge?.description || "",
-          icon: badge?.icon || "🏅",
-        });
-      }
-    }
-  }
-  prevBadgeIds.current = earnedIds;
-
-  // — Nou nivell de progressió —
-  if (prevLevel.current !== null && progression.level.level > prevLevel.current) {
-    triggerAchievement({
-      type: "level",
-      title: `Nivell ${progression.level.level}: ${progression.level.name}`,
-      description: "Has pujat de nivell. Continua així!",
-      icon: progression.level.icon || "⬆️",
-    });
-  }
-  prevLevel.current = progression.level.level;
-
-}, [currentUserData, loading]);
-// ────────────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -166,7 +86,14 @@ useEffect(() => {
   return (
     <div className="space-y-4 px-4 max-w-7xl mx-auto pb-8">
 
-      {/* Header amb foto */}
+      {/* BOTÓ DE PROVA TEMPORAL — esborra aquest bloc quan hagis vist les animacions */}
+      <button
+        onClick={testAchievements}
+        className="fixed bottom-6 right-6 z-50 bg-primary text-white px-4 py-2 rounded-xl shadow-neo text-sm font-bold"
+      >
+        🎉 Test animacions
+      </button>
+
       <div className="flex items-center gap-3">
         <img
           src={currentUserData.profileImageUrl || currentUserData.avatar}
@@ -188,7 +115,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Missatge Motivacional IA */}
       {(phrase || phraseLoading) && (
         <div className="p-4 rounded-xl shadow-neo bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20">
           <div className="flex items-start gap-3">
@@ -202,9 +128,7 @@ useEffect(() => {
                 </div>
               ) : (
                 <>
-                  {title && (
-                    <h3 className="font-bold text-sm text-primary mb-1">{title}</h3>
-                  )}
+                  {title && <h3 className="font-bold text-sm text-primary mb-1">{title}</h3>}
                   <p className="text-xs text-foreground leading-relaxed">{phrase}</p>
                 </>
               )}
@@ -213,26 +137,22 @@ useEffect(() => {
         </div>
       )}
 
-      {/* Targetes principals - 4 mètriques clau */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-neo text-center hover:shadow-neo-lg transition-all">
           <Calendar className="w-5 h-5 text-blue-500 mx-auto mb-1" />
           <div className="text-2xl font-bold text-blue-700 mb-1">{basicStats.totalSessions}</div>
           <div className="text-xs text-blue-600 font-medium">Sessions Totals</div>
         </div>
-
         <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-neo text-center hover:shadow-neo-lg transition-all">
           <Award className="w-5 h-5 text-green-500 mx-auto mb-1" />
           <div className="text-2xl font-bold text-green-700 mb-1">{basicStats.uniquePrograms}</div>
           <div className="text-xs text-green-600 font-medium">Programes Diferents</div>
         </div>
-
         <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl shadow-neo text-center hover:shadow-neo-lg transition-all">
           <TrendingUp className="w-5 h-5 text-purple-500 mx-auto mb-1" />
           <div className="text-2xl font-bold text-purple-700 mb-1">{currentUserData.daysSinceLastSession || 0}</div>
           <div className="text-xs text-purple-600 font-medium">Dies sense venir</div>
         </div>
-
         <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl shadow-neo text-center hover:shadow-neo-lg transition-all">
           <Calendar className="w-5 h-5 text-orange-500 mx-auto mb-1" />
           <div className="text-2xl font-bold text-orange-700 mb-1">
@@ -244,7 +164,6 @@ useEffect(() => {
 
       <Separator />
 
-      {/* Informació de contacte */}
       <div className="p-4 rounded-xl shadow-neo bg-background">
         <h3 className="font-semibold text-sm mb-3 flex items-center">
           <Mail className="w-4 h-4 mr-2 text-primary" />
@@ -268,7 +187,6 @@ useEffect(() => {
 
       <Separator />
 
-      {/* Ranking General */}
       <div className="p-4 rounded-xl shadow-neo bg-background">
         <h3 className="font-semibold text-sm mb-3 flex items-center">
           <Zap className="w-4 h-4 mr-2 text-primary" />
@@ -279,9 +197,7 @@ useEffect(() => {
             <div>
               <div className="text-xs text-indigo-600 mb-1 font-medium">Ranking General d'Assistència</div>
               {basicStats.generalRanking.rank > 0 ? (
-                <div className="text-3xl font-bold text-indigo-700">
-                  #{basicStats.generalRanking.rank}
-                </div>
+                <div className="text-3xl font-bold text-indigo-700">#{basicStats.generalRanking.rank}</div>
               ) : (
                 <div className="text-sm text-indigo-500">Pendent de càlcul</div>
               )}
@@ -298,7 +214,6 @@ useEffect(() => {
 
       <Separator />
 
-      {/* Programes Actius */}
       <div className="p-4 rounded-xl shadow-neo bg-background">
         <div className="flex items-center gap-2 mb-3">
           <div className="p-1.5 rounded-lg shadow-neo-inset bg-purple-500/10">
@@ -312,19 +227,14 @@ useEffect(() => {
         {basicStats.activePrograms.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {basicStats.activePrograms.map((program, idx) => (
-              <span
-                key={idx}
-                className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary font-semibold shadow-neo hover:shadow-neo-sm transition-all cursor-default text-sm"
-              >
+              <span key={idx} className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary font-semibold shadow-neo hover:shadow-neo-sm transition-all cursor-default text-sm">
                 {program}
               </span>
             ))}
           </div>
         ) : (
           <div className="p-3 rounded-xl shadow-neo-inset bg-muted/30 text-center">
-            <p className="text-muted-foreground text-xs">
-              No tens sessions recents. Apunta't a una classe!
-            </p>
+            <p className="text-muted-foreground text-xs">No tens sessions recents. Apunta't a una classe!</p>
           </div>
         )}
       </div>
