@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Player } from "@lottiefiles/react-lottie-player";
 
 export type AchievementType = "badge" | "level" | "discipline" | "streak";
 
@@ -16,11 +17,36 @@ interface Props {
   onClose: () => void;
 }
 
-const config: Record<AchievementType, { gradient: string; label: string; textColor: string }> = {
-  badge:      { gradient: "from-yellow-400 via-orange-400 to-red-400",       label: "Nova Insígnia!",   textColor: "text-yellow-900" },
-  level:      { gradient: "from-purple-500 via-violet-500 to-indigo-500",    label: "Nou Nivell!",      textColor: "text-purple-50"  },
-  discipline: { gradient: "from-emerald-400 via-green-500 to-teal-500",      label: "Autodisciplina!",  textColor: "text-emerald-900" },
-  streak:     { gradient: "from-pink-500 via-rose-400 to-orange-400",        label: "Ratxa!",           textColor: "text-pink-50"    },
+const config: Record<AchievementType, {
+  gradient: string;
+  label: string;
+  textColor: string;
+  lottie: string;
+}> = {
+  badge: {
+    gradient: "from-yellow-400 via-orange-400 to-red-400",
+    label: "Nova Insígnia!",
+    textColor: "text-yellow-900",
+    lottie: "https://assets9.lottiefiles.com/packages/lf20_touohxv0.json",
+  },
+  level: {
+    gradient: "from-purple-500 via-violet-500 to-indigo-500",
+    label: "Nou Nivell!",
+    textColor: "text-purple-50",
+    lottie: "https://assets3.lottiefiles.com/packages/lf20_obhph3t0.json",
+  },
+  discipline: {
+    gradient: "from-emerald-400 via-green-500 to-teal-500",
+    label: "Autodisciplina!",
+    textColor: "text-emerald-900",
+    lottie: "https://assets4.lottiefiles.com/packages/lf20_jbb5uxlz.json",
+  },
+  streak: {
+    gradient: "from-pink-500 via-rose-400 to-orange-400",
+    label: "Ratxa!",
+    textColor: "text-pink-50",
+    lottie: "https://assets5.lottiefiles.com/packages/lf20_xlmz9xwm.json",
+  },
 };
 
 export function AchievementToast({ achievement, onClose }: Props) {
@@ -45,7 +71,7 @@ export function AchievementToast({ achievement, onClose }: Props) {
             onClick={onClose}
           />
 
-          {/* Targeta centrada amb fons de color */}
+          {/* Targeta centrada */}
           <motion.div
             key={achievement.id}
             initial={{ scale: 0.5, opacity: 0, y: 60 }}
@@ -64,17 +90,15 @@ export function AchievementToast({ achievement, onClose }: Props) {
               {/* Cos */}
               <div className="relative z-10 px-6 py-10 flex flex-col items-center text-center gap-4">
 
-                {/* Emoji animat */}
-                <motion.div
-                  animate={{
-                    scale: [1, 1.4, 0.9, 1.2, 1],
-                    rotate: [0, -8, 8, -4, 0],
-                  }}
-                  transition={{ duration: 0.8, delay: 0.2 }}
-                  className="text-8xl drop-shadow-lg"
-                >
-                  {achievement.icon}
-                </motion.div>
+                {/* Animació Lottie — substitueix l'emoji */}
+                <div className="w-36 h-36 -mt-2 -mb-2">
+                  <Player
+                    autoplay
+                    loop
+                    src={cfg.lottie}
+                    style={{ width: "100%", height: "100%" }}
+                  />
+                </div>
 
                 {/* Etiqueta tipus */}
                 <motion.div
