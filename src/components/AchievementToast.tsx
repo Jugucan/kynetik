@@ -16,11 +16,11 @@ interface Props {
   onClose: () => void;
 }
 
-const config: Record<AchievementType, { gradient: string; label: string; bg: string }> = {
-  badge:      { gradient: "from-yellow-400 via-orange-400 to-red-400", label: "🏅 Nova Insígnia!", bg: "rgba(251,146,60,0.15)" },
-  level:      { gradient: "from-purple-500 via-violet-500 to-indigo-500", label: "⬆️ Nou Nivell!", bg: "rgba(139,92,246,0.15)" },
-  discipline: { gradient: "from-emerald-400 via-green-500 to-teal-500", label: "🔥 Autodisciplina!", bg: "rgba(16,185,129,0.15)" },
-  streak:     { gradient: "from-pink-500 via-rose-400 to-red-400", label: "⚡ Ratxa!", bg: "rgba(244,63,94,0.15)" },
+const config: Record<AchievementType, { gradient: string; label: string; textColor: string }> = {
+  badge:      { gradient: "from-yellow-400 via-orange-400 to-red-400",       label: "Nova Insígnia!",   textColor: "text-yellow-900" },
+  level:      { gradient: "from-purple-500 via-violet-500 to-indigo-500",    label: "Nou Nivell!",      textColor: "text-purple-50"  },
+  discipline: { gradient: "from-emerald-400 via-green-500 to-teal-500",      label: "Autodisciplina!",  textColor: "text-emerald-900" },
+  streak:     { gradient: "from-pink-500 via-rose-400 to-orange-400",        label: "Ratxa!",           textColor: "text-pink-50"    },
 };
 
 export function AchievementToast({ achievement, onClose }: Props) {
@@ -36,16 +36,16 @@ export function AchievementToast({ achievement, onClose }: Props) {
     <AnimatePresence>
       {achievement && cfg && (
         <>
-          {/* Fons fosc semitransparent */}
+          {/* Fons fosc */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm"
             onClick={onClose}
           />
 
-          {/* Targeta centrada */}
+          {/* Targeta centrada amb fons de color */}
           <motion.div
             key={achievement.id}
             initial={{ scale: 0.5, opacity: 0, y: 60 }}
@@ -55,14 +55,14 @@ export function AchievementToast({ achievement, onClose }: Props) {
             className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none"
           >
             <div
-              className="pointer-events-auto mx-4 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden cursor-pointer"
+              className={`pointer-events-auto mx-4 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden cursor-pointer bg-gradient-to-br ${cfg.gradient} relative`}
               onClick={onClose}
             >
-              {/* Franja de gradient a dalt */}
-              <div className={`h-2 w-full bg-gradient-to-r ${cfg.gradient}`} />
+              {/* Brillantor decorativa */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-white/25 via-white/10 to-transparent pointer-events-none" />
 
               {/* Cos */}
-              <div className="bg-white dark:bg-zinc-900 px-6 py-8 flex flex-col items-center text-center gap-4">
+              <div className="relative z-10 px-6 py-10 flex flex-col items-center text-center gap-4">
 
                 {/* Emoji animat */}
                 <motion.div
@@ -71,7 +71,7 @@ export function AchievementToast({ achievement, onClose }: Props) {
                     rotate: [0, -8, 8, -4, 0],
                   }}
                   transition={{ duration: 0.8, delay: 0.2 }}
-                  className="text-7xl drop-shadow-lg"
+                  className="text-8xl drop-shadow-lg"
                 >
                   {achievement.icon}
                 </motion.div>
@@ -82,8 +82,8 @@ export function AchievementToast({ achievement, onClose }: Props) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
                 >
-                  <span className={`text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full bg-gradient-to-r ${cfg.gradient} text-white`}>
-                    {cfg.label}
+                  <span className={`text-xs font-black uppercase tracking-widest px-4 py-1.5 rounded-full bg-white/25 backdrop-blur-sm ${cfg.textColor}`}>
+                    ✦ {cfg.label} ✦
                   </span>
                 </motion.div>
 
@@ -92,7 +92,7 @@ export function AchievementToast({ achievement, onClose }: Props) {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="text-2xl font-black text-foreground leading-tight"
+                  className={`text-2xl font-black leading-tight ${cfg.textColor}`}
                 >
                   {achievement.title}
                 </motion.h2>
@@ -102,27 +102,27 @@ export function AchievementToast({ achievement, onClose }: Props) {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.5 }}
-                  className="text-sm text-muted-foreground"
+                  className={`text-sm opacity-90 ${cfg.textColor}`}
                 >
                   {achievement.description}
                 </motion.p>
 
-                {/* Barra de progrés que es buida (compte enrere visual) */}
-                <motion.div className="w-full h-1.5 bg-muted rounded-full overflow-hidden mt-2">
+                {/* Barra de compte enrere */}
+                <motion.div className="w-full h-1.5 bg-white/30 rounded-full overflow-hidden mt-2">
                   <motion.div
-                    className={`h-full bg-gradient-to-r ${cfg.gradient} rounded-full`}
+                    className="h-full bg-white/70 rounded-full"
                     initial={{ width: "100%" }}
                     animate={{ width: "0%" }}
                     transition={{ duration: 5, ease: "linear" }}
                   />
                 </motion.div>
 
-                <p className="text-xs text-muted-foreground/60">Toca per tancar</p>
+                <p className={`text-xs opacity-60 ${cfg.textColor}`}>Toca per tancar</p>
               </div>
             </div>
           </motion.div>
 
-          {/* Partícules de confetti */}
+          {/* Confetti */}
           {[...Array(12)].map((_, i) => (
             <motion.div
               key={i}
