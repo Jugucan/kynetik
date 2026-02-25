@@ -19,7 +19,7 @@ const UserIndex = () => {
   // PROVA TEMPORAL — esborra aquesta funció i el botó quan hagis vist les animacions
   const testAchievements = () => {
     triggerAchievement({ type: "badge", title: "Primera Classe!", description: "Has completat la teva primera sessió", icon: "🏅" });
-    setTimeout(() => triggerAchievement({ type: "level", title: "Nivell 2: Aprendiz", description: "Has pujat de nivell!", icon: "⬆️" }), 4500);
+    setTimeout(() => triggerAchievement({ type: "level", title: "Nivell 2: Aprenent", description: "Has pujat de nivell!", icon: "⬆️" }), 4500);
     setTimeout(() => triggerAchievement({ type: "discipline", title: "Autodisciplina Alta", description: "La teva constància és exemplar", icon: "🔥" }), 9000);
     setTimeout(() => triggerAchievement({ type: "streak", title: "4 Setmanes seguides!", description: "Ratxa increïble", icon: "⚡" }), 13500);
   };
