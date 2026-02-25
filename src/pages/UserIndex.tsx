@@ -95,6 +95,13 @@ const UserIndex = () => {
 
   // ── Detecció de fites (zero lectures Firebase addicionals) ──────────────
 const { triggerAchievement } = useAchievement();
+  // PROVA TEMPORAL — esborra això quan hagis vist les animacions
+const testAchievements = () => {
+  triggerAchievement({ type: "badge", title: "Primera Classe!", description: "Has completat la teva primera sessió", icon: "🏅" });
+  setTimeout(() => triggerAchievement({ type: "level", title: "Nivell 2: Aprendiz", description: "Has pujat de nivell!", icon: "⬆️" }), 4500);
+  setTimeout(() => triggerAchievement({ type: "discipline", title: "Autodisciplina Alta", description: "La teva constància és exemplar", icon: "🔥" }), 9000);
+  setTimeout(() => triggerAchievement({ type: "streak", title: "4 Setmanes seguides!", description: "Ratxa increïble", icon: "⚡" }), 13500);
+};
 const { programs } = usePrograms();
 
 const prevBadgeIds = useRef<Set<string> | null>(null);
@@ -163,6 +170,14 @@ useEffect(() => {
     );
   }
 
+ {/* BOTÓ DE PROVA TEMPORAL */}
+<button
+  onClick={testAchievements}
+  className="fixed bottom-6 right-6 z-50 bg-primary text-white px-4 py-2 rounded-xl shadow-neo text-sm font-bold"
+>
+  🎉 Test animacions
+</button>
+  
   return (
     <div className="space-y-4 px-4 max-w-7xl mx-auto pb-8">
 
