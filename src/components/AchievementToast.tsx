@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Player } from "@lottiefiles/react-lottie-player";
 
 export type AchievementType = "badge" | "level" | "discipline" | "streak";
 
@@ -17,19 +16,11 @@ interface Props {
   onClose: () => void;
 }
 
-// Animacions Lottie inline (sense URLs externes)
-const LOTTIE_BADGE = {"v":"5.7.4","fr":30,"ip":0,"op":60,"w":200,"h":200,"nm":"badge","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"star","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":1,"k":[{"i":{"x":[0.833],"y":[0.833]},"o":{"x":[0.167],"y":[0.167]},"t":0,"s":[0]},{"t":60,"s":[360]}]},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"i":{"x":[0.833,0.833,0.833],"y":[0.833,0.833,0.833]},"o":{"x":[0.167,0.167,0.167],"y":[0.167,0.167,0.167]},"t":0,"s":[80,80,100]},{"i":{"x":[0.833,0.833,0.833],"y":[0.833,0.833,0.833]},"o":{"x":[0.167,0.167,0.167],"y":[0.167,0.167,0.167]},"t":30,"s":[110,110,100]},{"t":60,"s":[80,80,100]}]}},"ao":0,"shapes":[{"ty":"sr","d":1,"pt":{"a":0,"k":5},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":0},"ir":{"a":0,"k":30},"is":{"a":0,"k":0},"or":{"a":0,"k":60},"os":{"a":0,"k":0},"ix":1,"nm":"star"},{"ty":"fl","c":{"a":0,"k":[1,0.8,0,1]},"o":{"a":0,"k":100},"r":1,"nm":"fill"}],"ip":0,"op":60,"st":0,"bm":0}]};
-
-const config: Record<AchievementType, {
-  gradient: string;
-  label: string;
-  textColor: string;
-  emoji: string;
-}> = {
-  badge:      { gradient: "from-yellow-400 via-orange-400 to-red-400",    label: "Nova Insígnia!",  textColor: "text-yellow-900", emoji: "🏅" },
-  level:      { gradient: "from-purple-500 via-violet-500 to-indigo-500", label: "Nou Nivell!",     textColor: "text-purple-50",  emoji: "⬆️" },
-  discipline: { gradient: "from-emerald-400 via-green-500 to-teal-500",   label: "Autodisciplina!", textColor: "text-emerald-900", emoji: "🔥" },
-  streak:     { gradient: "from-pink-500 via-rose-400 to-orange-400",     label: "Ratxa!",          textColor: "text-pink-50",    emoji: "⚡" },
+const config: Record<AchievementType, { gradient: string; label: string; textColor: string }> = {
+  badge:      { gradient: "from-yellow-400 via-orange-400 to-red-400",       label: "Nova Insígnia!",   textColor: "text-yellow-900" },
+  level:      { gradient: "from-purple-500 via-violet-500 to-indigo-500",    label: "Nou Nivell!",      textColor: "text-purple-50"  },
+  discipline: { gradient: "from-emerald-400 via-green-500 to-teal-500",      label: "Autodisciplina!",  textColor: "text-emerald-900" },
+  streak:     { gradient: "from-pink-500 via-rose-400 to-orange-400",        label: "Ratxa!",           textColor: "text-pink-50"    },
 };
 
 export function AchievementToast({ achievement, onClose }: Props) {
@@ -69,13 +60,16 @@ export function AchievementToast({ achievement, onClose }: Props) {
 
               <div className="relative z-10 px-6 py-10 flex flex-col items-center text-center gap-4">
 
-                {/* Cercle blanc per contrast + emoji animat */}
+                {/* Emoji gran animat */}
                 <motion.div
-                  animate={{ scale: [1, 1.15, 0.95, 1.08, 1], rotate: [0, -6, 6, -3, 0] }}
+                  animate={{
+                    scale: [1, 1.4, 0.9, 1.2, 1],
+                    rotate: [0, -8, 8, -4, 0],
+                  }}
                   transition={{ duration: 0.8, delay: 0.2 }}
-                  className="w-28 h-28 rounded-full bg-white/90 shadow-lg flex items-center justify-center"
+                  className="text-8xl drop-shadow-lg"
                 >
-                  <span className="text-6xl">{cfg.emoji}</span>
+                  {achievement.icon}
                 </motion.div>
 
                 <motion.div
