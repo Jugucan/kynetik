@@ -17,36 +17,19 @@ interface Props {
   onClose: () => void;
 }
 
+// Animacions Lottie inline (sense URLs externes)
+const LOTTIE_BADGE = {"v":"5.7.4","fr":30,"ip":0,"op":60,"w":200,"h":200,"nm":"badge","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"star","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":1,"k":[{"i":{"x":[0.833],"y":[0.833]},"o":{"x":[0.167],"y":[0.167]},"t":0,"s":[0]},{"t":60,"s":[360]}]},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"i":{"x":[0.833,0.833,0.833],"y":[0.833,0.833,0.833]},"o":{"x":[0.167,0.167,0.167],"y":[0.167,0.167,0.167]},"t":0,"s":[80,80,100]},{"i":{"x":[0.833,0.833,0.833],"y":[0.833,0.833,0.833]},"o":{"x":[0.167,0.167,0.167],"y":[0.167,0.167,0.167]},"t":30,"s":[110,110,100]},{"t":60,"s":[80,80,100]}]}},"ao":0,"shapes":[{"ty":"sr","d":1,"pt":{"a":0,"k":5},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":0},"ir":{"a":0,"k":30},"is":{"a":0,"k":0},"or":{"a":0,"k":60},"os":{"a":0,"k":0},"ix":1,"nm":"star"},{"ty":"fl","c":{"a":0,"k":[1,0.8,0,1]},"o":{"a":0,"k":100},"r":1,"nm":"fill"}],"ip":0,"op":60,"st":0,"bm":0}]};
+
 const config: Record<AchievementType, {
   gradient: string;
   label: string;
   textColor: string;
-  lottie: string;
+  emoji: string;
 }> = {
-  badge: {
-    gradient: "from-yellow-400 via-orange-400 to-red-400",
-    label: "Nova Insígnia!",
-    textColor: "text-yellow-900",
-    lottie: "https://assets9.lottiefiles.com/packages/lf20_touohxv0.json",
-  },
-  level: {
-    gradient: "from-purple-500 via-violet-500 to-indigo-500",
-    label: "Nou Nivell!",
-    textColor: "text-purple-50",
-    lottie: "https://assets3.lottiefiles.com/packages/lf20_obhph3t0.json",
-  },
-  discipline: {
-    gradient: "from-emerald-400 via-green-500 to-teal-500",
-    label: "Autodisciplina!",
-    textColor: "text-emerald-900",
-    lottie: "https://assets4.lottiefiles.com/packages/lf20_jbb5uxlz.json",
-  },
-  streak: {
-    gradient: "from-pink-500 via-rose-400 to-orange-400",
-    label: "Ratxa!",
-    textColor: "text-pink-50",
-    lottie: "https://assets5.lottiefiles.com/packages/lf20_xlmz9xwm.json",
-  },
+  badge:      { gradient: "from-yellow-400 via-orange-400 to-red-400",    label: "Nova Insígnia!",  textColor: "text-yellow-900", emoji: "🏅" },
+  level:      { gradient: "from-purple-500 via-violet-500 to-indigo-500", label: "Nou Nivell!",     textColor: "text-purple-50",  emoji: "⬆️" },
+  discipline: { gradient: "from-emerald-400 via-green-500 to-teal-500",   label: "Autodisciplina!", textColor: "text-emerald-900", emoji: "🔥" },
+  streak:     { gradient: "from-pink-500 via-rose-400 to-orange-400",     label: "Ratxa!",          textColor: "text-pink-50",    emoji: "⚡" },
 };
 
 export function AchievementToast({ achievement, onClose }: Props) {
@@ -62,7 +45,6 @@ export function AchievementToast({ achievement, onClose }: Props) {
     <AnimatePresence>
       {achievement && cfg && (
         <>
-          {/* Fons fosc */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -71,7 +53,6 @@ export function AchievementToast({ achievement, onClose }: Props) {
             onClick={onClose}
           />
 
-          {/* Targeta centrada */}
           <motion.div
             key={achievement.id}
             initial={{ scale: 0.5, opacity: 0, y: 60 }}
@@ -84,23 +65,19 @@ export function AchievementToast({ achievement, onClose }: Props) {
               className={`pointer-events-auto mx-4 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden cursor-pointer bg-gradient-to-br ${cfg.gradient} relative`}
               onClick={onClose}
             >
-              {/* Brillantor decorativa */}
               <div className="absolute inset-0 bg-gradient-to-tr from-white/25 via-white/10 to-transparent pointer-events-none" />
 
-              {/* Cos */}
               <div className="relative z-10 px-6 py-10 flex flex-col items-center text-center gap-4">
 
-                {/* Animació Lottie — substitueix l'emoji */}
-                <div className="w-36 h-36 -mt-2 -mb-2">
-                  <Player
-                    autoplay
-                    loop
-                    src={cfg.lottie}
-                    style={{ width: "100%", height: "100%" }}
-                  />
-                </div>
+                {/* Cercle blanc per contrast + emoji animat */}
+                <motion.div
+                  animate={{ scale: [1, 1.15, 0.95, 1.08, 1], rotate: [0, -6, 6, -3, 0] }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                  className="w-28 h-28 rounded-full bg-white/90 shadow-lg flex items-center justify-center"
+                >
+                  <span className="text-6xl">{cfg.emoji}</span>
+                </motion.div>
 
-                {/* Etiqueta tipus */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -111,7 +88,6 @@ export function AchievementToast({ achievement, onClose }: Props) {
                   </span>
                 </motion.div>
 
-                {/* Títol */}
                 <motion.h2
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -121,7 +97,6 @@ export function AchievementToast({ achievement, onClose }: Props) {
                   {achievement.title}
                 </motion.h2>
 
-                {/* Descripció */}
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -131,7 +106,6 @@ export function AchievementToast({ achievement, onClose }: Props) {
                   {achievement.description}
                 </motion.p>
 
-                {/* Barra de compte enrere */}
                 <motion.div className="w-full h-1.5 bg-white/30 rounded-full overflow-hidden mt-2">
                   <motion.div
                     className="h-full bg-white/70 rounded-full"
@@ -146,7 +120,6 @@ export function AchievementToast({ achievement, onClose }: Props) {
             </div>
           </motion.div>
 
-          {/* Confetti */}
           {[...Array(12)].map((_, i) => (
             <motion.div
               key={i}
