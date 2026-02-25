@@ -1,3 +1,8 @@
+import { useRef, useEffect } from "react";
+import { calculateBadges } from "@/utils/badgeCalculations";
+import { calculateProgression } from "@/utils/progressionCalculations";
+import { useAchievement } from "@/contexts/AchievementContext";
+import { usePrograms } from "@/hooks/usePrograms";
 import { Mail, Phone, Cake, MapPin, Award, Zap, Calendar, TrendingUp } from "lucide-react";
 import { useCurrentUserWithSessions } from "@/hooks/useUsers";
 import { useAuth } from "@/contexts/AuthContext";
@@ -87,6 +92,55 @@ const UserIndex = () => {
   }, [currentUserData, userProfile, basicStats.activePrograms]);
 
   const { title, phrase, emoji, isLoading: phraseLoading } = useMotivationalPhrase(phraseStats);
+
+  // ── Detecció de fites (zero lectures Firebase addicionals) ──────────────
+const { triggerAchievement } = useAchievement();
+const { programs } = usePrograms();
+
+const prevBadgeIds = useRef<Set<string> | null>(null);
+const prevLevel = useRef<number | null>(null);
+const prevDisciplineLevel = useRef<string | null>(null);
+
+useEffect(() => {
+  if (!currentUserData?.sessions || loading) return;
+
+  const sessions = currentUserData.sessions;
+
+  // Càlculs en memòria, sense Firebase
+  const badges = calculateBadges({ sessions, firstSession: currentUserData.firstSession }, programs || []);
+  const progression = calculateProgression(sessions);
+
+  const earnedIds = new Set(badges.filter(b => b.earned && !b.unavailable).map(b => b.id));
+
+  // — Insígnies noves —
+  if (prevBadgeIds.current !== null) {
+    for (const id of earnedIds) {
+      if (!prevBadgeIds.current.has(id)) {
+        const badge = badges.find(b => b.id === id);
+        triggerAchievement({
+          type: "badge",
+          title: badge?.name || "Nova Insígnia!",
+          description: badge?.description || "",
+          icon: badge?.icon || "🏅",
+        });
+      }
+    }
+  }
+  prevBadgeIds.current = earnedIds;
+
+  // — Nou nivell de progressió —
+  if (prevLevel.current !== null && progression.level.level > prevLevel.current) {
+    triggerAchievement({
+      type: "level",
+      title: `Nivell ${progression.level.level}: ${progression.level.name}`,
+      description: "Has pujat de nivell. Continua així!",
+      icon: progression.level.icon || "⬆️",
+    });
+  }
+  prevLevel.current = progression.level.level;
+
+}, [currentUserData, loading]);
+// ────────────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
