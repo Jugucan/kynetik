@@ -1,3 +1,4 @@
+import { useMemo, useRef, useEffect } from "react";
 import { useMemo } from "react";
 import { Mail, Phone, Cake, MapPin, Award, Zap, Calendar, TrendingUp } from "lucide-react";
 import { useCurrentUserWithSessions } from "@/hooks/useUsers";
@@ -15,6 +16,61 @@ const UserIndex = () => {
   const { userProfile } = useUserProfile();
   const { user: currentUserData, loading } = useCurrentUserWithSessions(firestoreUserId);
   const { triggerAchievement } = useAchievement();
+  const prevBadgeIds = useRef<Set<string> | null>(null);
+const prevLevelId = useRef<string | null>(null);
+
+useEffect(() => {
+  if (loading || !currentUserData) return;
+  const sessions = Array.isArray(currentUserData.sessions) ? currentUserData.sessions : [];
+  if (sessions.length === 0) return;
+
+  // Insígnies — comparació en memòria, zero lectures Firebase
+  try {
+    const { calculateBadges } = require('@/utils/badgeCalculations');
+    const badges = calculateBadges(
+      { sessions, firstSession: currentUserData.firstSession },
+      []
+    );
+    const earnedIds = new Set<string>(
+      badges.filter((b: any) => b.earned && !b.unavailable).map((b: any) => b.id)
+    );
+    if (prevBadgeIds.current !== null) {
+      for (const id of earnedIds) {
+        if (!prevBadgeIds.current.has(id)) {
+          const badge = badges.find((b: any) => b.id === id);
+          triggerAchievement({
+            type: "badge",
+            title: badge?.name || "Nova Insígnia!",
+            description: badge?.description || "",
+            icon: badge?.emoji || "🏅",
+          });
+        }
+      }
+    }
+    prevBadgeIds.current = earnedIds;
+  } catch (e) {
+    console.warn("Badge detection error:", e);
+  }
+
+  // Nivell — comparació en memòria, zero lectures Firebase
+  try {
+    const { calculateProgression } = require('@/utils/progressionCalculations');
+    const progression = calculateProgression(sessions);
+    const currentLevelId = progression.level.id;
+    if (prevLevelId.current !== null && currentLevelId !== prevLevelId.current) {
+      triggerAchievement({
+        type: "level",
+        title: `${progression.level.emoji} ${progression.level.name}`,
+        description: progression.level.description,
+        icon: progression.level.emoji,
+      });
+    }
+    prevLevelId.current = currentLevelId;
+  } catch (e) {
+    console.warn("Level detection error:", e);
+  }
+
+}, [currentUserData, loading]);
 
   // PROVA TEMPORAL — esborra aquesta funció i el botó quan hagis vist les animacions
   const testAchievements = () => {
