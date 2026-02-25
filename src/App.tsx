@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./components/Sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AchievementProvider } from "@/contexts/AchievementContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ViewProtectedRoute } from "@/components/ViewProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
