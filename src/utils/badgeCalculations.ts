@@ -316,7 +316,7 @@ export function calculateBadges(
   totalAvailableCategories: number = 3
 ): BadgeWithStatus[] {
 
-  const sessions = (userData.sessions || []).filter(s => {
+  const sessions = (Array.isArray(userData.sessions) ? userData.sessions : []).filter(s => {
   if (!s?.date) return false;
   const d = new Date(s.date);
   return !isNaN(d.getTime());
