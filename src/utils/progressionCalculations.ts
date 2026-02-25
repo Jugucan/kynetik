@@ -67,7 +67,7 @@ export function calcXPUntilNextLevel(totalXP: number): number | null {
 // ------------------------------------------------------------
 
 export function calcWeekStreak(sessions: Session[]): WeekStreak {
-  sessions = sessions.filter(s => {
+  sessions = (Array.isArray(sessions) ? sessions : []).filter(s => {
   if (!s?.date) return false;
   const d = new Date(s.date);
   return !isNaN(d.getTime());
@@ -132,7 +132,7 @@ export function calcWeekStreak(sessions: Session[]): WeekStreak {
 // ------------------------------------------------------------
 
 export function calcXP(sessions: Session[]): XPInfo {
-  sessions = sessions.filter(s => {
+  sessions = (Array.isArray(sessions) ? sessions : []).filter(s => {
   if (!s?.date) return false;
   const d = new Date(s.date);
   return !isNaN(d.getTime());
