@@ -1,3 +1,5 @@
+import { calculateBadges } from "@/utils/badgeCalculations";
+import { calculateProgression } from "@/utils/progressionCalculations";
 import { useMemo, useRef, useEffect } from "react";
 import { useMemo } from "react";
 import { Mail, Phone, Cake, MapPin, Award, Zap, Calendar, TrendingUp } from "lucide-react";
@@ -26,18 +28,17 @@ useEffect(() => {
 
   // Insígnies — comparació en memòria, zero lectures Firebase
   try {
-    const { calculateBadges } = require('@/utils/badgeCalculations');
     const badges = calculateBadges(
       { sessions, firstSession: currentUserData.firstSession },
       []
     );
     const earnedIds = new Set<string>(
-      badges.filter((b: any) => b.earned && !b.unavailable).map((b: any) => b.id)
+      badges.filter((b) => b.earned && !b.unavailable).map((b) => b.id)
     );
     if (prevBadgeIds.current !== null) {
       for (const id of earnedIds) {
         if (!prevBadgeIds.current.has(id)) {
-          const badge = badges.find((b: any) => b.id === id);
+          const badge = badges.find((b) => b.id === id);
           triggerAchievement({
             type: "badge",
             title: badge?.name || "Nova Insígnia!",
@@ -54,7 +55,6 @@ useEffect(() => {
 
   // Nivell — comparació en memòria, zero lectures Firebase
   try {
-    const { calculateProgression } = require('@/utils/progressionCalculations');
     const progression = calculateProgression(sessions);
     const currentLevelId = progression.level.id;
     if (prevLevelId.current !== null && currentLevelId !== prevLevelId.current) {
