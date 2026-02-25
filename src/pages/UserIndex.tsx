@@ -72,15 +72,7 @@ useEffect(() => {
 
 }, [currentUserData, loading]);
 
-  // PROVA TEMPORAL — esborra aquesta funció i el botó quan hagis vist les animacions
-  const testAchievements = () => {
-    triggerAchievement({ type: "badge", title: "Primera Classe!", description: "Has completat la teva primera sessió", icon: "🏅" });
-    setTimeout(() => triggerAchievement({ type: "level", title: "Nivell 2: Aprenent", description: "Has pujat de nivell!", icon: "⬆️" }), 4500);
-    setTimeout(() => triggerAchievement({ type: "discipline", title: "Autodisciplina Alta", description: "La teva constància és exemplar", icon: "🔥" }), 9000);
-    setTimeout(() => triggerAchievement({ type: "streak", title: "4 Setmanes seguides!", description: "Ratxa increïble", icon: "⚡" }), 13500);
-  };
-
-  const basicStats = useMemo(() => {
+   const basicStats = useMemo(() => {
     if (!currentUserData || !currentUserData.sessions) {
       return { totalSessions: 0, uniquePrograms: 0, activePrograms: [], generalRanking: { rank: 0, total: 0, percentile: 0 } };
     }
@@ -141,14 +133,6 @@ useEffect(() => {
 
   return (
     <div className="space-y-4 px-4 max-w-7xl mx-auto pb-8">
-
-      {/* BOTÓ DE PROVA TEMPORAL — esborra aquest bloc quan hagis vist les animacions */}
-      <button
-        onClick={testAchievements}
-        className="fixed bottom-6 right-6 z-50 bg-primary text-white px-4 py-2 rounded-xl shadow-neo text-sm font-bold"
-      >
-        🎉 Test animacions
-      </button>
 
       <div className="flex items-center gap-3">
         <img
