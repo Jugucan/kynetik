@@ -1,78 +1,127 @@
 import { calculateBadges } from "@/utils/badgeCalculations";
 import { calculateProgression } from "@/utils/progressionCalculations";
+import { calculateAdvancedStats, calculateYearlyTrend } from '@/utils/advancedStats';
 import { useMemo, useRef, useEffect } from "react";
-import { useMemo } from "react";
 import { Mail, Phone, Cake, MapPin, Award, Zap, Calendar, TrendingUp } from "lucide-react";
 import { useCurrentUserWithSessions } from "@/hooks/useUsers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { calculateAdvancedStats, calculateYearlyTrend } from '@/utils/advancedStats';
 import { getBenvingut } from "@/utils/genderHelpers";
 import { useMotivationalPhrase } from '@/hooks/useMotivationalPhrase';
 import { useAchievement } from "@/contexts/AchievementContext";
+
+// Mapes de nivells d'autodisciplina per detectar pujades
+const DISCIPLINE_LEVELS = [
+  { min: 0,  max: 19,  label: 'Cal millorar',       emoji: '😞' },
+  { min: 20, max: 39,  label: 'Ho pots fer millor',  emoji: '😐' },
+  { min: 40, max: 59,  label: 'Bona',                emoji: '🙂' },
+  { min: 60, max: 79,  label: 'Notable',             emoji: '😊' },
+  { min: 80, max: 100, label: 'Excel·lent',          emoji: '🤩' },
+];
+
+function getDisciplineLevel(score: number): string {
+  for (const lvl of DISCIPLINE_LEVELS) {
+    if (score >= lvl.min && score <= lvl.max) return lvl.label;
+  }
+  return 'Cal millorar';
+}
+
+function getDisciplineEmoji(score: number): string {
+  for (const lvl of DISCIPLINE_LEVELS) {
+    if (score >= lvl.min && score <= lvl.max) return lvl.emoji;
+  }
+  return '😞';
+}
 
 const UserIndex = () => {
   const { firestoreUserId } = useAuth();
   const { userProfile } = useUserProfile();
   const { user: currentUserData, loading } = useCurrentUserWithSessions(firestoreUserId);
   const { triggerAchievement } = useAchievement();
+
   const prevBadgeIds = useRef<Set<string> | null>(null);
-const prevLevelId = useRef<string | null>(null);
+  const prevLevelId = useRef<string | null>(null);
+  const prevDisciplineLabel = useRef<string | null>(null);
 
-useEffect(() => {
-  if (loading || !currentUserData) return;
-  const sessions = Array.isArray(currentUserData.sessions) ? currentUserData.sessions : [];
-  if (sessions.length === 0) return;
+  useEffect(() => {
+    if (loading || !currentUserData) return;
+    const sessions = Array.isArray(currentUserData.sessions) ? currentUserData.sessions : [];
+    if (sessions.length === 0) return;
 
-  // Insígnies — comparació en memòria, zero lectures Firebase
-  try {
-    const badges = calculateBadges(
-      { sessions, firstSession: currentUserData.firstSession },
-      []
-    );
-    const earnedIds = new Set<string>(
-      badges.filter((b) => b.earned && !b.unavailable).map((b) => b.id)
-    );
-    if (prevBadgeIds.current !== null) {
-      for (const id of earnedIds) {
-        if (!prevBadgeIds.current.has(id)) {
-          const badge = badges.find((b) => b.id === id);
+    // — Insígnies —
+    try {
+      const badges = calculateBadges(
+        { sessions, firstSession: currentUserData.firstSession },
+        []
+      );
+      const earnedIds = new Set<string>(
+        badges.filter((b) => b.earned && !b.unavailable).map((b) => b.id)
+      );
+      if (prevBadgeIds.current !== null) {
+        for (const id of earnedIds) {
+          if (!prevBadgeIds.current.has(id)) {
+            const badge = badges.find((b) => b.id === id);
+            triggerAchievement({
+              type: "badge",
+              title: badge?.name || "Nova Insígnia!",
+              description: badge?.description || "",
+              icon: badge?.emoji || "🏅",
+            });
+          }
+        }
+      }
+      prevBadgeIds.current = earnedIds;
+    } catch (e) {
+      console.warn("Badge detection error:", e);
+    }
+
+    // — Nivell de progressió —
+    try {
+      const progression = calculateProgression(sessions);
+      const currentLevelId = progression.level.id;
+      if (prevLevelId.current !== null && currentLevelId !== prevLevelId.current) {
+        triggerAchievement({
+          type: "level",
+          title: `${progression.level.emoji} ${progression.level.name}`,
+          description: progression.level.description,
+          icon: progression.level.emoji,
+        });
+      }
+      prevLevelId.current = currentLevelId;
+    } catch (e) {
+      console.warn("Level detection error:", e);
+    }
+
+    // — Autodisciplina —
+    try {
+      const advStats = calculateAdvancedStats(currentUserData);
+      const currentDisciplineLabel = getDisciplineLevel(advStats.autodiscipline);
+      const currentDisciplineEmoji = getDisciplineEmoji(advStats.autodiscipline);
+      if (
+        prevDisciplineLabel.current !== null &&
+        currentDisciplineLabel !== prevDisciplineLabel.current
+      ) {
+        const hasPujaDeNivell = DISCIPLINE_LEVELS.findIndex(l => l.label === currentDisciplineLabel) >
+                                DISCIPLINE_LEVELS.findIndex(l => l.label === prevDisciplineLabel.current);
+        if (hasPujaDeNivell) {
           triggerAchievement({
-            type: "badge",
-            title: badge?.name || "Nova Insígnia!",
-            description: badge?.description || "",
-            icon: badge?.emoji || "🏅",
+            type: "discipline",
+            title: `Autodisciplina ${currentDisciplineLabel}`,
+            description: `Has millorat el teu nivell d'autodisciplina. Continua així!`,
+            icon: currentDisciplineEmoji,
           });
         }
       }
+      prevDisciplineLabel.current = currentDisciplineLabel;
+    } catch (e) {
+      console.warn("Discipline detection error:", e);
     }
-    prevBadgeIds.current = earnedIds;
-  } catch (e) {
-    console.warn("Badge detection error:", e);
-  }
 
-  // Nivell — comparació en memòria, zero lectures Firebase
-  try {
-    const progression = calculateProgression(sessions);
-    const currentLevelId = progression.level.id;
-    if (prevLevelId.current !== null && currentLevelId !== prevLevelId.current) {
-      triggerAchievement({
-        type: "level",
-        title: `${progression.level.emoji} ${progression.level.name}`,
-        description: progression.level.description,
-        icon: progression.level.emoji,
-      });
-    }
-    prevLevelId.current = currentLevelId;
-  } catch (e) {
-    console.warn("Level detection error:", e);
-  }
+  }, [currentUserData, loading]);
 
-}, [currentUserData, loading]);
-
-   const basicStats = useMemo(() => {
+  const basicStats = useMemo(() => {
     if (!currentUserData || !currentUserData.sessions) {
       return { totalSessions: 0, uniquePrograms: 0, activePrograms: [], generalRanking: { rank: 0, total: 0, percentile: 0 } };
     }
