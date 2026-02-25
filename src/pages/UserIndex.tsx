@@ -41,6 +41,14 @@ const UserIndex = () => {
   const { user: currentUserData, loading } = useCurrentUserWithSessions(firestoreUserId);
   const { triggerAchievement } = useAchievement();
 
+  // PROVA TEMPORAL LOTTIE — esborra quan hagis comprovat les animacions
+  const testAchievements = () => {
+    triggerAchievement({ type: "badge", title: "Primera Classe!", description: "Has completat la teva primera sessió", icon: "🏅" });
+    setTimeout(() => triggerAchievement({ type: "level", title: "🚀 Imparable", description: "Estàs en un nivell que pocs assoleixen.", icon: "🚀" }), 5500);
+    setTimeout(() => triggerAchievement({ type: "discipline", title: "Autodisciplina Excel·lent", description: "Has millorat el teu nivell d'autodisciplina. Continua així!", icon: "🤩" }), 11000);
+    setTimeout(() => triggerAchievement({ type: "streak", title: "4 Setmanes seguides!", description: "Ratxa increïble", icon: "⚡" }), 16500);
+  };
+
   const prevBadgeIds = useRef<Set<string> | null>(null);
   const prevLevelId = useRef<string | null>(null);
   const prevDisciplineLabel = useRef<string | null>(null);
@@ -182,6 +190,14 @@ const UserIndex = () => {
 
   return (
     <div className="space-y-4 px-4 max-w-7xl mx-auto pb-8">
+
+      {/* BOTÓ PROVA LOTTIE — esborra quan hagis comprovat */}
+      <button
+        onClick={testAchievements}
+        className="fixed bottom-6 right-6 z-50 bg-primary text-white px-4 py-2 rounded-xl shadow-neo text-sm font-bold"
+      >
+        🎉 Test Lottie
+      </button>
 
       <div className="flex items-center gap-3">
         <img
