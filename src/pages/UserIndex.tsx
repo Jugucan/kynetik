@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Mail, Phone, Cake, MapPin, Award, Zap, Calendar, TrendingUp } from "lucide-react";
 import { useCurrentUserWithSessions } from "@/hooks/useUsers";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,64 +8,21 @@ import { Separator } from "@/components/ui/separator";
 import { calculateAdvancedStats, calculateYearlyTrend } from '@/utils/advancedStats';
 import { getBenvingut } from "@/utils/genderHelpers";
 import { useMotivationalPhrase } from '@/hooks/useMotivationalPhrase';
-import { calculateBadges } from "@/utils/badgeCalculations";
-import { calculateProgression } from "@/utils/progressionCalculations";
 import { useAchievement } from "@/contexts/AchievementContext";
-import { usePrograms } from "@/hooks/usePrograms";
 
 const UserIndex = () => {
   const { firestoreUserId } = useAuth();
   const { userProfile } = useUserProfile();
   const { user: currentUserData, loading } = useCurrentUserWithSessions(firestoreUserId);
   const { triggerAchievement } = useAchievement();
-  const { programs } = usePrograms();
 
-  const prevBadgeIds = useRef<Set<string> | null>(null);
-  const prevLevel = useRef<number | null>(null);
-
-  // PROVA TEMPORAL — esborra aquesta funció quan hagis vist les animacions
+  // PROVA TEMPORAL — esborra aquesta funció i el botó quan hagis vist les animacions
   const testAchievements = () => {
     triggerAchievement({ type: "badge", title: "Primera Classe!", description: "Has completat la teva primera sessió", icon: "🏅" });
     setTimeout(() => triggerAchievement({ type: "level", title: "Nivell 2: Aprendiz", description: "Has pujat de nivell!", icon: "⬆️" }), 4500);
     setTimeout(() => triggerAchievement({ type: "discipline", title: "Autodisciplina Alta", description: "La teva constància és exemplar", icon: "🔥" }), 9000);
     setTimeout(() => triggerAchievement({ type: "streak", title: "4 Setmanes seguides!", description: "Ratxa increïble", icon: "⚡" }), 13500);
   };
-
-  // Detecció de fites (zero lectures Firebase addicionals)
-  useEffect(() => {
-    if (loading || !currentUserData) return;
-    const sessions = Array.isArray(currentUserData.sessions) ? currentUserData.sessions : [];
-    if (sessions.length === 0) return;
-
-    const badges = calculateBadges({ sessions, firstSession: currentUserData.firstSession }, programs || []);
-    const progression = calculateProgression(sessions);
-    const earnedIds = new Set(badges.filter(b => b.earned && !b.unavailable).map(b => b.id));
-
-    if (prevBadgeIds.current !== null) {
-      for (const id of earnedIds) {
-        if (!prevBadgeIds.current.has(id)) {
-          const badge = badges.find(b => b.id === id);
-          triggerAchievement({
-            type: "badge",
-            title: badge?.name || "Nova Insígnia!",
-            description: badge?.description || "",
-            icon: badge?.icon || "🏅",
-          });
-        }
-      }
-    }
-    prevBadgeIds.current = earnedIds;
-
-    if (prevLevel.current !== null && progression.level.level > prevLevel.current) {
-      triggerAchievement({
-        type: "level",
-        title: `Nivell ${progression.level.level}: ${progression.level.name}`,
-        description: "Has pujat de nivell. Continua així!",
-        icon: progression.level.icon || "⬆️",
-      });
-    }
-    prevLevel.current = progression.level.level;
-  }, [currentUserData, loading]);
 
   const basicStats = useMemo(() => {
     if (!currentUserData || !currentUserData.sessions) {
@@ -137,7 +94,6 @@ const UserIndex = () => {
         🎉 Test animacions
       </button>
 
-      {/* Header amb foto */}
       <div className="flex items-center gap-3">
         <img
           src={currentUserData.profileImageUrl || currentUserData.avatar}
@@ -159,7 +115,6 @@ const UserIndex = () => {
         </div>
       </div>
 
-      {/* Missatge Motivacional IA */}
       {(phrase || phraseLoading) && (
         <div className="p-4 rounded-xl shadow-neo bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20">
           <div className="flex items-start gap-3">
@@ -182,7 +137,6 @@ const UserIndex = () => {
         </div>
       )}
 
-      {/* Targetes principals */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-neo text-center hover:shadow-neo-lg transition-all">
           <Calendar className="w-5 h-5 text-blue-500 mx-auto mb-1" />
@@ -210,7 +164,6 @@ const UserIndex = () => {
 
       <Separator />
 
-      {/* Informació de contacte */}
       <div className="p-4 rounded-xl shadow-neo bg-background">
         <h3 className="font-semibold text-sm mb-3 flex items-center">
           <Mail className="w-4 h-4 mr-2 text-primary" />
@@ -234,7 +187,6 @@ const UserIndex = () => {
 
       <Separator />
 
-      {/* Ranking General */}
       <div className="p-4 rounded-xl shadow-neo bg-background">
         <h3 className="font-semibold text-sm mb-3 flex items-center">
           <Zap className="w-4 h-4 mr-2 text-primary" />
@@ -262,7 +214,6 @@ const UserIndex = () => {
 
       <Separator />
 
-      {/* Programes Actius */}
       <div className="p-4 rounded-xl shadow-neo bg-background">
         <div className="flex items-center gap-2 mb-3">
           <div className="p-1.5 rounded-lg shadow-neo-inset bg-purple-500/10">
