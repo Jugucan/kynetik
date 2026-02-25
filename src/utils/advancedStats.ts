@@ -437,7 +437,7 @@ export const calculateImprovementRecent = (sessions: UserSession[]): AdvancedSta
 };
 
 export const calculateAdvancedStats = (user: User): AdvancedStats => {
-  const sessions = user.sessions || [];
+  const sessions = Array.isArray((user as any).sessions) ? (user as any).sessions : [];
   const autodisciplineResult = calculateAutodiscipline(sessions);
 
   return {
