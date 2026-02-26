@@ -8,7 +8,7 @@ import { ca } from "date-fns/locale";
 import { getFiscalYear, getFiscalYearsRange } from "@/lib/utils";
 import { useCenters } from "@/hooks/useCenters";
 import { db } from "@/lib/firebase";
-import { doc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { 
   DateWithReason, 
   filterDatesByFiscalYear, 
@@ -179,52 +179,42 @@ const Settings = () => {
     };
 
     useEffect(() => {
-        const unsubscribe = onSnapshot(SETTINGS_DOC_REF, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                
-                const newVacations = convertToDateWithReason(data.vacations).sort((a, b) => a.date.getTime() - b.date.getTime());
-                const newHolidays = convertToDateWithReason(data.officialHolidays).sort((a, b) => a.date.getTime() - b.date.getTime());
-                
-                const closures: Record<string, DateWithReason[]> = {};
-                if (data.closuresByCenter) {
-                    Object.entries(data.closuresByCenter).forEach(([centerId, dates]) => {
-                        closures[centerId] = convertToDateWithReason(dates as Record<string, string>)
-                            .sort((a, b) => a.date.getTime() - b.date.getTime());
-                    });
-                }
-                if (!data.closuresByCenter) {
-                    if (data.closuresArbucies) {
-                        closures['arbucies'] = convertToDateWithReason(data.closuresArbucies)
-                            .sort((a, b) => a.date.getTime() - b.date.getTime());
+        const fetchSettings = async () => {
+            try {
+                const docSnap = await getDoc(SETTINGS_DOC_REF);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const newVacations = convertToDateWithReason(data.vacations).sort((a, b) => a.date.getTime() - b.date.getTime());
+                    const newHolidays = convertToDateWithReason(data.officialHolidays).sort((a, b) => a.date.getTime() - b.date.getTime());
+                    const closures: Record<string, DateWithReason[]> = {};
+                    if (data.closuresByCenter) {
+                        Object.entries(data.closuresByCenter).forEach(([centerId, dates]) => {
+                            closures[centerId] = convertToDateWithReason(dates as Record<string, string>).sort((a, b) => a.date.getTime() - b.date.getTime());
+                        });
                     }
-                    if (data.closuresSantHilari) {
-                        closures['sant-hilari'] = convertToDateWithReason(data.closuresSantHilari)
-                            .sort((a, b) => a.date.getTime() - b.date.getTime());
+                    if (!data.closuresByCenter) {
+                        if (data.closuresArbucies) closures['arbucies'] = convertToDateWithReason(data.closuresArbucies).sort((a, b) => a.date.getTime() - b.date.getTime());
+                        if (data.closuresSantHilari) closures['sant-hilari'] = convertToDateWithReason(data.closuresSantHilari).sort((a, b) => a.date.getTime() - b.date.getTime());
+                    }
+                    setAllVacationDates(newVacations);
+                    setAllClosuresByCenter(closures);
+                    if (newHolidays.length === 0 && activeCenters.length > 0) {
+                        const currentWorkYear = getWorkYearDates(currentFiscalYear);
+                        const generatedHolidays = generateHolidays(currentWorkYear.start, currentWorkYear.end, activeCenters);
+                        setAllOfficialHolidays(generatedHolidays);
+                        saveToFirebase(newVacations, closures, generatedHolidays);
+                    } else {
+                        setAllOfficialHolidays(newHolidays);
                     }
                 }
-                
-                setAllVacationDates(newVacations);
-                setAllClosuresByCenter(closures);
-                
-                if (newHolidays.length === 0 && activeCenters.length > 0) {
-                    const currentWorkYear = getWorkYearDates(currentFiscalYear);
-                    const generatedHolidays = generateHolidays(currentWorkYear.start, currentWorkYear.end, activeCenters);
-                    setAllOfficialHolidays(generatedHolidays);
-                    saveToFirebase(newVacations, closures, generatedHolidays);
-                } else {
-                    setAllOfficialHolidays(newHolidays);
-                }
+            } catch (error) {
+                console.error("❌ Error:", error);
+            } finally {
+                setIsLoading(false);
+                setIsInitialLoad(false);
             }
-            setIsLoading(false);
-            setIsInitialLoad(false);
-        }, (error) => {
-            console.error("❌ Error:", error);
-            setIsLoading(false);
-            setIsInitialLoad(false);
-        });
-
-        return () => unsubscribe();
+        };
+        fetchSettings();
     }, [currentFiscalYear, activeCenters.length]);
 
     const handleDateSelect = async (selectedDates: Date[] | undefined, type: 'vacation' | 'closure', centerId?: string) => {
