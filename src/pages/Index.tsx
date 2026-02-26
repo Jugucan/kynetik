@@ -3,7 +3,7 @@ import { getBenvingut } from "@/utils/genderHelpers";
 import UserIndex from "./UserIndex";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { 
   Calendar, 
   Users, 
@@ -142,28 +142,26 @@ const Index = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Carregar sessions personalitzades de Firebase
+  // Carregar sessions personalitzades de Firebase (lectura única)
   useEffect(() => {
-    const customSessionsDocRef = doc(db, 'settings', 'customSessions');
-    
-    const unsubscribe = onSnapshot(customSessionsDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const sessionsMap: Record<string, Session[]> = {};
-        
-        Object.entries(data).forEach(([dateKey, sessions]) => {
-          if (Array.isArray(sessions)) {
-            sessionsMap[dateKey] = sessions as Session[];
-          }
-        });
-        
-        setCustomSessions(sessionsMap);
-      } else {
-        setCustomSessions({});
+    const fetchCustomSessions = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'settings', 'customSessions'));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const sessionsMap: Record<string, Session[]> = {};
+          Object.entries(data).forEach(([dateKey, sessions]) => {
+            if (Array.isArray(sessions)) {
+              sessionsMap[dateKey] = sessions as Session[];
+            }
+          });
+          setCustomSessions(sessionsMap);
+        }
+      } catch (error) {
+        console.error('Error carregant sessions personalitzades:', error);
       }
-    });
-
-    return () => unsubscribe();
+    };
+    fetchCustomSessions();
   }, []);
 
   // ============================================================================
