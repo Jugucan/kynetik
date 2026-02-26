@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
+import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, orderBy, Timestamp } from "firebase/firestore";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ca } from "date-fns/locale";
@@ -64,36 +65,37 @@ const Notes = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Carregar notes des de Firebase
+  // Carregar notes des de Firebase (lectura única)
   useEffect(() => {
     if (!currentUser) return;
-
-    const notesRef = collection(db, "notes");
-    const q = query(
-      notesRef,
-      where("userId", "==", currentUser.uid),
-      orderBy("updatedAt", "desc")
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadedNotes: Note[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        loadedNotes.push({
-          id: doc.id,
-          title: data.title,
-          content: data.content,
-          category: data.category,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-          userId: data.userId,
+    const fetchNotes = async () => {
+      try {
+        const q = query(
+          collection(db, "notes"),
+          where("userId", "==", currentUser.uid),
+          orderBy("updatedAt", "desc")
+        );
+        const snapshot = await getDocs(q);
+        const loadedNotes: Note[] = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            title: data.title,
+            content: data.content,
+            category: data.category,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+            userId: data.userId,
+          };
         });
-      });
-      setNotes(loadedNotes);
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
+        setNotes(loadedNotes);
+      } catch (error) {
+        console.error('Error carregant notes:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchNotes();
   }, [currentUser]);
 
   // Filtrar notes
@@ -152,29 +154,48 @@ const Notes = () => {
     setIsSaving(true);
 
     try {
+      const now = Timestamp.now();
       if (editingNote) {
-        // Actualitzar nota existent
         const noteRef = doc(db, "notes", editingNote.id);
         await updateDoc(noteRef, {
           title: formTitle,
           content: formContent,
           category: formCategory,
-          updatedAt: Timestamp.now(),
+          updatedAt: now,
         });
+        // Actualitzar estat local sense rellegir Firebase
+        setNotes(prev => prev
+          .map(n => n.id === editingNote.id
+            ? { ...n, title: formTitle, content: formContent, category: formCategory, updatedAt: now.toDate() }
+            : n
+          )
+          .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+        );
         toast.success("Nota actualitzada!");
       } else {
-        // Crear nova nota
-        await addDoc(collection(db, "notes"), {
+        const docRef = await addDoc(collection(db, "notes"), {
           title: formTitle,
           content: formContent,
           category: formCategory,
           userId: currentUser.uid,
-          createdAt: Timestamp.now(),
-          updatedAt: Timestamp.now(),
+          createdAt: now,
+          updatedAt: now,
         });
+        // Afegir a estat local sense rellegir Firebase
+        const newNote: Note = {
+          id: docRef.id,
+          title: formTitle,
+          content: formContent,
+          category: formCategory,
+          userId: currentUser.uid,
+          createdAt: now.toDate(),
+          updatedAt: now.toDate(),
+        };
+        setNotes(prev => [newNote, ...prev]);
         toast.success("Nota creada!");
       }
       closeDialog();
+      
     } catch (error) {
       console.error("Error al desar la nota:", error);
       toast.error("Error al desar la nota");
@@ -188,6 +209,7 @@ const Notes = () => {
 
     try {
       await deleteDoc(doc(db, "notes", noteToDelete.id));
+      setNotes(prev => prev.filter(n => n.id !== noteToDelete.id)); // ← afegir aquesta
       toast.success("Nota eliminada");
       setIsDeleteDialogOpen(false);
       setNoteToDelete(null);
