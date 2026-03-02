@@ -14,6 +14,45 @@ interface UserForRanking {
   center?: string;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// NORMALITZACIÓ DE NOMS DE CENTRE
+// Converteix qualsevol variant al nom oficial del centre
+// Afegeix aquí noves variants si en apareixen de noves
+// ─────────────────────────────────────────────────────────────────────────────
+const CENTER_NAME_MAP: Record<string, string> = {
+  // Variants d'Arbúcies
+  'arbucies':         'Arbúcies',
+  'arbúcies':         'Arbúcies',
+  'Arbucies':         'Arbúcies',
+  'Arbúcies':         'Arbúcies',
+  'ARBUCIES':         'Arbúcies',
+  'ARBÚCIES':         'Arbúcies',
+  'arbucies gym':     'Arbúcies',
+  'gym arbucies':     'Arbúcies',
+
+  // Variants de Sant Hilari
+  'sant-hilari':      'Sant Hilari',
+  'Sant-Hilari':      'Sant Hilari',
+  'SANT-HILARI':      'Sant Hilari',
+  'sant hilari':      'Sant Hilari',
+  'Sant Hilari':      'Sant Hilari',
+  'SANT HILARI':      'Sant Hilari',
+  'santhilari':       'Sant Hilari',
+  'SantHilari':       'Sant Hilari',
+  'sant_hilari':      'Sant Hilari',
+};
+
+/**
+ * Normalitza el nom d'un centre al nom oficial.
+ * Si no reconeix el valor, el retorna tal qual (per no perdre dades).
+ */
+export const normalizeCenterName = (rawCenter: string | undefined | null): string => {
+  if (!rawCenter) return 'Sant Hilari'; // valor per defecte si ve buit
+  const trimmed = rawCenter.trim();
+  return CENTER_NAME_MAP[trimmed] ?? trimmed;
+};
+
+
 // Calcula i escriu els rankings a tots els usuaris en lots de 500
 export const recalculateAndSaveRankings = async (users: UserForRanking[]): Promise<void> => {
   if (users.length === 0) {
@@ -174,19 +213,31 @@ export const importDeporsiteOptimized = async (
         nameToDoc.get(importedUser.name.toLowerCase());
 
       const importedSessions = Array.isArray(importedUser.sessions) ? importedUser.sessions : [];
+
+      // ── NORMALITZACIÓ: corregim el centre de cada sessió ─────────────────
       const normalizedSessions = importedSessions.map((s: any) => ({
         date: s.date || '',
         activity: s.activity || '',
         time: s.time || '',
         sala: s.sala || '',
-        center: s.center || importedUser.center || 'Sant Hilari'
+        center: normalizeCenterName(s.center || importedUser.center),
       }));
+
+      // ── NORMALITZACIÓ: corregim el centre de l'usuari ────────────────────
+      const normalizedUserCenter = normalizeCenterName(importedUser.center);
 
       if (existing) {
         // Fusionar sessions (eliminar duplicats per clau date-activity-time)
         const existingSessions = Array.isArray(existing.data.sessions) ? existing.data.sessions : [];
+
+        // Normalitzem també les sessions ja existents a Firebase (per netejar les antigues)
+        const normalizedExistingSessions = existingSessions.map((s: any) => ({
+          ...s,
+          center: normalizeCenterName(s.center),
+        }));
+
         const sessionMap = new Map<string, any>();
-        [...existingSessions, ...normalizedSessions].forEach(s => {
+        [...normalizedExistingSessions, ...normalizedSessions].forEach(s => {
           sessionMap.set(`${s.date}-${s.activity}-${s.time || 'no-time'}`, s);
         });
         const mergedSessions = Array.from(sessionMap.values());
@@ -198,13 +249,16 @@ export const importDeporsiteOptimized = async (
           ? Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
           : 0;
 
+        // Normalitzem també el centre existent de l'usuari
+        const existingCenter = normalizeCenterName(existing.data.center) || normalizedUserCenter || 'Sant Hilari';
+
         const mergedData = {
           ...existing.data,
           name: existing.data.name || importedUser.name,
           email: existing.data.email || importedUser.email || '',
           phone: existing.data.phone || importedUser.phone || '',
           birthday: existing.data.birthday || importedUser.birthday || '',
-          center: existing.data.center || importedUser.center || 'Sant Hilari',
+          center: existingCenter,
           profileImageUrl: (importedUser.profileImageUrl?.includes('candelfi.deporsite.net'))
             ? importedUser.profileImageUrl
             : (existing.data.profileImageUrl || importedUser.profileImageUrl || ''),
@@ -237,7 +291,7 @@ export const importDeporsiteOptimized = async (
           phone: importedUser.phone || '',
           birthday: importedUser.birthday || '',
           age: importedUser.age || 0,
-          center: importedUser.center || 'Sant Hilari',
+          center: normalizedUserCenter || 'Sant Hilari',
           preferredPrograms: Array.isArray(importedUser.preferredPrograms) ? importedUser.preferredPrograms : [],
           profileImageUrl: importedUser.profileImageUrl || '',
           avatar: importedUser.profileImageUrl || importedUser.avatar || '',
@@ -296,8 +350,6 @@ export const importDeporsiteOptimized = async (
   });
 
   // ── FASE 4: Calcular i guardar rankings ───────────────────────────────────
-  // Llegim de nou tots els usuaris de Firebase (ja amb les sessions actualitzades)
-  // per garantir que els rankings es calculen sobre les dades definitives
   try {
     await recalculateAllRankingsFromFirebase(onProgress);
   } catch (rankingError) {
