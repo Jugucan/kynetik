@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
-import { Users as UsersIcon, Search, Plus, Upload, Info, ChevronDown, ChevronUp, MapPin, Download } from "lucide-react";
+import { Users as UsersIcon, Search, Plus, Upload, Info, MapPin, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUsers, User } from "@/hooks/useUsers"; 
@@ -11,23 +11,14 @@ import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { UserDetailModal } from "@/components/UserDetailModal";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { normalizeCenterName } from "@/utils/importUtils";
 
 const Users = () => {
   const { users, loading, addUser, updateUser, deleteUser } = useUsers();
-  const { centers } = useCenters(); // 🆕
+  const { centers } = useCenters();
   const [searchQuery, setSearchQuery] = useState("");
   const [centerFilter, setCenterFilter] = useState<string>("all"); 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -37,13 +28,10 @@ const Users = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   
-  // 🆕 Funció per obtenir el color d'un centre
   const getCenterColor = (centerName: string): string => {
-    const center = centers.find(c => 
-      c.name.toLowerCase() === centerName.toLowerCase() ||
-      c.id === centerName.toLowerCase().replace(' ', '-')
-    );
-    return center?.color || 'blue'; // Color per defecte si no es troba
+    const normalized = normalizeCenterName(centerName);
+    const center = centers.find(c => c.name === normalized);
+    return center?.color || 'blue';
   };
 
   const sortedUsers = [...users].sort((a, b) => 
@@ -51,8 +39,8 @@ const Users = () => {
   );
 
   const filteredUsers = sortedUsers.filter(user => {
-    const matchesCenter = centerFilter === "all" || 
-                          (user.center || '').toLowerCase() === centerFilter.toLowerCase();
+    const userCenterNormalized = normalizeCenterName(user.center);
+    const matchesCenter = centerFilter === "all" || userCenterNormalized === centerFilter;
     const matchesSearch = (user.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (user.email || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCenter && matchesSearch;
@@ -120,12 +108,8 @@ const Users = () => {
             const usersRef = collection(db, 'users');
             const q = query(usersRef, where('email', '==', importedUser.email));
             const querySnapshot = await getDocs(q);
-            
             if (!querySnapshot.empty) {
-              existingUser = {
-                id: querySnapshot.docs[0].id,
-                ...querySnapshot.docs[0].data()
-              } as User;
+              existingUser = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as User;
             }
           }
           
@@ -133,12 +117,8 @@ const Users = () => {
             const usersRef = collection(db, 'users');
             const q = query(usersRef, where('name', '==', importedUser.name));
             const querySnapshot = await getDocs(q);
-            
             if (!querySnapshot.empty) {
-              existingUser = {
-                id: querySnapshot.docs[0].id,
-                ...querySnapshot.docs[0].data()
-              } as User;
+              existingUser = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as User;
             }
           }
 
@@ -147,6 +127,8 @@ const Users = () => {
             continue;
           }
 
+          const normalizedImportedCenter = normalizeCenterName(importedUser.center);
+
           if (existingUser) {
             const mergedData: Partial<User> = {};
             
@@ -154,7 +136,7 @@ const Users = () => {
             mergedData.email = existingUser.email || importedUser.email || '';
             mergedData.phone = existingUser.phone || importedUser.phone || '';
             mergedData.birthday = existingUser.birthday || importedUser.birthday || '';
-            mergedData.center = existingUser.center || importedUser.center || 'Sant Hilari';
+            mergedData.center = normalizeCenterName(existingUser.center) || normalizedImportedCenter || 'Sant Hilari';
             
             if (importedUser.profileImageUrl && importedUser.profileImageUrl.includes('candelfi.deporsite.net')) {
               mergedData.profileImageUrl = importedUser.profileImageUrl;
@@ -176,20 +158,27 @@ const Users = () => {
             const existingSessions = Array.isArray(existingUser.sessions) ? existingUser.sessions : [];
             const importedSessions = Array.isArray(importedUser.sessions) ? importedUser.sessions : [];
             
+            const normalizedExistingSessions = existingSessions.map((s: any) => ({
+              ...s,
+              center: normalizeCenterName(s.center),
+            }));
+            const normalizedImportedSessions = importedSessions.map((s: any) => ({
+              ...s,
+              center: normalizeCenterName(s.center || importedUser.center),
+            }));
+            
             const sessionMap = new Map();
-            [...existingSessions, ...importedSessions].forEach(session => {
+            [...normalizedExistingSessions, ...normalizedImportedSessions].forEach(session => {
               const key = `${session.date}-${session.activity}-${session.time}`;
               sessionMap.set(key, session);
             });
             mergedData.sessions = Array.from(sessionMap.values());
-            
             mergedData.totalSessions = mergedData.sessions.length;
             
             if (mergedData.sessions.length > 0) {
-              const dates = mergedData.sessions.map(s => s.date).sort();
+              const dates = mergedData.sessions.map((s: any) => s.date).sort();
               mergedData.firstSession = dates[0];
               mergedData.lastSession = dates[dates.length - 1];
-              
               const lastDate = new Date(mergedData.lastSession);
               const today = new Date();
               mergedData.daysSinceLastSession = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -197,22 +186,25 @@ const Users = () => {
             
             await updateUser(existingUser.id, mergedData);
             updatedCount++;
+
           } else {
+            const normalizedSessions = (Array.isArray(importedUser.sessions) ? importedUser.sessions : []).map((s: any) => ({
+              ...s,
+              center: normalizeCenterName(s.center || importedUser.center),
+            }));
+
             const userData: Omit<User, 'id'> = {
               name: importedUser.name || '',
               email: importedUser.email || '',
               phone: importedUser.phone || '',
               birthday: importedUser.birthday || '',
               age: importedUser.age || 0,
-              center: importedUser.center || 'Sant Hilari',
-              preferredPrograms: Array.isArray(importedUser.preferredPrograms) 
-                ? importedUser.preferredPrograms 
-                : [],
+              center: normalizedImportedCenter || 'Sant Hilari',
+              preferredPrograms: Array.isArray(importedUser.preferredPrograms) ? importedUser.preferredPrograms : [],
               profileImageUrl: importedUser.profileImageUrl || '',
               avatar: importedUser.profileImageUrl || importedUser.avatar || '',
               notes: importedUser.notes || '',
-              
-              sessions: Array.isArray(importedUser.sessions) ? importedUser.sessions : [],
+              sessions: normalizedSessions,
               totalSessions: importedUser.totalSessions || 0,
               firstSession: importedUser.firstSession || '',
               lastSession: importedUser.lastSession || '',
@@ -233,7 +225,6 @@ const Users = () => {
       if (newCount > 0) messages.push(`${newCount} nous usuaris`);
       if (updatedCount > 0) messages.push(`${updatedCount} actualitzats`);
       if (skippedCount > 0) messages.push(`${skippedCount} omesos`);
-      
       toast.success(`✅ Importació completada! ${messages.join(', ')}`);
 
     } catch (error) {
@@ -266,7 +257,7 @@ const Users = () => {
         try {
           const userData: Omit<User, 'id'> = {
             name: row['Nom Complet'] || row['Nom'] || '',
-            center: row['Gimnàs'] || row['Gimnas'] || 'Arbúcies',
+            center: normalizeCenterName(row['Gimnàs'] || row['Gimnas'] || 'Arbúcies'),
             birthday: row['Data Aniversari'] || row['Data'] || '',
             age: 0,
             preferredPrograms: row['Sessions Habituals'] ? 
@@ -282,7 +273,6 @@ const Users = () => {
           };
 
           if (!userData.name) {
-            console.warn('Fila sense nom, s\'omet');
             errorCount++;
             continue;
           }
@@ -295,12 +285,8 @@ const Users = () => {
         }
       }
 
-      if (successCount > 0) {
-        toast.success(`✅ S'han importat ${successCount} usuaris correctament!`);
-      }
-      if (errorCount > 0) {
-        toast.warning(`⚠️ ${errorCount} usuaris no s'han pogut importar`);
-      }
+      if (successCount > 0) toast.success(`✅ S'han importat ${successCount} usuaris correctament!`);
+      if (errorCount > 0) toast.warning(`⚠️ ${errorCount} usuaris no s'han pogut importar`);
 
     } catch (error) {
       console.error('Error llegint fitxer Excel:', error);
@@ -313,7 +299,6 @@ const Users = () => {
 
   return (
     <div className="space-y-6 w-full">
-      {/* 🎯 Capçalera neta */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <UsersIcon className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
@@ -322,8 +307,6 @@ const Users = () => {
             <p className="text-sm text-muted-foreground">Gestió dels teus alumnes</p>
           </div>
         </div>
-        
-        {/* 🆕 Botó d'informació discret amb neomòrfic */}
         <button
           onClick={() => setShowInstructions(!showInstructions)}
           className="p-2 rounded-full shadow-neo hover:shadow-neo-sm transition-all"
@@ -333,11 +316,9 @@ const Users = () => {
         </button>
       </div>
 
-      {/* 🆕 UN SOL desplegable per tota la info d'importació amb neomòrfic */}
       <Collapsible open={showInstructions} onOpenChange={setShowInstructions}>
         <CollapsibleContent>
           <NeoCard className="bg-blue-50/30">
-            {/* Deporsite */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Download className="w-4 h-4 text-red-600" />
@@ -373,7 +354,6 @@ const Users = () => {
 
             <div className="border-t border-blue-200/50 my-4"></div>
 
-            {/* Excel */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Upload className="w-4 h-4 text-green-600" />
@@ -408,7 +388,6 @@ const Users = () => {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* 🎯 Filtres amb neomòrfic subtil i elegant */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
         <div className="sm:col-span-1 min-w-0">
           <Select value={centerFilter} onValueChange={setCenterFilter}>
@@ -439,7 +418,6 @@ const Users = () => {
         </div>
       </div>
 
-      {/* 🎯 Grid d'usuaris amb neomòrfic */}
       <NeoCard>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
@@ -451,6 +429,7 @@ const Users = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 w-full">
             {filteredUsers.map((user) => {
               const centerColor = getCenterColor(user.center || '');
+              const displayCenter = normalizeCenterName(user.center);
               
               const colorClasses = {
                 blue: 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 hover:border-blue-500/50',
@@ -487,13 +466,11 @@ const Users = () => {
                       className="w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-neo object-cover ring-2 ring-white"
                     />
                   </div>
-                  
                   <h3 className="font-semibold text-sm sm:text-base text-center line-clamp-2 mb-1 px-1 w-full break-words">
                     {user.name}
                   </h3>
-                  
                   <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium shadow-neo-inset ${badgeColorClasses[centerColor as keyof typeof badgeColorClasses] || badgeColorClasses.blue}`}>
-                    {user.center}
+                    {displayCenter}
                   </span>
                 </div>
               );
@@ -502,7 +479,6 @@ const Users = () => {
         )}
       </NeoCard>
 
-      {/* 🆕 BOTÓ FLOTANT per afegir usuaris */}
       <button
         onClick={handleAddNew}
         className="fixed bottom-6 right-6 w-14 h-14 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg hover:shadow-xl transition-all z-50 flex items-center justify-center"
