@@ -176,7 +176,8 @@ const Index = () => {
 
   const getScheduleForDate = useCallback((date: Date) => {
     const dateStr = dateToKey(date);
-    return schedules.find(schedule => {
+    const sortedSchedules = [...schedules].sort((a, b) => b.startDate.localeCompare(a.startDate));
+    return sortedSchedules.find(schedule => {
       const startDate = schedule.startDate;
       const endDate = schedule.endDate || '9999-12-31';
       return dateStr >= startDate && dateStr <= endDate;
