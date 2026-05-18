@@ -35,15 +35,12 @@ const Schedules = () => {
 
     setIsSaving(true);
 
-    // Si és un horari nou (no existeix a la llista)
     const existingIndex = schedules.findIndex(s => s.id === editingSchedule.id);
     let updatedSchedules: Schedule[];
 
     if (existingIndex === -1) {
-      // Horari nou: afegir a la llista
       updatedSchedules = [...schedules, editingSchedule];
     } else {
-      // Horari existent: actualitzar
       updatedSchedules = schedules.map(s => s.id === editingSchedule.id ? editingSchedule : s);
     }
 
@@ -52,16 +49,23 @@ const Schedules = () => {
     setIsSaving(false);
   };
 
+  // ✅ CORRECCIÓ: tot en una sola operació atòmica
   const handleActivateSchedule = async (scheduleId: string) => {
-    // Desactivar l'horari actual
-    if (activeSchedule) {
-      deactivateSchedule(activeSchedule.id);
-    }
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-    // Activar el nou horari
-    const updatedSchedules = schedules.map(s =>
-      s.id === scheduleId ? { ...s, isActive: true, endDate: null } : s
-    );
+    const updatedSchedules = schedules.map(s => {
+      if (s.id === scheduleId) {
+        // Activar el nou horari
+        return { ...s, isActive: true, endDate: null };
+      } else if (s.isActive) {
+        // Desactivar l'horari que estava actiu, posant-li data de fi
+        return { ...s, isActive: false, endDate: yesterdayStr };
+      }
+      return s;
+    });
 
     await saveSchedules(updatedSchedules);
   };
@@ -115,7 +119,6 @@ const Schedules = () => {
       [dayIndex]: daySessions.length > 0 ? daySessions : undefined,
     };
 
-    // Eliminar la clau si no hi ha sessions
     if (!daySessions.length) {
       delete updatedSessions[dayIndex];
     }
@@ -191,7 +194,6 @@ const Schedules = () => {
               </Button>
             </div>
 
-            {/* Mostrar sessions de l'horari actiu */}
             <div className="grid gap-3">
               {dayNames.map((dayName, idx) => {
                 const dayIndex = idx + 1;
@@ -303,7 +305,6 @@ const Schedules = () => {
 
             <hr className="my-4" />
 
-            {/* Sessions per dia */}
             <div className="space-y-4">
               <h3 className="font-semibold">Sessions setmanals</h3>
               {dayNames.map((dayName, idx) => {
