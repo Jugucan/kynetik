@@ -312,7 +312,7 @@ const Index = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const currentYear = today.getFullYear();
-    const birthdays: Birthday[] = [];
+    const result: Birthday[] = [];
 
     birthdays.forEach(user => {
       const birthdayParts = user.birthday.toString().split('/');
@@ -341,7 +341,7 @@ const Index = () => {
 
         const dateString = `${day} ${getMonthName(month)}`;
 
-        birthdays.push({
+        result.push({
           name: user.name,
           date: dateString,
           status: status,
@@ -355,10 +355,10 @@ const Index = () => {
     });
 
     // Ordenar cronològicament
-    birthdays.sort((a, b) => a.daysUntil - b.daysUntil);
+    result.sort((a, b) => a.daysUntil - b.daysUntil);
 
-    return birthdays;
-  }, [users]);
+    return result;
+  }, [birthdays]);
 
   const getHolidayName = useCallback((date: Date) => {
     const dateKey = dateToKey(date);
