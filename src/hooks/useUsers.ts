@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, Timestamp, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { toast } from 'sonner';
 
@@ -200,6 +200,29 @@ const prepareDataForFirestore = (userData: Partial<UserWithSessions>) => {
   return dataToSave;
 };
 
+// ── Actualitza el document lleuger usersIndex ───────────────────────────────
+// S'anomena després de cada addUser, updateUser i deleteUser
+
+const updateUsersIndex = async (users: User[]) => {
+  try {
+    const birthdays = users.map(u => ({
+      id: u.id,
+      name: u.name,
+      birthday: u.birthday || '',
+      center: u.center || '',
+      profileImageUrl: u.profileImageUrl || u.avatar || '',
+    }));
+    await setDoc(doc(db, 'settings', 'usersIndex'), {
+      totalUsers: users.length,
+      birthdays,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error actualitzant usersIndex:', error);
+  }
+};
+
+
 // ── Hook lleuger: SENSE sessions ────────────────────────────────────────────
 // Usa aquest hook a: Index.tsx, Users.tsx, UserFormModal, components/Users.tsx
 
@@ -230,7 +253,11 @@ export const useUsers = () => {
       const dataToSave = prepareDataForFirestore(userData);
       const docRef = await addDoc(collection(db, 'users'), dataToSave);
       const newUser = processUserDoc(docRef.id, dataToSave, false) as User;
-      setUsers(prev => [...prev, newUser]);
+      setUsers(prev => {
+        const updatedUsers = [...prev, newUser];
+        updateUsersIndex(updatedUsers);
+        return updatedUsers;
+      });
       toast.success('Usuari afegit correctament');
     } catch (error) {
       console.error('Error adding user:', error);
@@ -243,9 +270,13 @@ export const useUsers = () => {
     try {
       const dataToSave = prepareDataForFirestore(userData);
       await updateDoc(doc(db, 'users', id), dataToSave);
-      setUsers(prev => prev.map(u =>
-        u.id === id ? { ...u, ...processUserDoc(id, { ...u, ...dataToSave }, false) } : u
-      ));
+      setUsers(prev => {
+        const updatedUsers = prev.map(u =>
+          u.id === id ? { ...u, ...processUserDoc(id, { ...u, ...dataToSave }, false) } : u
+        );
+        updateUsersIndex(updatedUsers);
+        return updatedUsers;
+      });
       toast.success('Usuari actualitzat correctament');
     } catch (error) {
       console.error('Error updating user:', error);
@@ -257,7 +288,11 @@ export const useUsers = () => {
   const deleteUser = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'users', id));
-      setUsers(prev => prev.filter(u => u.id !== id));
+      setUsers(prev => {
+        const updatedUsers = prev.filter(u => u.id !== id);
+        updateUsersIndex(updatedUsers);
+        return updatedUsers;
+      });
       toast.success('Usuari eliminat correctament');
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -265,9 +300,6 @@ export const useUsers = () => {
       throw error;
     }
   };
-
-  return { users, loading, addUser, updateUser, deleteUser };
-};
 
 // ── Hook usuari actual: AMB sessions (1 sola lectura!) ──────────────────────
 // Usa aquest hook a: UserIndex.tsx, UserStats.tsx, Badges.tsx
