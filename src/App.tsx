@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./components/Sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AchievementProvider } from "@/contexts/AchievementContext";
+import { AppDataProvider } from "@/contexts/AppDataContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ViewProtectedRoute } from "@/components/ViewProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
@@ -199,7 +200,8 @@ const AppRoutes = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <AchievementProvider>
+      <AppDataProvider>
+        <AchievementProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -208,6 +210,7 @@ const App = () => (
           </BrowserRouter>
         </TooltipProvider>
       </AchievementProvider>
+      </AppDataProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
