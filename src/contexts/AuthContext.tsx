@@ -55,21 +55,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Cerca i vincula el document de 'users' amb el perfil autenticat (primera vegada)
   const linkFirestoreUserId = async (email: string, uid: string) => {
     try {
+      // Primer intentem llegir el document amb el mateix ID que l'uid de Firebase Auth
+      // (cas comú si s'han creat els usuaris amb el mateix ID)
+      const directSnap = await getDoc(doc(db, 'users', uid));
+      if (directSnap.exists()) {
+        const foundId = uid;
+        setFirestoreUserId(foundId);
+        await updateDoc(doc(db, 'userProfiles', uid), { firestoreUserId: foundId });
+        setFirestoreUserIdResolved(true);
+        return;
+      }
+  
+      // Si no, cal fer la query per email — però només una vegada,
+      // després es guarda per sempre i no es torna a fer mai més
       const q = query(collection(db, 'users'), where('email', '==', email));
       const snapshot = await getDocs(q);
-
       if (!snapshot.empty) {
         const foundId = snapshot.docs[0].id;
         setFirestoreUserId(foundId);
-
-        // Guardem l'ID al userProfile perquè les properes vegades no calgui la query
-        // Nota: això dispararà un nou onSnapshot, però com que data.firestoreUserId
-        // ja existirà, entrarà per la branca ràpida i no tornarà a fer la query
-        await updateDoc(doc(db, 'userProfiles', uid), {
-          firestoreUserId: foundId
-        });
+        await updateDoc(doc(db, 'userProfiles', uid), { firestoreUserId: foundId });
       } else {
-        // L'usuari té compte però encara no té document a 'users' (no s'ha importat)
         setFirestoreUserId(null);
       }
     } catch (error) {
