@@ -23,7 +23,7 @@ import { DayInfoModalReadOnly } from "@/components/DayInfoModalReadOnly";
 // Hooks
 import { useSettings } from "@/hooks/useSettings";
 import { useSchedules } from "@/hooks/useSchedules";
-import { useUsers } from "@/hooks/useUsers";
+import { useUsersIndex } from "@/hooks/useUsersIndex";
 import { usePrograms } from "@/hooks/usePrograms";
 import { useProgramColors } from "@/hooks/useProgramColors";
 
@@ -125,7 +125,7 @@ const Index = () => {
 
   const { vacations, closuresArbucies, closuresSantHilari, officialHolidays } = useSettings();
   const { schedules } = useSchedules();
-  const { users } = useUsers();
+  const { totalUsers, birthdays, loading: usersLoading } = useUsersIndex();
   const { getAllActivePrograms, loading: programsLoading } = usePrograms();
   const { getProgramColor, getProgramName } = useProgramColors();
 
@@ -314,7 +314,7 @@ const Index = () => {
     const currentYear = today.getFullYear();
     const birthdays: Birthday[] = [];
 
-    users.forEach(user => {
+    birthdays.forEach(user => {
       const birthdayParts = user.birthday.toString().split('/');
       if (birthdayParts.length !== 3) return;
 
@@ -601,7 +601,7 @@ const Index = () => {
                 Usuaris actius
               </p>
               <p className="text-2xl font-bold text-accent">
-                {users.length}
+                {totalUsers}
               </p>
             </div>
           </div>
