@@ -299,7 +299,10 @@ export const useUsers = () => {
       toast.error('Error al eliminar usuari');
       throw error;
     }
-  };
+ };
+
+  return { users, loading, addUser, updateUser, deleteUser };
+};
 
 // ── Hook usuari actual: AMB sessions (1 sola lectura!) ──────────────────────
 // Usa aquest hook a: UserIndex.tsx, UserStats.tsx, Badges.tsx
