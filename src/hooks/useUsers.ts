@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, Timestamp, setDoc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, Timestamp, setDoc, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { toast } from 'sonner';
 
@@ -258,6 +258,26 @@ export const useUsers = () => {
         updateUsersIndex(updatedUsers);
         return updatedUsers;
       });
+  
+      // Si ja existeix un userProfile amb aquest email, vincular l'ID immediatament
+      // Això evita la query costosa de 628 lectures al primer login
+      if (userData.email) {
+        try {
+          const q = query(
+            collection(db, 'userProfiles'),
+            where('email', '==', userData.email)
+          );
+          const profileSnap = await getDocs(q);
+          if (!profileSnap.empty) {
+            await updateDoc(doc(db, 'userProfiles', profileSnap.docs[0].id), {
+              firestoreUserId: docRef.id,
+            });
+          }
+        } catch (linkError) {
+          console.warn('No s\'ha pogut vincular firestoreUserId automàticament:', linkError);
+        }
+      }
+  
       toast.success('Usuari afegit correctament');
     } catch (error) {
       console.error('Error adding user:', error);
