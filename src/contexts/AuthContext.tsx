@@ -56,19 +56,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Cerca i vincula el document de 'users' amb el perfil autenticat (primera vegada)
   const linkFirestoreUserId = async (email: string, uid: string) => {
     try {
-      // Primer intentem llegir el document amb el mateix ID que l'uid de Firebase Auth
-      // (cas comú si s'han creat els usuaris amb el mateix ID)
+      // Primer provem si el document té el mateix ID que l'uid
       const directSnap = await getDoc(doc(db, 'users', uid));
       if (directSnap.exists()) {
-        const foundId = uid;
-        setFirestoreUserId(foundId);
-        await updateDoc(doc(db, 'userProfiles', uid), { firestoreUserId: foundId });
+        setFirestoreUserId(uid);
+        await updateDoc(doc(db, 'userProfiles', uid), { firestoreUserId: uid });
         setFirestoreUserIdResolved(true);
         return;
       }
   
-      // Si no, cal fer la query per email — però només una vegada,
-      // després es guarda per sempre i no es torna a fer mai més
+      // Si no, busquem per email però guardem el resultat per sempre
+      // Aquesta query costosa només es fa UNA SOLA VEGADA per usuari
       const q = query(collection(db, 'users'), where('email', '==', email));
       const snapshot = await getDocs(q);
       if (!snapshot.empty) {
