@@ -65,7 +65,7 @@ const getMenuItems = (viewMode: 'instructor' | 'user' | 'superadmin') => {
 };
 
 export const AppSidebar = () => {
-  const { state } = useSidebar();
+  const { state, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
   const { currentUser, logout, viewMode, setViewMode } = useAuth();
   const { userProfile, updateProfile } = useAuth();
@@ -156,6 +156,7 @@ export const AppSidebar = () => {
                     <SidebarMenuButton asChild>
                       <NavLink
                         to={item.path}
+                        onClick={() => setOpenMobile(false)}
                         className={({ isActive }) =>
                           `flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                             isActive
