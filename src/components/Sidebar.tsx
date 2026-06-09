@@ -13,7 +13,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { useUserProfile } from "@/hooks/useUserProfile";
 import { ROLE_NAMES } from "@/types/user";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -69,7 +68,7 @@ export const AppSidebar = () => {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const { currentUser, logout, viewMode, setViewMode } = useAuth();
-  const { userProfile, updateProfile } = useUserProfile();
+  const { userProfile, updateProfile } = useAuth();
   const navigate = useNavigate();
 
   const menuItems = getMenuItems(viewMode);
