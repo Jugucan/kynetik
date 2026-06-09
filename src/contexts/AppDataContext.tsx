@@ -55,6 +55,31 @@ export interface Subprogram {
   activationCount?: number;
 }
 
+export interface YearlyConfig {
+  workDays: number[];
+  availableVacationDays: number;
+}
+
+export interface LocalHoliday {
+  month: number;
+  day: number;
+  name: string;
+}
+
+export interface Center {
+  id: string;
+  name: string;
+  color: string;
+  isActive: boolean;
+  localHolidays: LocalHoliday[];
+  createdAt: string;
+  deactivatedAt?: string;
+  defaultConfig: YearlyConfig;
+  yearlyConfigs?: Record<number, YearlyConfig>;
+  workDays?: number[];
+  availableVacationDays?: number;
+}
+
 export interface Program {
   id: string;
   name: string;
@@ -150,6 +175,21 @@ interface AppDataContextType {
   createNewSchedule: (copyFrom?: Schedule) => Schedule;
   deactivateSchedule: (scheduleId: string) => void;
 
+  // Centers
+  centers: Center[];
+  activeCenters: Center[];
+  centersLoading: boolean;
+  saveCenters: (centers: Center[]) => Promise<void>;
+  addCenter: (center: Omit<Center, 'id' | 'createdAt'>) => Promise<Center>;
+  deactivateCenter: (centerId: string) => Promise<void>;
+  reactivateCenter: (centerId: string) => Promise<void>;
+  updateCenter: (centerId: string, updates: Partial<Center>) => Promise<void>;
+  updateCenterYearlyConfig: (centerId: string, fiscalYear: number, config: YearlyConfig) => Promise<void>;
+  deleteCenter: (centerId: string) => Promise<void>;
+  getCenterById: (centerId: string) => Center | undefined;
+  getCenterByLegacyId: (legacyId: 'Arbucies' | 'SantHilari') => Center | undefined;
+  getCenterConfig: (centerId: string, fiscalYear: number) => YearlyConfig;
+  
   // Programs
   programs: { [key: string]: Program };
   programsLoading: boolean;
@@ -182,6 +222,45 @@ export const useAppData = () => {
   return context;
 };
 
+const DEFAULT_CENTERS: Center[] = [
+  {
+    id: 'arbucies',
+    name: 'Arbúcies',
+    color: 'blue',
+    isActive: true,
+    localHolidays: [{ month: 7, day: 16, name: 'Festa Major Arbúcies' }],
+    createdAt: '2024-01-01',
+    defaultConfig: { workDays: [1, 2, 4], availableVacationDays: 13 },
+    yearlyConfigs: {},
+  },
+  {
+    id: 'sant-hilari',
+    name: 'Sant Hilari',
+    isActive: true,
+    color: 'green',
+    localHolidays: [{ month: 0, day: 13, name: 'Sant Hilari (Festa Major)' }],
+    createdAt: '2024-01-01',
+    defaultConfig: { workDays: [3, 5], availableVacationDays: 9 },
+    yearlyConfigs: {},
+  },
+];
+
+const migrateCenterToNewFormat = (center: any): Center => {
+  if (center.defaultConfig && center.yearlyConfigs !== undefined) {
+    return center as Center;
+  }
+  return {
+    ...center,
+    defaultConfig: {
+      workDays: center.workDays || [],
+      availableVacationDays: center.availableVacationDays || 0,
+    },
+    yearlyConfigs: {},
+    workDays: center.workDays,
+    availableVacationDays: center.availableVacationDays,
+  };
+};
+
 const DEFAULT_TRACKS: { [key: string]: string[] } = {
   'BP': ['Escalfament','Squats','Pit','Esquena','Bíceps/Tríceps','Lunge','Espatlles','Abdominals','Estiraments'],
   'BC': ['1A Escalfament tren superior','1B Escalfament tren inferior','Combat 1','Power Training 1','Combat 2','Power Training 2','Combat 3','Muay Thai','Power Training 3','Abdominals','Estiraments'],
@@ -201,16 +280,19 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
 
   const [programs, setPrograms] = useState<{ [key: string]: Program }>({});
   const [programsLoading, setProgramsLoading] = useState(true);
+  const [centers, setCenters] = useState<Center[]>([]);
+  const [centersLoading, setCentersLoading] = useState(true);
 
   // ── Càrrega inicial: UNA SOLA VEGADA per sessió ───────────────────────────
 
   useEffect(() => {
     const loadAll = async () => {
       try {
-        const [settingsSnap, schedulesSnap, programsSnap] = await Promise.all([
+        const [settingsSnap, schedulesSnap, programsSnap, centersSnap] = await Promise.all([
           getDoc(doc(db, 'settings', 'global')),
           getDoc(doc(db, 'settings', 'schedules')),
           getDocs(collection(db, 'programs')),
+          getDoc(doc(db, 'settings', 'centers')),
         ]);
 
         // Settings
@@ -249,6 +331,16 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         programsSnap.forEach((d) => { programsData[d.id] = processProgram(d.id, d.data()); });
         setPrograms(programsData);
         setProgramsLoading(false);
+
+        // Centers
+        if (centersSnap.exists()) {
+          const data = centersSnap.data();
+          setCenters((data.centers || []).map(migrateCenterToNewFormat));
+        } else {
+          await setDoc(doc(db, 'settings', 'centers'), { centers: DEFAULT_CENTERS });
+          setCenters(DEFAULT_CENTERS);
+        }
+        setCentersLoading(false);
 
       } catch (error) {
         console.error('Error carregant dades inicials:', error);
@@ -302,6 +394,67 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     saveSchedules(updated);
   }, [schedules]);
 
+  // ── Centers: funcions ─────────────────────────────────────────────────────
+
+  const saveCenters = async (newCenters: Center[]) => {
+    await setDoc(doc(db, 'settings', 'centers'), { centers: newCenters });
+    setCenters(newCenters);
+  };
+
+  const addCenter = async (centerData: Omit<Center, 'id' | 'createdAt'>): Promise<Center> => {
+    const id = centerData.name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const newCenter: Center = { ...centerData, id, createdAt: new Date().toISOString().split('T')[0], yearlyConfigs: {} };
+    await saveCenters([...centers, newCenter]);
+    return newCenter;
+  };
+
+  const deactivateCenter = async (centerId: string) => {
+    await saveCenters(centers.map(c =>
+      c.id === centerId ? { ...c, isActive: false, deactivatedAt: new Date().toISOString().split('T')[0] } : c
+    ));
+  };
+
+  const reactivateCenter = async (centerId: string) => {
+    await saveCenters(centers.map(c => {
+      if (c.id === centerId) { const { deactivatedAt, ...rest } = c; return { ...rest, isActive: true }; }
+      return c;
+    }));
+  };
+
+  const updateCenter = async (centerId: string, updates: Partial<Center>) => {
+    await saveCenters(centers.map(c => c.id === centerId ? { ...c, ...updates } : c));
+  };
+
+  const updateCenterYearlyConfig = async (centerId: string, fiscalYear: number, config: YearlyConfig) => {
+    await saveCenters(centers.map(c =>
+      c.id === centerId ? { ...c, yearlyConfigs: { ...c.yearlyConfigs, [fiscalYear]: config } } : c
+    ));
+  };
+
+  const deleteCenter = async (centerId: string) => {
+    await saveCenters(centers.filter(c => c.id !== centerId));
+  };
+
+  const getCenterById = useCallback((centerId: string) =>
+    centers.find(c => c.id === centerId), [centers]);
+
+  const getCenterByLegacyId = useCallback((legacyId: 'Arbucies' | 'SantHilari') => {
+    const mapping: Record<string, string> = { 'Arbucies': 'arbucies', 'SantHilari': 'sant-hilari' };
+    return centers.find(c => c.id === mapping[legacyId]);
+  }, [centers]);
+
+  const getCenterConfig = useCallback((centerId: string, fiscalYear: number): YearlyConfig => {
+    const center = getCenterById(centerId);
+    if (!center) return { workDays: [], availableVacationDays: 0 };
+    if (center.yearlyConfigs?.[fiscalYear]) return center.yearlyConfigs[fiscalYear];
+    return center.defaultConfig;
+  }, [centers, getCenterById]);
+  
   // ── Programs: helpers interns ─────────────────────────────────────────────
 
   // Actualitza els programs en memòria a partir d'un document modificat
@@ -511,6 +664,10 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AppDataContext.Provider value={{
       settings, settingsLoading, saveSettings,
+      centers, activeCenters: centers.filter(c => c.isActive), centersLoading,
+      saveCenters, addCenter, deactivateCenter, reactivateCenter,
+      updateCenter, updateCenterYearlyConfig, deleteCenter,
+      getCenterById, getCenterByLegacyId, getCenterConfig,
       schedules, schedulesLoading, saveSchedules, getActiveSchedule, createNewSchedule, deactivateSchedule,
       programs, programsLoading,
       addProgram, updateProgramName, updateProgramColor, toggleProgramActive,
