@@ -64,6 +64,7 @@ const Notes = () => {
   const [formCategory, setFormCategory] = useState("general");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [viewingNote, setViewingNote] = useState<Note | null>(null);
 
   // Carregar notes des de Firebase (lectura única)
   useEffect(() => {
@@ -307,6 +308,7 @@ const Notes = () => {
             return (
               <Card
                 key={note.id}
+                onClick={() => setViewingNote(note)}
                 className="p-4 shadow-neo hover:shadow-neo-sm transition-shadow cursor-pointer group"
               >
                 <div className="flex items-start justify-between mb-3">
@@ -317,7 +319,7 @@ const Notes = () => {
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => openEditDialog(note)}
+                      onClick={(e) => { e.stopPropagation(); openEditDialog(note); }}
                       className="h-8 w-8"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -325,10 +327,7 @@ const Notes = () => {
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => {
-                        setNoteToDelete(note);
-                        setIsDeleteDialogOpen(true);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); setNoteToDelete(note); setIsDeleteDialogOpen(true); }}
                       className="h-8 w-8 text-destructive"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -353,6 +352,46 @@ const Notes = () => {
           })}
         </div>
       )}
+      
+      {/* Dialog Lectura */}
+      <Dialog open={!!viewingNote} onOpenChange={(open) => { if (!open) setViewingNote(null); }}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <div className="flex items-center gap-2 mb-1">
+              {viewingNote && (
+                <Badge className={`${getCategoryInfo(viewingNote.category).color} text-white`}>
+                  {getCategoryInfo(viewingNote.category).label}
+                </Badge>
+              )}
+            </div>
+            <DialogTitle className="text-xl">{viewingNote?.title}</DialogTitle>
+            <DialogDescription className="flex items-center gap-1 text-xs">
+              <CalendarIcon className="w-3 h-3" />
+              {viewingNote && format(viewingNote.updatedAt, "dd MMM yyyy, HH:mm", { locale: ca })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 whitespace-pre-wrap text-sm leading-relaxed max-h-[60vh] overflow-y-auto">
+            {viewingNote?.content || <span className="text-muted-foreground italic">Sense contingut</span>}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setViewingNote(null)}
+              className="shadow-neo"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Tancar
+            </Button>
+            <Button
+              onClick={() => { setViewingNote(null); openEditDialog(viewingNote!); }}
+              className="shadow-neo"
+            >
+              <Edit2 className="w-4 h-4 mr-2" />
+              Editar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog Crear/Editar */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
