@@ -4,11 +4,15 @@ import { NeoCard } from "@/components/NeoCard";
 import { Button } from "@/components/ui/button";
 import { usePendingUsers } from "@/hooks/usePendingUsers";
 import { recalculateAllRankingsFromFirebase } from "@/utils/importUtils";
+import { collection, getDocs, updateDoc, doc, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { toast } from "sonner";
 
 const Superadmin = () => {
   const { pendingUsers, loading, approveUser, rejectUser } = usePendingUsers();
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationResult, setMigrationResult] = useState<string | null>(null);
 
   const handleRecalculateRankings = async () => {
     setIsRecalculating(true);
@@ -24,6 +28,61 @@ const Superadmin = () => {
       toast.error('Error recalculant rankings');
     } finally {
       setIsRecalculating(false);
+    }
+  };
+
+  const handleMigrateFirestoreIds = async () => {
+    setIsMigrating(true);
+    setMigrationResult(null);
+    try {
+      // 1. Llegir tots els perfils
+      const profilesSnap = await getDocs(collection(db, 'userProfiles'));
+      const profiles = profilesSnap.docs.map(d => ({ uid: d.id, ...d.data() })) as any[];
+
+      // 2. Filtrar els que no tenen firestoreUserId
+      const pending = profiles.filter(p => !p.firestoreUserId && p.email);
+      toast.info(`${pending.length} perfils sense ID vinculat. Processant...`);
+
+      if (pending.length === 0) {
+        setMigrationResult('✅ Tots els perfils ja tenen ID vinculat!');
+        return;
+      }
+
+      // 3. Per cada perfil pendent, buscar el document d'usuari per email
+      let linked = 0;
+      let notFound = 0;
+
+      for (const profile of pending) {
+        try {
+          const q = query(
+            collection(db, 'users'),
+            where('email', '==', profile.email)
+          );
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const firestoreUserId = snap.docs[0].id;
+            await updateDoc(doc(db, 'userProfiles', profile.uid), {
+              firestoreUserId,
+            });
+            linked++;
+          } else {
+            notFound++;
+          }
+        } catch (err) {
+          console.error('Error processant perfil:', profile.email, err);
+          notFound++;
+        }
+      }
+
+      const msg = `✅ Migració completada: ${linked} vinculats, ${notFound} no trobats.`;
+      setMigrationResult(msg);
+      toast.success(msg);
+
+    } catch (error) {
+      console.error('Error en la migració:', error);
+      toast.error('Error durant la migració');
+    } finally {
+      setIsMigrating(false);
     }
   };
 
@@ -115,6 +174,35 @@ const Superadmin = () => {
             </Button>
           </div>
         </NeoCard>
+        
+        <NeoCard>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shadow-neo-inset">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Vincular IDs d'usuaris</p>
+                <p className="text-sm text-muted-foreground">
+                  Vincula cada perfil d'autenticació amb el seu document d'usuari. Només cal fer-ho una vegada.
+                </p>
+                {migrationResult && (
+                  <p className="text-sm text-green-600 font-medium mt-1">{migrationResult}</p>
+                )}
+              </div>
+            </div>
+            <Button
+              onClick={handleMigrateFirestoreIds}
+              disabled={isMigrating}
+              variant="outline"
+              className="shadow-neo hover:shadow-neo-sm gap-2 border-blue-400 text-blue-700 hover:bg-blue-50 whitespace-nowrap"
+            >
+              <RefreshCw className={`w-4 h-4 ${isMigrating ? 'animate-spin' : ''}`} />
+              {isMigrating ? "Processant..." : "Vincular IDs"}
+            </Button>
+          </div>
+        </NeoCard>
+        
       </div>
 
       {/* Sol·licituds d'accés */}
