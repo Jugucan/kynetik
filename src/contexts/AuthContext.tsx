@@ -192,10 +192,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signup = async (email: string, password: string, data: RegisterData) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-
+  
     const displayName = `${data.firstName} ${data.lastName}`.trim();
     const profileRef = doc(db, 'userProfiles', user.uid);
-
+  
+    // Crear el perfil bàsic
     await setDoc(profileRef, {
       uid: user.uid,
       email: email,
@@ -209,9 +210,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       status: 'pending',
       createdAt: new Date(),
       updatedAt: new Date(),
-      // firestoreUserId s'afegirà automàticament quan faci login
-      // si el seu email ja existeix a la col·lecció 'users'
     });
+  
+    // Intentar vincular amb el document de 'users' si ja existeix
+    // Això evita la query costosa de 628 lectures al primer login
+    try {
+      const q = query(
+        collection(db, 'users'),
+        where('email', '==', email)
+      );
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const firestoreUserId = snapshot.docs[0].id;
+        await updateDoc(profileRef, { firestoreUserId });
+      }
+    } catch (linkError) {
+      console.warn('No s\'ha pogut vincular firestoreUserId al registre:', linkError);
+    }
   };
 
   const updateProfile = async (data: { displayName?: string; gender?: string | null }) => {
