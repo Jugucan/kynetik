@@ -5,7 +5,6 @@ import { useMemo, useRef, useEffect } from "react";
 import { Mail, Phone, Cake, MapPin, Award, Zap, Calendar, TrendingUp } from "lucide-react";
 import { useCurrentUserWithSessions } from "@/hooks/useUsers";
 import { useAuth } from "@/contexts/AuthContext";
-import { useUserProfile } from "@/hooks/useUserProfile";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { getBenvingut } from "@/utils/genderHelpers";
@@ -37,7 +36,7 @@ function getDisciplineEmoji(score: number): string {
 
 const UserIndex = () => {
   const { firestoreUserId } = useAuth();
-  const { userProfile } = useUserProfile();
+  const { userProfile } = useAuth();
   const { user: currentUserData, loading } = useCurrentUserWithSessions(firestoreUserId);
   const { triggerAchievement } = useAchievement();
 
