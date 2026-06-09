@@ -23,6 +23,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (data: { displayName?: string; gender?: string | null }) => Promise<void>;
   userStatus: UserStatus | null;
   firestoreUserId: string | null; // ID del document a la col·lecció 'users'
 }
@@ -215,6 +216,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const updateProfile = async (data: { displayName?: string; gender?: string | null }) => {
+    if (!currentUser) return;
+    await updateDoc(doc(db, 'userProfiles', currentUser.uid), {
+      ...data,
+      updatedAt: new Date(),
+    });
+  };
+  
   const logout = async () => {
     if (profileUnsubscribeRef.current) {
       profileUnsubscribeRef.current();
@@ -236,6 +245,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     login,
     signup,
     logout,
+    updateProfile,
     userStatus,
     firestoreUserId,
   };
