@@ -3,7 +3,8 @@ import { NeoCard } from "@/components/NeoCard";
 import { Users as UsersIcon, Search, Plus, Upload, Info, MapPin, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useUsers, User } from "@/hooks/useUsers"; 
+import { useUsers, User } from "@/hooks/useUsers";
+import { useAppData } from "@/contexts/AppDataContext"; 
 import { useCenters } from "@/hooks/useCenters";
 import { UserFormModal } from "@/components/UserFormModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -17,7 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { normalizeCenterName } from "@/utils/importUtils";
 
 const Users = () => {
-  const { users, loading, addUser, updateUser, deleteUser } = useUsers();
+  const { appUsers: usersFromContext } = useAppData();
+  const { loading, addUser, updateUser, deleteUser } = useUsers();
+  const users = usersFromContext as unknown as User[];
   const { centers } = useCenters();
   const [searchQuery, setSearchQuery] = useState("");
   const [centerFilter, setCenterFilter] = useState<string>("all"); 
