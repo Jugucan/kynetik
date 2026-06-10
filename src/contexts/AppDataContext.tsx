@@ -55,43 +55,6 @@ export interface Subprogram {
   activationCount?: number;
 }
 
-export interface UserSession {
-  date: string;
-  activity: string;
-  time: string;
-  sala: string;
-  center: string;
-}
-
-export interface RankingCache {
-  totalSessions: { rank: number; total: number; percentile: number };
-  programs: { [program: string]: { rank: number; total: number; percentile: number } };
-  updatedAt: string;
-}
-
-export interface AppUser {
-  id: string;
-  name: string;
-  email: string;
-  center: string;
-  birthday: string;
-  age: number;
-  phone: string;
-  avatar: string;
-  preferredPrograms: string[];
-  profileImageUrl: string;
-  notes: string;
-  totalSessions?: number;
-  firstSession?: string;
-  lastSession?: string;
-  daysSinceLastSession?: number;
-  rankingCache?: RankingCache;
-}
-
-export interface AppUserWithSessions extends AppUser {
-  sessions: UserSession[];
-}
-
 export interface YearlyConfig {
   workDays: number[];
   availableVacationDays: number;
@@ -212,14 +175,6 @@ interface AppDataContextType {
   createNewSchedule: (copyFrom?: Schedule) => Schedule;
   deactivateSchedule: (scheduleId: string) => void;
 
-  // Users (lleugers)
-  appUsers: AppUser[];
-  appUsersLoading: boolean;
-  // Users (pesats, amb sessions — càrrega lazy)
-  appUsersWithSessions: AppUserWithSessions[];
-  appUsersWithSessionsLoading: boolean;
-  loadUsersWithSessions: () => Promise<void>;
-  
   // Centers
   centers: Center[];
   activeCenters: Center[];
@@ -327,23 +282,17 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
   const [programsLoading, setProgramsLoading] = useState(true);
   const [centers, setCenters] = useState<Center[]>([]);
   const [centersLoading, setCentersLoading] = useState(true);
-  const [appUsers, setAppUsers] = useState<AppUser[]>([]);
-  const [appUsersLoading, setAppUsersLoading] = useState(true);
-  const [appUsersWithSessions, setAppUsersWithSessions] = useState<AppUserWithSessions[]>([]);
-  const [appUsersWithSessionsLoading, setAppUsersWithSessionsLoading] = useState(false);
-  const [usersWithSessionsLoaded, setUsersWithSessionsLoaded] = useState(false);
 
   // ── Càrrega inicial: UNA SOLA VEGADA per sessió ───────────────────────────
 
   useEffect(() => {
     const loadAll = async () => {
       try {
-        const [settingsSnap, schedulesSnap, programsSnap, centersSnap, usersSnap] = await Promise.all([
+        const [settingsSnap, schedulesSnap, programsSnap, centersSnap] = await Promise.all([
           getDoc(doc(db, 'settings', 'global')),
           getDoc(doc(db, 'settings', 'schedules')),
           getDocs(collection(db, 'programs')),
           getDoc(doc(db, 'settings', 'centers')),
-          getDocs(collection(db, 'users')),
         ]);
 
         // Settings
@@ -392,38 +341,6 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
           setCenters(DEFAULT_CENTERS);
         }
         setCentersLoading(false);
-
-        // Users lleugers (sense sessions)
-        const usersData: AppUser[] = usersSnap.docs.map(d => {
-          const data = d.data();
-          const lastSessionStr = data.lastSession || '';
-          const daysSinceLastSessionLive = (() => {
-            if (!lastSessionStr) return 0;
-            const lastDate = new Date(lastSessionStr);
-            if (isNaN(lastDate.getTime())) return 0;
-            return Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-          })();
-          return {
-            id: d.id,
-            name: data.name || '',
-            email: data.email || '',
-            center: data.center || '',
-            birthday: data.birthday || '',
-            age: data.age || 0,
-            phone: data.phone || '',
-            avatar: data.avatar || '',
-            preferredPrograms: Array.isArray(data.preferredPrograms) ? data.preferredPrograms : [],
-            profileImageUrl: data.profileImageUrl || '',
-            notes: data.notes || '',
-            totalSessions: data.totalSessions || 0,
-            firstSession: data.firstSession || '',
-            lastSession: lastSessionStr,
-            daysSinceLastSession: daysSinceLastSessionLive,
-            rankingCache: data.rankingCache || null,
-          };
-        });
-        setAppUsers(usersData);
-        setAppUsersLoading(false);
 
       } catch (error) {
         console.error('Error carregant dades inicials:', error);
@@ -477,52 +394,6 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     saveSchedules(updated);
   }, [schedules]);
 
-  // ── Users: càrrega lazy amb sessions ─────────────────────────────────────
-
-  const loadUsersWithSessions = useCallback(async () => {
-    if (usersWithSessionsLoaded || appUsersWithSessionsLoading) return;
-    setAppUsersWithSessionsLoading(true);
-    try {
-      const snapshot = await getDocs(collection(db, 'users'));
-      const usersData: AppUserWithSessions[] = snapshot.docs.map(d => {
-        const data = d.data();
-        const sessions = Array.isArray(data.sessions) ? data.sessions : [];
-        const lastSessionStr = data.lastSession || '';
-        const daysSinceLastSessionLive = (() => {
-          if (!lastSessionStr) return 0;
-          const lastDate = new Date(lastSessionStr);
-          if (isNaN(lastDate.getTime())) return 0;
-          return Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-        })();
-        return {
-          id: d.id,
-          name: data.name || '',
-          email: data.email || '',
-          center: data.center || '',
-          birthday: data.birthday || '',
-          age: data.age || 0,
-          phone: data.phone || '',
-          avatar: data.avatar || '',
-          preferredPrograms: Array.isArray(data.preferredPrograms) ? data.preferredPrograms : [],
-          profileImageUrl: data.profileImageUrl || '',
-          notes: data.notes || '',
-          totalSessions: sessions.length || data.totalSessions || 0,
-          firstSession: data.firstSession || '',
-          lastSession: lastSessionStr,
-          daysSinceLastSession: daysSinceLastSessionLive,
-          rankingCache: data.rankingCache || null,
-          sessions,
-        };
-      });
-      setAppUsersWithSessions(usersData);
-      setUsersWithSessionsLoaded(true);
-    } catch (error) {
-      console.error('Error carregant usuaris amb sessions:', error);
-    } finally {
-      setAppUsersWithSessionsLoading(false);
-    }
-  }, [usersWithSessionsLoaded, appUsersWithSessionsLoading]);
-  
   // ── Centers: funcions ─────────────────────────────────────────────────────
 
   const saveCenters = async (newCenters: Center[]) => {
@@ -792,8 +663,6 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AppDataContext.Provider value={{
-      appUsers, appUsersLoading,
-      appUsersWithSessions, appUsersWithSessionsLoading, loadUsersWithSessions,
       settings, settingsLoading, saveSettings,
       centers, activeCenters: centers.filter(c => c.isActive), centersLoading,
       saveCenters, addCenter, deactivateCenter, reactivateCenter,
