@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { BarChart3 } from "lucide-react";
-import { useAppData } from "@/contexts/AppDataContext";
+import { useUsersWithSessions as useUsers } from "@/hooks/useUsers";
 import { useSettings } from "@/hooks/useSettings";
 import { useSchedules } from "@/hooks/useSchedules";
 import { useCenters } from "@/hooks/useCenters";
@@ -24,7 +24,7 @@ import UserStats from "./UserStats";
 
 const StatsNew = () => {
   const { viewMode } = useAuth();
-  const { appUsersWithSessions: users, appUsersWithSessionsLoading: usersLoading, loadUsersWithSessions } = useAppData();
+  const { users, loading: usersLoading } = useUsers();
   const { vacations, closuresByCenter, officialHolidays, loading: settingsLoading } = useSettings();
   const { schedules, loading: schedulesLoading } = useSchedules();
   const { activeCenters, loading: centersLoading } = useCenters();
@@ -34,10 +34,6 @@ const StatsNew = () => {
   const [viewingUser, setViewingUser] = useState<any>(null);
   const [customSessions, setCustomSessions] = useState<Record<string, Session[]>>({});
 
-  useEffect(() => {
-    loadUsersWithSessions();
-  }, []);
-  
   const loading = usersLoading || settingsLoading || schedulesLoading || centersLoading;
 
   useEffect(() => {
