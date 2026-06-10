@@ -1,7 +1,6 @@
 import { Calendar, TrendingUp, Award, Clock, Info, TrendingDown, Minus, BarChart3, ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import { useCurrentUserWithSessions } from "@/hooks/useUsers";
 import { useAuth } from "@/contexts/AuthContext";
-import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { calculateAdvancedStats, calculateYearlyTrend } from '@/utils/advancedStats';
@@ -19,7 +18,7 @@ import {
 
 const UserStats = () => {
   const { firestoreUserId } = useAuth();
-  const { userProfile } = useUserProfile();
+  const { userProfile } = useAuth();
   const { user: currentUserData, loading } = useCurrentUserWithSessions(firestoreUserId);
   const [isMonthlyFrequencyOpen, setIsMonthlyFrequencyOpen] = useState(false);
   const [isHistorialOpen, setIsHistorialOpen] = useState(false);
