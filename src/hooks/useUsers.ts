@@ -223,26 +223,50 @@ const updateUsersIndex = async (users: User[]) => {
 };
 
 
+// ── Caché en memòria per a la sessió actual ─────────────────────────────────
+let usersCache: User[] | null = null;
+let usersCacheLoading = false;
+let usersCacheCallbacks: Array<(users: User[]) => void> = [];
+
 // ── Hook lleuger: SENSE sessions ────────────────────────────────────────────
 // Usa aquest hook a: Index.tsx, Users.tsx, UserFormModal, components/Users.tsx
 
 export const useUsers = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<User[]>(usersCache || []);
+  const [loading, setLoading] = useState(usersCache === null);
 
   useEffect(() => {
+    if (usersCache !== null) {
+      setUsers(usersCache);
+      setLoading(false);
+      return;
+    }
+
+    if (usersCacheLoading) {
+      usersCacheCallbacks.push((cachedUsers) => {
+        setUsers(cachedUsers);
+        setLoading(false);
+      });
+      return;
+    }
+
+    usersCacheLoading = true;
     const fetchUsers = async () => {
       try {
         const snapshot = await getDocs(collection(db, 'users'));
         const usersData = snapshot.docs.map(doc =>
           processUserDoc(doc.id, doc.data(), false)
         ) as User[];
+        usersCache = usersData;
         setUsers(usersData);
+        usersCacheCallbacks.forEach(cb => cb(usersData));
+        usersCacheCallbacks = [];
       } catch (error) {
         console.error('Error fetching users:', error);
         toast.error('Error al carregar usuaris');
       } finally {
         setLoading(false);
+        usersCacheLoading = false;
       }
     };
     fetchUsers();
@@ -253,14 +277,11 @@ export const useUsers = () => {
       const dataToSave = prepareDataForFirestore(userData);
       const docRef = await addDoc(collection(db, 'users'), dataToSave);
       const newUser = processUserDoc(docRef.id, dataToSave, false) as User;
-      setUsers(prev => {
-        const updatedUsers = [...prev, newUser];
-        updateUsersIndex(updatedUsers);
-        return updatedUsers;
-      });
-  
-      // Si ja existeix un userProfile amb aquest email, vincular l'ID immediatament
-      // Això evita la query costosa de 628 lectures al primer login
+      const updatedUsers = [...(usersCache || []), newUser];
+      usersCache = updatedUsers;
+      setUsers(updatedUsers);
+      updateUsersIndex(updatedUsers);
+
       if (userData.email) {
         try {
           const q = query(
@@ -277,7 +298,7 @@ export const useUsers = () => {
           console.warn('No s\'ha pogut vincular firestoreUserId automàticament:', linkError);
         }
       }
-  
+
       toast.success('Usuari afegit correctament');
     } catch (error) {
       console.error('Error adding user:', error);
@@ -290,13 +311,12 @@ export const useUsers = () => {
     try {
       const dataToSave = prepareDataForFirestore(userData);
       await updateDoc(doc(db, 'users', id), dataToSave);
-      setUsers(prev => {
-        const updatedUsers = prev.map(u =>
-          u.id === id ? { ...u, ...processUserDoc(id, { ...u, ...dataToSave }, false) } : u
-        );
-        updateUsersIndex(updatedUsers);
-        return updatedUsers;
-      });
+      const updatedUsers = (usersCache || []).map(u =>
+        u.id === id ? { ...u, ...processUserDoc(id, { ...u, ...dataToSave }, false) } : u
+      );
+      usersCache = updatedUsers;
+      setUsers(updatedUsers);
+      updateUsersIndex(updatedUsers);
       toast.success('Usuari actualitzat correctament');
     } catch (error) {
       console.error('Error updating user:', error);
@@ -308,18 +328,17 @@ export const useUsers = () => {
   const deleteUser = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'users', id));
-      setUsers(prev => {
-        const updatedUsers = prev.filter(u => u.id !== id);
-        updateUsersIndex(updatedUsers);
-        return updatedUsers;
-      });
+      const updatedUsers = (usersCache || []).filter(u => u.id !== id);
+      usersCache = updatedUsers;
+      setUsers(updatedUsers);
+      updateUsersIndex(updatedUsers);
       toast.success('Usuari eliminat correctament');
     } catch (error) {
       console.error('Error deleting user:', error);
       toast.error('Error al eliminar usuari');
       throw error;
     }
- };
+  };
 
   return { users, loading, addUser, updateUser, deleteUser };
 };
