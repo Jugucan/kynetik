@@ -340,12 +340,15 @@ const Index = () => {
         }
 
         const dateString = `${day} ${getMonthName(month)}`;
+        const birthYear = parseInt(birthdayParts[2], 10);
+        const calculatedAge = currentYear - birthYear -
+          (new Date() < new Date(currentYear, month, day) ? 1 : 0);
 
         result.push({
           name: user.name,
           date: dateString,
           status: status,
-          age: user.age,
+          age: calculatedAge,
           center: user.center,
           photo: user.profileImageUrl || user.avatar || 
                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`,
