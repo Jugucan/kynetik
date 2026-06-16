@@ -192,6 +192,53 @@ function hasDoubleMorningEvening(sessions: Session[]): boolean {
   return Object.values(byWeek).some(w => w.morning && w.evening);
 }
 
+function countMorningClasses(sessions: Session[]): number {
+  return sessions.filter(s => s.time && parseInt(s.time.split(':')[0], 10) < 12).length;
+}
+
+function countEveningClasses(sessions: Session[]): number {
+  return sessions.filter(s => s.time && parseInt(s.time.split(':')[0], 10) >= 20).length;
+}
+
+function countDoubleMorningEveningWeeks(sessions: Session[]): number {
+  const byWeek: Record<string, { morning: boolean; evening: boolean }> = {};
+  for (const s of sessions) {
+    if (!s.time) continue;
+    const hour = parseInt(s.time.split(':')[0], 10);
+    const wk = getWeekKey(new Date(s.date));
+    if (!byWeek[wk]) byWeek[wk] = { morning: false, evening: false };
+    if (hour < 12) byWeek[wk].morning = true;
+    if (hour >= 17) byWeek[wk].evening = true;
+  }
+  return Object.values(byWeek).filter(w => w.morning && w.evening).length;
+}
+
+function calcMaxConsecutiveDays(sessions: Session[]): number {
+  if (sessions.length < 2) return sessions.length;
+  const days = Array.from(new Set(sessions.map(s => {
+    const d = new Date(s.date);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }))).sort();
+  let max = 1, cur = 1;
+  for (let i = 1; i < days.length; i++) {
+    const diff = (new Date(days[i]).getTime() - new Date(days[i-1]).getTime()) / 86400000;
+    cur = diff === 1 ? cur + 1 : 1;
+    if (cur > max) max = cur;
+  }
+  return max;
+}
+
+function countWeeksWithMinDays(sessions: Session[], minDays: number): number {
+  const byWeek: Record<string, Set<string>> = {};
+  for (const s of sessions) {
+    const d = new Date(s.date);
+    const wk = getWeekKey(d);
+    if (!byWeek[wk]) byWeek[wk] = new Set();
+    byWeek[wk].add(getDayKey(d));
+  }
+  return Object.values(byWeek).filter(days => days.size >= minDays).length;
+}
+
 function hasMorningClass(sessions: Session[]): boolean {
   return sessions.some(s => s.time && parseInt(s.time.split(':')[0], 10) < 12);
 }
@@ -569,21 +616,75 @@ export function calculateBadges(
       // EXPLORACIÓ: HORARIS
       case 'exp_matidora':
         earned = hasMorningClass(sessions);
-        progress = earned ? 100 : 0;
-        progressLabel = earned ? 'Completat!' : 'Vine a una classe abans de les 12h';
+        progress = Math.min(100, Math.round((countMorningClasses(sessions) / 1) * 100));
+        progressLabel = `${countMorningClasses(sessions)} / 1 classe de matí`;
         if (earned) earnedAt = findEarnedDate(sessions, s => hasMorningClass(s));
+        break;
+      case 'exp_matidora_plata':
+        earned = countMorningClasses(sessions) >= 5;
+        progress = Math.min(100, Math.round((countMorningClasses(sessions) / 5) * 100));
+        progressLabel = `${countMorningClasses(sessions)} / 5 classes de matí`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countMorningClasses(s) >= 5);
+        break;
+      case 'exp_matidora_or':
+        earned = countMorningClasses(sessions) >= 10;
+        progress = Math.min(100, Math.round((countMorningClasses(sessions) / 10) * 100));
+        progressLabel = `${countMorningClasses(sessions)} / 10 classes de matí`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countMorningClasses(s) >= 10);
+        break;
+      case 'exp_matidora_diamant':
+        earned = countMorningClasses(sessions) >= 20;
+        progress = Math.min(100, Math.round((countMorningClasses(sessions) / 20) * 100));
+        progressLabel = `${countMorningClasses(sessions)} / 20 classes de matí`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countMorningClasses(s) >= 20);
         break;
       case 'exp_vespre':
         earned = hasEveningClass(sessions);
-        progress = earned ? 100 : 0;
-        progressLabel = earned ? 'Completat!' : 'Vine a una classe a les 20h o més tard';
+        progress = Math.min(100, Math.round((countEveningClasses(sessions) / 1) * 100));
+        progressLabel = `${countEveningClasses(sessions)} / 1 classe de vespre`;
         if (earned) earnedAt = findEarnedDate(sessions, s => hasEveningClass(s));
         break;
-      case 'exp_doble':
+      case 'exp_vespre_plata':
+        earned = countEveningClasses(sessions) >= 5;
+        progress = Math.min(100, Math.round((countEveningClasses(sessions) / 5) * 100));
+        progressLabel = `${countEveningClasses(sessions)} / 5 classes de vespre`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countEveningClasses(s) >= 5);
+        break;
+      case 'exp_vespre_or':
+        earned = countEveningClasses(sessions) >= 10;
+        progress = Math.min(100, Math.round((countEveningClasses(sessions) / 10) * 100));
+        progressLabel = `${countEveningClasses(sessions)} / 10 classes de vespre`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countEveningClasses(s) >= 10);
+        break;
+      case 'exp_vespre_diamant':
+        earned = countEveningClasses(sessions) >= 20;
+        progress = Math.min(100, Math.round((countEveningClasses(sessions) / 20) * 100));
+        progressLabel = `${countEveningClasses(sessions)} / 20 classes de vespre`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countEveningClasses(s) >= 20);
+        break;
+      case 'exp_doble_bronze':
         earned = hasDoubleMorningEvening(sessions);
-        progress = earned ? 100 : 0;
-        progressLabel = earned ? 'Completat!' : 'Vine de matí i de tarda la mateixa setmana';
+        progress = Math.min(100, Math.round((countDoubleMorningEveningWeeks(sessions) / 1) * 100));
+        progressLabel = `${countDoubleMorningEveningWeeks(sessions)} / 1 setmana`;
         if (earned) earnedAt = findEarnedDate(sessions, s => hasDoubleMorningEvening(s));
+        break;
+      case 'exp_doble':
+        earned = countDoubleMorningEveningWeeks(sessions) >= 3;
+        progress = Math.min(100, Math.round((countDoubleMorningEveningWeeks(sessions) / 3) * 100));
+        progressLabel = `${countDoubleMorningEveningWeeks(sessions)} / 3 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countDoubleMorningEveningWeeks(s) >= 3);
+        break;
+      case 'exp_doble_or':
+        earned = countDoubleMorningEveningWeeks(sessions) >= 6;
+        progress = Math.min(100, Math.round((countDoubleMorningEveningWeeks(sessions) / 6) * 100));
+        progressLabel = `${countDoubleMorningEveningWeeks(sessions)} / 6 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countDoubleMorningEveningWeeks(s) >= 6);
+        break;
+      case 'exp_doble_diamant':
+        earned = countDoubleMorningEveningWeeks(sessions) >= 12;
+        progress = Math.min(100, Math.round((countDoubleMorningEveningWeeks(sessions) / 12) * 100));
+        progressLabel = `${countDoubleMorningEveningWeeks(sessions)} / 12 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countDoubleMorningEveningWeeks(s) >= 12);
         break;
 
       // EXPLORACIÓ: VARIETAT
@@ -626,23 +727,77 @@ export function calculateBadges(
         break;
 
       // EXPLORACIÓ: INTENSITAT
-      case 'exp_3dies_seguits':
+      case 'exp_3dies_seguits_bronze':
         earned = hasThreeConsecutiveDays(sessions);
-        progress = earned ? 100 : 0;
-        progressLabel = earned ? 'Completat!' : 'Vine 3 dies seguits';
+        progress = Math.min(100, Math.round((calcMaxConsecutiveDays(sessions) / 3) * 100));
+        progressLabel = `${calcMaxConsecutiveDays(sessions)} / 3 dies seguits`;
         if (earned) earnedAt = findEarnedDate(sessions, s => hasThreeConsecutiveDays(s));
         break;
-      case 'exp_3dies_setmana':
+      case 'exp_3dies_seguits':
+        earned = calcMaxConsecutiveDays(sessions) >= 6;
+        progress = Math.min(100, Math.round((calcMaxConsecutiveDays(sessions) / 6) * 100));
+        progressLabel = `${calcMaxConsecutiveDays(sessions)} / 6 dies seguits`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => calcMaxConsecutiveDays(s) >= 6);
+        break;
+      case 'exp_3dies_seguits_or':
+        earned = calcMaxConsecutiveDays(sessions) >= 10;
+        progress = Math.min(100, Math.round((calcMaxConsecutiveDays(sessions) / 10) * 100));
+        progressLabel = `${calcMaxConsecutiveDays(sessions)} / 10 dies seguits`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => calcMaxConsecutiveDays(s) >= 10);
+        break;
+      case 'exp_3dies_seguits_diamant':
+        earned = calcMaxConsecutiveDays(sessions) >= 15;
+        progress = Math.min(100, Math.round((calcMaxConsecutiveDays(sessions) / 15) * 100));
+        progressLabel = `${calcMaxConsecutiveDays(sessions)} / 15 dies seguits`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => calcMaxConsecutiveDays(s) >= 15);
+        break;
+      case 'exp_3dies_setmana_bronze':
         earned = hasThreeDaysInOneWeek(sessions);
-        progress = earned ? 100 : 0;
-        progressLabel = earned ? 'Completat!' : 'Vine 3 dies en una mateixa setmana';
+        progress = Math.min(100, Math.round((countWeeksWithMinDays(sessions, 3) / 1) * 100));
+        progressLabel = `${countWeeksWithMinDays(sessions, 3)} / 1 setmana`;
         if (earned) earnedAt = findEarnedDate(sessions, s => hasThreeDaysInOneWeek(s));
         break;
-      case 'exp_5dies':
+      case 'exp_3dies_setmana':
+        earned = countWeeksWithMinDays(sessions, 3) >= 4;
+        progress = Math.min(100, Math.round((countWeeksWithMinDays(sessions, 3) / 4) * 100));
+        progressLabel = `${countWeeksWithMinDays(sessions, 3)} / 4 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countWeeksWithMinDays(s, 3) >= 4);
+        break;
+      case 'exp_3dies_setmana_or':
+        earned = countWeeksWithMinDays(sessions, 3) >= 10;
+        progress = Math.min(100, Math.round((countWeeksWithMinDays(sessions, 3) / 10) * 100));
+        progressLabel = `${countWeeksWithMinDays(sessions, 3)} / 10 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countWeeksWithMinDays(s, 3) >= 10);
+        break;
+      case 'exp_3dies_setmana_diamant':
+        earned = countWeeksWithMinDays(sessions, 3) >= 20;
+        progress = Math.min(100, Math.round((countWeeksWithMinDays(sessions, 3) / 20) * 100));
+        progressLabel = `${countWeeksWithMinDays(sessions, 3)} / 20 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countWeeksWithMinDays(s, 3) >= 20);
+        break;
+      case 'exp_5dies_bronze':
         earned = hasFiveDaysInOneWeek(sessions);
-        progress = earned ? 100 : 0;
-        progressLabel = earned ? 'Completat!' : 'Vine 5 dies laborables en una setmana';
+        progress = Math.min(100, Math.round((countWeeksWithMinDays(sessions, 5) / 1) * 100));
+        progressLabel = `${countWeeksWithMinDays(sessions, 5)} / 1 setmana`;
         if (earned) earnedAt = findEarnedDate(sessions, s => hasFiveDaysInOneWeek(s));
+        break;
+      case 'exp_5dies_plata':
+        earned = countWeeksWithMinDays(sessions, 5) >= 3;
+        progress = Math.min(100, Math.round((countWeeksWithMinDays(sessions, 5) / 3) * 100));
+        progressLabel = `${countWeeksWithMinDays(sessions, 5)} / 3 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countWeeksWithMinDays(s, 5) >= 3);
+        break;
+      case 'exp_5dies':
+        earned = countWeeksWithMinDays(sessions, 5) >= 6;
+        progress = Math.min(100, Math.round((countWeeksWithMinDays(sessions, 5) / 6) * 100));
+        progressLabel = `${countWeeksWithMinDays(sessions, 5)} / 6 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countWeeksWithMinDays(s, 5) >= 6);
+        break;
+      case 'exp_5dies_diamant':
+        earned = countWeeksWithMinDays(sessions, 5) >= 12;
+        progress = Math.min(100, Math.round((countWeeksWithMinDays(sessions, 5) / 12) * 100));
+        progressLabel = `${countWeeksWithMinDays(sessions, 5)} / 12 setmanes`;
+        if (earned) earnedAt = findEarnedDate(sessions, s => countWeeksWithMinDays(s, 5) >= 12);
         break;
 
       // ESPECIALS
