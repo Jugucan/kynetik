@@ -1,7 +1,6 @@
 import { useMemo, useEffect } from 'react';
 import { useCurrentUserWithSessions } from '@/hooks/useUsers';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserProfile } from '@/hooks/useUserProfile';
 import { usePrograms } from '@/hooks/usePrograms';
 import { calculateBadges } from '@/utils/badgeCalculations';
 import { calculateProgression } from '@/utils/progressionCalculations';
@@ -11,8 +10,7 @@ import { Trophy } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 const Badges = () => {
-  const { firestoreUserId } = useAuth();
-  const { userProfile } = useUserProfile();
+  const { firestoreUserId, userProfile } = useAuth();
   const { user: currentUserData, loading: loadingUser } = useCurrentUserWithSessions(firestoreUserId);
   const { programs, loading: loadingPrograms } = usePrograms();
 
