@@ -200,7 +200,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
     name: 'Nouvingut/da',
     nameFemeni: 'Nouvinguda',
     nameMasculi: 'Nouvingut',
-    description: 'Portes 1 mes amb nosaltres. Benvingut/da a la família!',
+    description: 'Portes 1 mes amb nosaltres. Tota una incorporació a la família!',
     descriptionFemeni: 'Portes 1 mes amb nosaltres. Benvinguda a la família!',
     descriptionMasculi: 'Portes 1 mes amb nosaltres. Benvingut a la família!',
     emoji: '🌱',
@@ -262,7 +262,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
     name: 'Veterà/na del Kynetik',
     nameFemeni: 'Veterana del Kynetik',
     nameMasculi: 'Veterà del Kynetik',
-    description: '5 anys al Kynetik. Un/a veritable veterà/na!',
+    description: '5 anys al Kynetik. Tota una figura veterana del centre!',
     descriptionFemeni: '5 anys al Kynetik. Una veritable veterana!',
     descriptionMasculi: '5 anys al Kynetik. Un veritable veterà!',
     emoji: '⭐',
@@ -326,7 +326,9 @@ export const ALL_BADGES: BadgeDefinition[] = [
     name: 'Matiner/a',
     nameFemeni: 'Matinera',
     nameMasculi: 'Matiner',
-    description: 'Has assistit a 20 classes abans de les 12h. Ets un/a autèntic/a matiner/a!',
+    description: 'Has assistit a 20 classes abans de les 12h. Tot un exemple de matinada!',
+    descriptionFemeni: 'Has assistit a 20 classes abans de les 12h. Tota una figura matinera!',
+    descriptionMasculi: 'Has assistit a 20 classes abans de les 12h. Tot un autèntic matiner!',
     emoji: '🌅',
     category: 'exploracio',
     subcategory: 'horaris',
@@ -380,7 +382,9 @@ export const ALL_BADGES: BadgeDefinition[] = [
     name: 'Nocturn/a',
     nameFemeni: 'Nocturna',
     nameMasculi: 'Nocturn',
-    description: 'Has assistit a 20 classes a partir de les 20h. Ets un/a autèntic/a nocturn/a!',
+    description: 'Has assistit a 20 classes a partir de les 20h. Tota una figura nocturna!',
+    descriptionFemeni: 'Has assistit a 20 classes a partir de les 20h. Tota una figura nocturna!',
+    descriptionMasculi: 'Has assistit a 20 classes a partir de les 20h. Tot un autèntic nocturn!',
     emoji: '🌙',
     category: 'exploracio',
     subcategory: 'horaris',
@@ -632,7 +636,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'esp_comeback',
     name: 'La Gran Tornada',
-    description: 'Havies estat més de 30 dies sense venir, i has tornat. Benvingut/da de nou!',
+    description: 'Havies estat més de 30 dies sense venir, i has tornat. Quina gran tornada!',
     descriptionFemeni: 'Havies estat més de 30 dies sense venir, i has tornat. Benvinguda de nou!',
     descriptionMasculi: 'Havies estat més de 30 dies sense venir, i has tornat. Benvingut de nou!',
     emoji: '🦅',
@@ -758,6 +762,14 @@ export const SUBCATEGORY_NAMES: Record<ExploracioSubcategory, string> = {
   horaris: '🌅 Horaris',
   varietat: '🧩 Varietat',
   intensitat: '📆 Intensitat setmanal',
+};
+
+// ── COLOR ÚNIC PER INSÍGNIES SENSE GRUP (trofeus) ────────────
+
+export const UNIQUE_BADGE_STYLE = {
+  bg: 'from-emerald-600 via-teal-400 to-emerald-500',
+  text: 'text-emerald-950',
+  border: 'border-emerald-400',
 };
 
 // ── COLORS DE TIERS ──────────────────────────────────────────
