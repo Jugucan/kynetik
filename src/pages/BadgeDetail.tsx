@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentUserWithSessions } from '@/hooks/useUsers';
 import { usePrograms } from '@/hooks/usePrograms';
 import { calculateBadges } from '@/utils/badgeCalculations';
-import { getBadgeTexts, TIER_COLORS, TIER_ORDER, getBadgeGroupTiers, BadgeWithStatus } from '@/types/badges';
+import { getBadgeTexts, TIER_COLORS, UNIQUE_BADGE_STYLE, TIER_ORDER, getBadgeGroupTiers, BadgeWithStatus } from '@/types/badges';
 import { ChevronLeft, Lock, CheckCircle2 } from 'lucide-react';
 import { useMemo } from 'react';
 
@@ -12,11 +12,12 @@ import { useMemo } from 'react';
 interface TierRowProps {
   badge: BadgeWithStatus;
   gender?: string | null;
-  isCurrentTier: boolean; // el nivell més alt assolit
-  isFutureTier: boolean;  // encara no assolit
+  isCurrentTier: boolean;
+  isFutureTier: boolean;
+  showProgress: boolean; // només al primer nivell no assolit
 }
 
-const TierRow = ({ badge, gender, isCurrentTier, isFutureTier }: TierRowProps) => {
+const TierRow = ({ badge, gender, isCurrentTier, showProgress }: TierRowProps) => {
   const { description } = getBadgeTexts(badge, gender);
   const tierStyle = TIER_COLORS[badge.tier];
   const isEarned = badge.earned;
@@ -31,18 +32,15 @@ const TierRow = ({ badge, gender, isCurrentTier, isFutureTier }: TierRowProps) =
           : 'bg-muted/20 border-muted/30 opacity-50'
       }
     `}>
-      {/* Brillantor als guanyats */}
       {isEarned && (
         <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-white/10 to-transparent pointer-events-none rounded-2xl" />
       )}
 
       <div className="relative z-10 flex items-center gap-3">
-        {/* Emoji / Lock */}
         <div className={`text-3xl flex-shrink-0 ${!isEarned ? 'grayscale' : isCurrentTier ? 'drop-shadow-md' : ''}`}>
           {isEarned ? badge.emoji : '🔒'}
         </div>
 
-        {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5 flex-wrap">
             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isEarned ? `${tierStyle.text} bg-white/30` : 'text-muted-foreground bg-muted/50'}`}>
@@ -64,7 +62,6 @@ const TierRow = ({ badge, gender, isCurrentTier, isFutureTier }: TierRowProps) =
           </p>
         </div>
 
-        {/* Check o Lock */}
         <div className="flex-shrink-0">
           {isEarned
             ? <CheckCircle2 className={`w-5 h-5 ${isCurrentTier ? tierStyle.text : tierStyle.text + ' opacity-50'}`} />
@@ -74,7 +71,7 @@ const TierRow = ({ badge, gender, isCurrentTier, isFutureTier }: TierRowProps) =
       </div>
 
       {/* Barra de progrés — només al primer nivell no assolit */}
-      {!isEarned && badge.progress !== undefined && (
+      {!isEarned && showProgress && badge.progress !== undefined && (
         <div className="relative z-10 mt-3 space-y-1">
           <div className="w-full bg-muted rounded-full h-1.5">
             <div
@@ -113,7 +110,6 @@ const BadgeDetail = () => {
     return programsArray.map((p: any) => ({ name: p.name, category: p.category || '' }));
   }, [programsArray]);
 
-  // Calculem totes les insígnies amb estat (en memòria, 0 lectures Firebase)
   const allBadgesWithStatus = useMemo(() => {
     if (!currentUserData) return [];
     return calculateBadges(
@@ -123,20 +119,17 @@ const BadgeDetail = () => {
     );
   }, [currentUserData, programsForBadges, totalAvailableCategories]);
 
-  // La insígnia clicada
   const badge = useMemo(
     () => allBadgesWithStatus.find(b => b.id === badgeId) || null,
     [allBadgesWithStatus, badgeId]
   );
 
-  // Si té grup, obtenim tots els nivells del grup amb el seu estat
   const groupTiers = useMemo(() => {
     if (!badge?.group) return null;
     const groupDefs = getBadgeGroupTiers(badge.group);
     return groupDefs.map(def => allBadgesWithStatus.find(b => b.id === def.id) || { ...def, earned: false });
   }, [badge, allBadgesWithStatus]);
 
-  // El nivell més alt assolit dins el grup
   const currentTierIndex = useMemo(() => {
     if (!groupTiers) return -1;
     let highest = -1;
@@ -144,10 +137,6 @@ const BadgeDetail = () => {
     return highest;
   }, [groupTiers]);
 
-  // El primer nivell no assolit (on mostrem la barra de progrés)
-  const nextTierIndex = currentTierIndex + 1;
-
-  // ── LOADING ───────────────────────────────────────────────
   if (loadingUser || loadingPrograms) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -178,8 +167,6 @@ const BadgeDetail = () => {
 
     return (
       <div className="px-4 max-w-lg mx-auto pb-12">
-
-        {/* Botó tornar */}
         <button
           onClick={() => navigate('/badges')}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
@@ -188,7 +175,6 @@ const BadgeDetail = () => {
           Tornar a les insígnies
         </button>
 
-        {/* Capçalera: emoji gran + nom + nivell actual */}
         <div className={`
           rounded-3xl p-8 text-center shadow-neo border-2 overflow-hidden relative mb-6
           ${hasAny
@@ -199,11 +185,9 @@ const BadgeDetail = () => {
           {hasAny && (
             <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-white/10 to-transparent pointer-events-none" />
           )}
-
           <div className={`text-8xl mb-4 relative z-10 ${!hasAny ? 'grayscale opacity-40' : 'drop-shadow-lg'}`}>
             {badge.emoji}
           </div>
-
           {hasAny && activeTier && (
             <div className="relative z-10 mb-3">
               <span className={`text-xs font-bold px-3 py-1 rounded-full ${activeTierStyle.text} bg-white/30 backdrop-blur-sm`}>
@@ -211,11 +195,9 @@ const BadgeDetail = () => {
               </span>
             </div>
           )}
-
           <h1 className={`text-3xl font-black mb-2 relative z-10 ${hasAny ? activeTierStyle.text : 'text-muted-foreground'}`}>
             {name}
           </h1>
-
           <p className={`text-sm relative z-10 ${hasAny ? activeTierStyle.text + ' opacity-80' : 'text-muted-foreground'}`}>
             {hasAny
               ? `${currentTierIndex + 1} de ${groupTiers.length} nivells assolits`
@@ -224,7 +206,6 @@ const BadgeDetail = () => {
           </p>
         </div>
 
-        {/* Llista de nivells */}
         <div className="space-y-3">
           <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wide px-1 mb-2">
             Nivells
@@ -236,6 +217,7 @@ const BadgeDetail = () => {
               gender={gender}
               isCurrentTier={index === currentTierIndex}
               isFutureTier={index > currentTierIndex}
+              showProgress={index === currentTierIndex + 1}
             />
           ))}
         </div>
@@ -243,15 +225,13 @@ const BadgeDetail = () => {
     );
   }
 
-  // ── VISTA ESTÀNDARD (insígnia única, sense grup) ──────────
+  // ── VISTA ÚNICA (trofeu) — sense tier label, color verd ──
   const { description } = getBadgeTexts(badge, gender);
-  const tierStyle = TIER_COLORS[badge.tier];
   const isEarned = badge.earned;
+  const uniqueStyle = UNIQUE_BADGE_STYLE;
 
   return (
     <div className="px-4 max-w-lg mx-auto pb-12">
-
-      {/* Botó tornar */}
       <button
         onClick={() => navigate('/badges')}
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
@@ -260,11 +240,11 @@ const BadgeDetail = () => {
         Tornar a les insígnies
       </button>
 
-      {/* Targeta principal */}
+      {/* Targeta principal — color verd, sense tier label */}
       <div className={`
         rounded-3xl p-8 text-center shadow-neo border-2 overflow-hidden relative
         ${isEarned
-          ? `bg-gradient-to-br ${tierStyle.bg} ${tierStyle.border}`
+          ? `bg-gradient-to-br ${uniqueStyle.bg} ${uniqueStyle.border}`
           : isUnavailable
             ? 'bg-muted/20 border-muted/30'
             : 'bg-muted/30 border-muted/50'
@@ -278,28 +258,20 @@ const BadgeDetail = () => {
           {isEarned ? badge.emoji : isUnavailable ? '🚫' : '🔒'}
         </div>
 
-        {isEarned && (
-          <div className="relative z-10 mb-3">
-            <span className={`text-xs font-bold px-3 py-1 rounded-full ${tierStyle.text} bg-white/30 backdrop-blur-sm`}>
-              ✦ {tierStyle.label} ✦
-            </span>
-          </div>
-        )}
-
-        <h1 className={`text-3xl font-black mb-2 relative z-10 ${isEarned ? tierStyle.text : 'text-muted-foreground'}`}>
+        <h1 className={`text-3xl font-black mb-2 relative z-10 ${isEarned ? uniqueStyle.text : 'text-muted-foreground'}`}>
           {name}
         </h1>
 
         {isEarned && badge.earnedAt && (
           <div className="relative z-10 mb-4">
-            <span className={`text-sm font-medium px-3 py-1 rounded-full bg-white/30 ${tierStyle.text}`}>
+            <span className={`text-sm font-medium px-3 py-1 rounded-full bg-white/30 ${uniqueStyle.text}`}>
               📅 {badge.earnedAt}
             </span>
           </div>
         )}
 
         {isEarned && badge.category === 'personal' && badge.progressLabel && (
-          <div className={`text-5xl font-black mb-4 relative z-10 ${tierStyle.text}`}>
+          <div className={`text-5xl font-black mb-4 relative z-10 ${uniqueStyle.text}`}>
             {badge.progressLabel}
           </div>
         )}
