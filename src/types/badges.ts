@@ -17,6 +17,15 @@ export type ExploracioSubcategory = 'horaris' | 'varietat' | 'intensitat';
 
 export type BadgeTier = 'bronze' | 'plata' | 'or' | 'diamant' | 'llegenda';
 
+// Grups d'insígnies multi-nivell (estil Zepp)
+export type BadgeGroup =
+  | 'matinera'
+  | 'nocturna'
+  | 'doble_torn'
+  | 'tres_en_ratlla'
+  | 'setmana_activa'
+  | 'setmana_completa';
+
 export interface BadgeDefinition {
   id: string;
   name: string;
@@ -30,6 +39,7 @@ export interface BadgeDefinition {
   subcategory?: ExploracioSubcategory;
   tier: BadgeTier;
   requirement: string;
+  group?: BadgeGroup; // Si definit, aquesta insígnia forma part d'un grup multi-nivell
 }
 
 export interface BadgeWithStatus extends BadgeDefinition {
@@ -130,7 +140,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'ratxa_2',
     name: 'Espurna Constant',
-    description: '2 setmanes seguides. L\'espurna ja crema!',
+    description: 'L\'espurna ja crema!',
     emoji: '✨',
     category: 'constancia',
     tier: 'bronze',
@@ -139,7 +149,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'ratxa_4',
     name: 'Ritme Estable',
-    description: '4 setmanes seguides. Tens un ritme estable!',
+    description: 'Tens un ritme estable!',
     emoji: '📆',
     category: 'constancia',
     tier: 'bronze',
@@ -148,7 +158,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'ratxa_8',
     name: 'En Foc',
-    description: '8 setmanes sense aturar-te. Estàs en foc!',
+    description: 'Estàs en foc!',
     emoji: '🔥',
     category: 'constancia',
     tier: 'plata',
@@ -271,6 +281,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
 
   // ── EXPLORACIÓ: HORARIS ────────────────────────────────────
+  // Grup: matinera (bronze → plata → or → diamant)
   {
     id: 'exp_matidora',
     name: 'Matiner/a',
@@ -281,8 +292,50 @@ export const ALL_BADGES: BadgeDefinition[] = [
     category: 'exploracio',
     subcategory: 'horaris',
     tier: 'bronze',
-    requirement: 'Classe abans de les 12h',
+    requirement: '1 classe de matí (abans de les 12h)',
+    group: 'matinera',
   },
+  {
+    id: 'exp_matidora_plata',
+    name: 'Matiner/a',
+    nameFemeni: 'Matinera',
+    nameMasculi: 'Matiner',
+    description: 'Has assistit a 5 classes abans de les 12h.',
+    emoji: '🌅',
+    category: 'exploracio',
+    subcategory: 'horaris',
+    tier: 'plata',
+    requirement: '5 classes de matí',
+    group: 'matinera',
+  },
+  {
+    id: 'exp_matidora_or',
+    name: 'Matiner/a',
+    nameFemeni: 'Matinera',
+    nameMasculi: 'Matiner',
+    description: 'Has assistit a 10 classes abans de les 12h.',
+    emoji: '🌅',
+    category: 'exploracio',
+    subcategory: 'horaris',
+    tier: 'or',
+    requirement: '10 classes de matí',
+    group: 'matinera',
+  },
+  {
+    id: 'exp_matidora_diamant',
+    name: 'Matiner/a',
+    nameFemeni: 'Matinera',
+    nameMasculi: 'Matiner',
+    description: 'Has assistit a 20 classes abans de les 12h. Ets un/a autèntic/a matiner/a!',
+    emoji: '🌅',
+    category: 'exploracio',
+    subcategory: 'horaris',
+    tier: 'diamant',
+    requirement: '20 classes de matí',
+    group: 'matinera',
+  },
+
+  // Grup: nocturna (bronze → plata → or → diamant)
   {
     id: 'exp_vespre',
     name: 'Nocturn/a',
@@ -293,17 +346,93 @@ export const ALL_BADGES: BadgeDefinition[] = [
     category: 'exploracio',
     subcategory: 'horaris',
     tier: 'bronze',
-    requirement: 'Classe a les 20h o més tard',
+    requirement: '1 classe de vespre (a les 20h o més tard)',
+    group: 'nocturna',
+  },
+  {
+    id: 'exp_vespre_plata',
+    name: 'Nocturn/a',
+    nameFemeni: 'Nocturna',
+    nameMasculi: 'Nocturn',
+    description: 'Has assistit a 5 classes a partir de les 20h.',
+    emoji: '🌙',
+    category: 'exploracio',
+    subcategory: 'horaris',
+    tier: 'plata',
+    requirement: '5 classes de vespre',
+    group: 'nocturna',
+  },
+  {
+    id: 'exp_vespre_or',
+    name: 'Nocturn/a',
+    nameFemeni: 'Nocturna',
+    nameMasculi: 'Nocturn',
+    description: 'Has assistit a 10 classes a partir de les 20h.',
+    emoji: '🌙',
+    category: 'exploracio',
+    subcategory: 'horaris',
+    tier: 'or',
+    requirement: '10 classes de vespre',
+    group: 'nocturna',
+  },
+  {
+    id: 'exp_vespre_diamant',
+    name: 'Nocturn/a',
+    nameFemeni: 'Nocturna',
+    nameMasculi: 'Nocturn',
+    description: 'Has assistit a 20 classes a partir de les 20h. Ets un/a autèntic/a nocturn/a!',
+    emoji: '🌙',
+    category: 'exploracio',
+    subcategory: 'horaris',
+    tier: 'diamant',
+    requirement: '20 classes de vespre',
+    group: 'nocturna',
+  },
+
+  // Grup: doble_torn (bronze → plata → or → diamant)
+  {
+    id: 'exp_doble_bronze',
+    name: 'Doble Torn',
+    description: 'Has fet classe de matí i de tarda en la mateixa setmana!',
+    emoji: '💥',
+    category: 'exploracio',
+    subcategory: 'horaris',
+    tier: 'bronze',
+    requirement: '1 setmana amb matí + tarda',
+    group: 'doble_torn',
   },
   {
     id: 'exp_doble',
     name: 'Doble Torn',
-    description: 'Has fet classe de matí i de tarda en la mateixa setmana.',
+    description: 'Has fet classe de matí i de tarda en 3 setmanes diferents!',
     emoji: '💥',
     category: 'exploracio',
     subcategory: 'horaris',
     tier: 'plata',
-    requirement: 'Classe de matí + tarda en la mateixa setmana',
+    requirement: '3 setmanes amb matí + tarda',
+    group: 'doble_torn',
+  },
+  {
+    id: 'exp_doble_or',
+    name: 'Doble Torn',
+    description: 'Has fet classe de matí i de tarda en 6 setmanes diferents!',
+    emoji: '💥',
+    category: 'exploracio',
+    subcategory: 'horaris',
+    tier: 'or',
+    requirement: '6 setmanes amb matí + tarda',
+    group: 'doble_torn',
+  },
+  {
+    id: 'exp_doble_diamant',
+    name: 'Doble Torn',
+    description: 'Has fet classe de matí i de tarda en 12 setmanes. Increïble flexibilitat!',
+    emoji: '💥',
+    category: 'exploracio',
+    subcategory: 'horaris',
+    tier: 'diamant',
+    requirement: '12 setmanes amb matí + tarda',
+    group: 'doble_torn',
   },
 
   // ── EXPLORACIÓ: VARIETAT ───────────────────────────────────
@@ -343,142 +472,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
 
   // ── EXPLORACIÓ: INTENSITAT ─────────────────────────────────
-  {
-    id: 'exp_3dies_seguits',
-    name: 'Tres en Ratlla',
-    description: 'Has assistit 3 dies consecutius. Increïble!',
-    emoji: '🔥',
-    category: 'exploracio',
-    subcategory: 'intensitat',
-    tier: 'plata',
-    requirement: '3 dies consecutius',
-  },
-  {
-    id: 'exp_3dies_setmana',
-    name: 'Setmana Activa',
-    description: 'Has fet 3 classes en una mateixa setmana!',
-    emoji: '📅',
-    category: 'exploracio',
-    subcategory: 'intensitat',
-    tier: 'plata',
-    requirement: '3 dies en una mateixa setmana',
-  },
-  {
-    id: 'exp_5dies',
-    name: 'Setmana Completa',
-    description: 'Has assistit els 5 dies laborables d\'una setmana!',
-    emoji: '📋',
-    category: 'exploracio',
-    subcategory: 'intensitat',
-    tier: 'or',
-    requirement: '5 dies laborables en una mateixa setmana',
-  },
-  
-  // ── EXPLORACIÓ: HORARIS (nivells addicionals) ──────────────
-  {
-    id: 'exp_matidora_plata',
-    name: 'Matiner/a',
-    nameFemeni: 'Matinera',
-    nameMasculi: 'Matiner',
-    description: 'Has assistit a 5 classes abans de les 12h. Bon dia!',
-    emoji: '🌅',
-    category: 'exploracio',
-    subcategory: 'horaris',
-    tier: 'plata',
-    requirement: '5 classes de matí',
-  },
-  {
-    id: 'exp_matidora_or',
-    name: 'Matiner/a',
-    nameFemeni: 'Matinera',
-    nameMasculi: 'Matiner',
-    description: 'Has assistit a 10 classes abans de les 12h. Bon dia!',
-    emoji: '🌅',
-    category: 'exploracio',
-    subcategory: 'horaris',
-    tier: 'or',
-    requirement: '10 classes de matí',
-  },
-  {
-    id: 'exp_matidora_diamant',
-    name: 'Matiner/a',
-    nameFemeni: 'Matinera',
-    nameMasculi: 'Matiner',
-    description: 'Has assistit a 20 classes abans de les 12h. Ets un/a autèntic/a matiner/a!',
-    emoji: '🌅',
-    category: 'exploracio',
-    subcategory: 'horaris',
-    tier: 'diamant',
-    requirement: '20 classes de matí',
-  },
-  {
-    id: 'exp_vespre_plata',
-    name: 'Nocturn/a',
-    nameFemeni: 'Nocturna',
-    nameMasculi: 'Nocturn',
-    description: 'Has assistit a 5 classes a partir de les 20h.',
-    emoji: '🌙',
-    category: 'exploracio',
-    subcategory: 'horaris',
-    tier: 'plata',
-    requirement: '5 classes de vespre',
-  },
-  {
-    id: 'exp_vespre_or',
-    name: 'Nocturn/a',
-    nameFemeni: 'Nocturna',
-    nameMasculi: 'Nocturn',
-    description: 'Has assistit a 10 classes a partir de les 20h.',
-    emoji: '🌙',
-    category: 'exploracio',
-    subcategory: 'horaris',
-    tier: 'or',
-    requirement: '10 classes de vespre',
-  },
-  {
-    id: 'exp_vespre_diamant',
-    name: 'Nocturn/a',
-    nameFemeni: 'Nocturna',
-    nameMasculi: 'Nocturn',
-    description: 'Has assistit a 20 classes a partir de les 20h. Ets un/a autèntic/a nocturn/a!',
-    emoji: '🌙',
-    category: 'exploracio',
-    subcategory: 'horaris',
-    tier: 'diamant',
-    requirement: '20 classes de vespre',
-  },
-  {
-    id: 'exp_doble_bronze',
-    name: 'Doble Torn',
-    description: 'Has fet classe de matí i de tarda en la mateixa setmana!',
-    emoji: '💥',
-    category: 'exploracio',
-    subcategory: 'horaris',
-    tier: 'bronze',
-    requirement: '1 setmana amb matí + tarda',
-  },
-  {
-    id: 'exp_doble_or',
-    name: 'Doble Torn',
-    description: 'Has fet classe de matí i de tarda en 6 setmanes diferents!',
-    emoji: '💥',
-    category: 'exploracio',
-    subcategory: 'horaris',
-    tier: 'or',
-    requirement: '6 setmanes amb matí + tarda',
-  },
-  {
-    id: 'exp_doble_diamant',
-    name: 'Doble Torn',
-    description: 'Has fet classe de matí i de tarda en 12 setmanes. Increïble flexibilitat!',
-    emoji: '💥',
-    category: 'exploracio',
-    subcategory: 'horaris',
-    tier: 'diamant',
-    requirement: '12 setmanes amb matí + tarda',
-  },
-
-  // ── EXPLORACIÓ: INTENSITAT (nivells addicionals) ───────────
+  // Grup: tres_en_ratlla (bronze → plata → or → diamant)
   {
     id: 'exp_3dies_seguits_bronze',
     name: 'Tres en Ratlla',
@@ -488,6 +482,18 @@ export const ALL_BADGES: BadgeDefinition[] = [
     subcategory: 'intensitat',
     tier: 'bronze',
     requirement: '3 dies consecutius',
+    group: 'tres_en_ratlla',
+  },
+  {
+    id: 'exp_3dies_seguits',
+    name: 'Tres en Ratlla',
+    description: 'Has aconseguit 6 dies consecutius assistint!',
+    emoji: '🔥',
+    category: 'exploracio',
+    subcategory: 'intensitat',
+    tier: 'plata',
+    requirement: '6 dies consecutius',
+    group: 'tres_en_ratlla',
   },
   {
     id: 'exp_3dies_seguits_or',
@@ -498,6 +504,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
     subcategory: 'intensitat',
     tier: 'or',
     requirement: '10 dies consecutius',
+    group: 'tres_en_ratlla',
   },
   {
     id: 'exp_3dies_seguits_diamant',
@@ -508,7 +515,10 @@ export const ALL_BADGES: BadgeDefinition[] = [
     subcategory: 'intensitat',
     tier: 'diamant',
     requirement: '15 dies consecutius',
+    group: 'tres_en_ratlla',
   },
+
+  // Grup: setmana_activa (bronze → plata → or → diamant)
   {
     id: 'exp_3dies_setmana_bronze',
     name: 'Setmana Activa',
@@ -518,6 +528,18 @@ export const ALL_BADGES: BadgeDefinition[] = [
     subcategory: 'intensitat',
     tier: 'bronze',
     requirement: '1 setmana amb 3+ classes',
+    group: 'setmana_activa',
+  },
+  {
+    id: 'exp_3dies_setmana',
+    name: 'Setmana Activa',
+    description: 'Has fet 3 o més classes en 4 setmanes!',
+    emoji: '📅',
+    category: 'exploracio',
+    subcategory: 'intensitat',
+    tier: 'plata',
+    requirement: '4 setmanes amb 3+ classes',
+    group: 'setmana_activa',
   },
   {
     id: 'exp_3dies_setmana_or',
@@ -528,6 +550,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
     subcategory: 'intensitat',
     tier: 'or',
     requirement: '10 setmanes amb 3+ classes',
+    group: 'setmana_activa',
   },
   {
     id: 'exp_3dies_setmana_diamant',
@@ -538,7 +561,10 @@ export const ALL_BADGES: BadgeDefinition[] = [
     subcategory: 'intensitat',
     tier: 'diamant',
     requirement: '20 setmanes amb 3+ classes',
+    group: 'setmana_activa',
   },
+
+  // Grup: setmana_completa (bronze → plata → or → diamant)
   {
     id: 'exp_5dies_bronze',
     name: 'Setmana Completa',
@@ -547,7 +573,8 @@ export const ALL_BADGES: BadgeDefinition[] = [
     category: 'exploracio',
     subcategory: 'intensitat',
     tier: 'bronze',
-    requirement: '1 setmana amb 5 dies',
+    requirement: '1 setmana amb 5 dies laborables',
+    group: 'setmana_completa',
   },
   {
     id: 'exp_5dies_plata',
@@ -557,7 +584,19 @@ export const ALL_BADGES: BadgeDefinition[] = [
     category: 'exploracio',
     subcategory: 'intensitat',
     tier: 'plata',
-    requirement: '3 setmanes amb 5 dies',
+    requirement: '3 setmanes amb 5 dies laborables',
+    group: 'setmana_completa',
+  },
+  {
+    id: 'exp_5dies',
+    name: 'Setmana Completa',
+    description: 'Has assistit els 5 dies laborables en 6 setmanes!',
+    emoji: '📋',
+    category: 'exploracio',
+    subcategory: 'intensitat',
+    tier: 'or',
+    requirement: '6 setmanes amb 5 dies laborables',
+    group: 'setmana_completa',
   },
   {
     id: 'exp_5dies_diamant',
@@ -567,9 +606,10 @@ export const ALL_BADGES: BadgeDefinition[] = [
     category: 'exploracio',
     subcategory: 'intensitat',
     tier: 'diamant',
-    requirement: '12 setmanes amb 5 dies',
+    requirement: '12 setmanes amb 5 dies laborables',
+    group: 'setmana_completa',
   },
-  
+
   // ── ESPECIALS ──────────────────────────────────────────────
   {
     id: 'ass_aniversari',
@@ -609,6 +649,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
     tier: 'or',
     requirement: 'Mateixa freqüència 3 mesos seguits',
   },
+
   // ── RÈCORDS PERSONALS ──────────────────────────────────────
   {
     id: 'personal_ratxa',
@@ -669,6 +710,16 @@ export function getNewYearBadges(): BadgeDefinition[] {
 
 export function getAllBadgesWithDynamic(): BadgeDefinition[] {
   return [...ALL_BADGES, ...getNewYearBadges()];
+}
+
+// ── HELPER: obtenir tots els nivells d'un grup ───────────────
+
+export const TIER_ORDER: BadgeTier[] = ['bronze', 'plata', 'or', 'diamant', 'llegenda'];
+
+export function getBadgeGroupTiers(group: BadgeGroup): BadgeDefinition[] {
+  return getAllBadgesWithDynamic()
+    .filter(b => b.group === group)
+    .sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier));
 }
 
 // ── HELPER DE GÈNERE ────────────────────────────────────────
