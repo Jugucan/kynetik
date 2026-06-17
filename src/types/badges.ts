@@ -140,7 +140,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'ratxa_2',
     name: 'Espurna Constant',
-    description: 'L\'espurna ja crema!',
+    description: '2 setmanes seguides. L\'espurna ja crema!',
     emoji: '✨',
     category: 'constancia',
     tier: 'bronze',
@@ -149,7 +149,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'ratxa_4',
     name: 'Ritme Estable',
-    description: 'Tens un ritme estable!',
+    description: '4 setmanes seguides. Tens un ritme estable!',
     emoji: '📆',
     category: 'constancia',
     tier: 'bronze',
@@ -158,7 +158,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'ratxa_8',
     name: 'En Foc',
-    description: 'Estàs en foc!',
+    description: '8 setmanes sense aturar-te. Estàs en foc!',
     emoji: '🔥',
     category: 'constancia',
     tier: 'plata',
@@ -169,7 +169,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
     name: 'Invicte/a',
     nameFemeni: 'Invicta',
     nameMasculi: 'Invicte',
-    description: 'Un trimestre sencer de constància absoluta.',
+    description: 'Un trimestre sencer de constància absoluta. Invencible!',
     emoji: '⚔️',
     category: 'constancia',
     tier: 'plata',
