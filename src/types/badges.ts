@@ -772,6 +772,12 @@ export const UNIQUE_BADGE_STYLE = {
   border: 'border-emerald-400',
 };
 
+export const PERSONAL_BADGE_STYLE = {
+  bg: 'from-violet-600 via-purple-400 to-fuchsia-500',
+  text: 'text-violet-950',
+  border: 'border-violet-400',
+};
+
 // ── COLORS DE TIERS ──────────────────────────────────────────
 
 export const TIER_COLORS: Record<BadgeTier, { bg: string; text: string; border: string; label: string }> = {
