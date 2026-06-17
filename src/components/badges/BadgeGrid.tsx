@@ -2,7 +2,7 @@
 // GRAELLA DE TOTES LES INSÍGNIES ORGANITZADES PER CATEGORIA
 // ============================================================
 
-import { BadgeWithStatus, CATEGORY_NAMES, BadgeCategory } from '@/types/badges';
+import { BadgeWithStatus, CATEGORY_NAMES, BadgeCategory, BadgeGroup, TIER_ORDER } from '@/types/badges';
 import BadgeCard from './BadgeCard';
 import { getBadgeSummary } from '@/utils/badgeCalculations';
 
@@ -19,6 +19,51 @@ const CATEGORY_ORDER: BadgeCategory[] = [
   'especial',
   'personal',
 ];
+
+// Per cada grup, retorna UNA sola insígnia representativa:
+// - el nivell més alt assolit, o
+// - el nivell bronze (primer) si no n'ha assolit cap
+function deduplicateGroups(badges: BadgeWithStatus[]): BadgeWithStatus[] {
+  const seen = new Map<BadgeGroup, BadgeWithStatus>();
+  const result: BadgeWithStatus[] = [];
+
+  for (const badge of badges) {
+    if (!badge.group) {
+      result.push(badge);
+      continue;
+    }
+
+    const existing = seen.get(badge.group);
+    if (!existing) {
+      seen.set(badge.group, badge);
+    } else {
+      // Prioritzem el nivell més alt assolit
+      if (badge.earned) {
+        const existingTierIdx = TIER_ORDER.indexOf(existing.tier);
+        const newTierIdx = TIER_ORDER.indexOf(badge.tier);
+        if (!existing.earned || newTierIdx > existingTierIdx) {
+          seen.set(badge.group, badge);
+        }
+      }
+      // Si cap és assolit, mantenim el bronze (primer de la llista, ja ordenat)
+    }
+  }
+
+  // Reinsertem en ordre original però substituïts
+  const groupsInserted = new Set<BadgeGroup>();
+  for (const badge of badges) {
+    if (!badge.group) continue;
+    if (!groupsInserted.has(badge.group)) {
+      const representative = seen.get(badge.group)!;
+      // Afegim al lloc on apareixeria el primer del grup
+      const insertIdx = result.findIndex(b => b.group === badge.group);
+      if (insertIdx === -1) result.push(representative);
+      groupsInserted.add(badge.group);
+    }
+  }
+
+  return result;
+}
 
 const BadgeGrid = ({ badges, gender }: BadgeGridProps) => {
   const summary = getBadgeSummary(badges);
@@ -71,6 +116,7 @@ const BadgeGrid = ({ badges, gender }: BadgeGridProps) => {
       {CATEGORY_ORDER.map(category => {
         const catBadges = badges.filter(b => b.category === category);
         const catEarned = catBadges.filter(b => b.earned).length;
+        const displayBadges = deduplicateGroups(catBadges);
 
         return (
           <div key={category}>
@@ -84,7 +130,7 @@ const BadgeGrid = ({ badges, gender }: BadgeGridProps) => {
 
             {/* Graella d'insígnies */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {catBadges.map(badge => (
+              {displayBadges.map(badge => (
                 <BadgeCard key={badge.id} badge={badge} gender={gender} />
               ))}
             </div>
