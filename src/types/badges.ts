@@ -767,15 +767,15 @@ export const SUBCATEGORY_NAMES: Record<ExploracioSubcategory, string> = {
 // ── COLOR ÚNIC PER INSÍGNIES SENSE GRUP (trofeus) ────────────
 
 export const UNIQUE_BADGE_STYLE = {
-  bg: 'from-teal-300 via-emerald-200 to-teal-400',
+  bg: 'from-teal-400 via-emerald-300 to-teal-500',
   text: 'text-teal-950',
-  border: 'border-teal-300',
+  border: 'border-teal-400',
 };
 
 export const PERSONAL_BADGE_STYLE = {
-  bg: 'from-violet-300 via-purple-200 to-fuchsia-300',
+  bg: 'from-violet-400 via-purple-300 to-fuchsia-400',
   text: 'text-violet-950',
-  border: 'border-violet-300',
+  border: 'border-violet-400',
 };
 
 // ── COLORS DE TIERS ──────────────────────────────────────────
