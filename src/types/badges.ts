@@ -645,11 +645,11 @@ export const ALL_BADGES: BadgeDefinition[] = [
   {
     id: 'esp_consistent',
     name: 'Rellotge Suís',
-    description: 'Has vingut exactament el mateix nombre de vegades cada mes durant 3 mesos.',
+    description: 'Has vingut exactament el mateix nombre de vegades cada mes durant 3 mesos seguits.',
     emoji: '⏱️',
     category: 'especial',
     tier: 'or',
-    requirement: 'Has vingut exactament el mateix nombre de vegades cada mes durant 3 mesos seguits',
+    requirement: 'Vine exactament el mateix nombre de vegades cada mes durant 3 mesos seguits.'
   },
 
   // ── RÈCORDS PERSONALS ──────────────────────────────────────
