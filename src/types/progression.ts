@@ -127,15 +127,15 @@ export const LEVELS: LevelDefinition[] = [
   },
   {
     id: 'llegenda',
-    name: 'Llegenda Kynetik',
-    nameFemeni: 'Llegenda Kynetik',
-    nameMasculi: 'Llegenda Kynetik',
+    name: 'Icona del Kynetik',
+    nameFemeni: 'Icona del Kynetik',
+    nameMasculi: 'Icona del Kynetik',
     emoji: '👑',
     minXP: 6000,
     maxXP: null,
     color: 'text-purple-700',
     bgGradient: 'from-purple-100 to-pink-100',
-    description: 'Ets la llegenda absoluta del Kynetik.',
+    description: 'Ets la icona absoluta del Kynetik.',
   },
 ];
 
