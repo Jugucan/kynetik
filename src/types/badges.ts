@@ -117,7 +117,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
   {
     id: 'ass_200',
-    name: 'Imparable',
+    name: 'Infatigable',
     description: '200 classes. Res et para!',
     emoji: '🚀',
     category: 'assistencia',
@@ -126,10 +126,8 @@ export const ALL_BADGES: BadgeDefinition[] = [
   },
   {
     id: 'ass_500',
-    name: 'Llegenda del Kynetik',
-    nameFemeni: 'Llegendària',
-    nameMasculi: 'Llegendari',
-    description: '500 classes. Ets una llegenda del Kynetik!',
+    name: 'Incombustible',
+    description: '500 classes. Ets incombustible!',
     emoji: '👑',
     category: 'assistencia',
     tier: 'llegenda',
@@ -651,7 +649,7 @@ export const ALL_BADGES: BadgeDefinition[] = [
     emoji: '⏱️',
     category: 'especial',
     tier: 'or',
-    requirement: 'Mateixa freqüència 3 mesos seguits',
+    requirement: 'Has vingut exactament el mateix nombre de vegades cada mes durant 3 mesos seguits',
   },
 
   // ── RÈCORDS PERSONALS ──────────────────────────────────────
