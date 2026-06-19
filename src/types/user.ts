@@ -1,6 +1,5 @@
 export type UserRole = 'superadmin' | 'admin' | 'monitor' | 'user';
 
-// NOU: estat de l'usuari dins el sistema
 export type UserStatus = 'pending' | 'approved' | 'rejected';
 
 export interface UserProfile {
@@ -8,21 +7,21 @@ export interface UserProfile {
   email: string;
   role: UserRole;
   displayName: string;
-  firstName?: string;        // NOU: nom
-  lastName?: string;         // NOU: cognoms
-  phone?: string;            // NOU: telèfon
-  birthDate?: string;        // NOU: data naixement (format YYYY-MM-DD)
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  birthDate?: string;
   gender?: string | null;
   center?: string;
+  centers?: string[];        // NOU: centres on treballa l'instructor (array per multi-centre)
   monitorId?: string;
-  status: UserStatus;        // NOU: estat de la sol·licitud
-  statusUpdatedAt?: Date;    // NOU: quan es va aprovar/rebutjar
-  statusUpdatedBy?: string;  // NOU: qui ho va aprovar/rebutjar (uid)
+  status: UserStatus;
+  statusUpdatedAt?: Date;
+  statusUpdatedBy?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// NOU: tipus específic per les sol·licituds pendents (vista simplificada)
 export interface PendingUserRequest {
   uid: string;
   email: string;
@@ -61,7 +60,7 @@ export const ROLE_PERMISSIONS = {
     canManageMonitors: true,
     canManageAdmins: true,
     canViewAllCenters: true,
-    canApproveUsers: true,     // NOU
+    canApproveUsers: true,
   },
   admin: {
     canManageAllData: true,
@@ -69,7 +68,7 @@ export const ROLE_PERMISSIONS = {
     canManageMonitors: true,
     canManageAdmins: false,
     canViewAllCenters: true,
-    canApproveUsers: true,     // NOU
+    canApproveUsers: true,
   },
   monitor: {
     canManageAllData: false,
@@ -77,7 +76,7 @@ export const ROLE_PERMISSIONS = {
     canManageMonitors: false,
     canManageAdmins: false,
     canViewAllCenters: false,
-    canApproveUsers: false,    // NOU
+    canApproveUsers: false,
   },
   user: {
     canManageAllData: false,
@@ -85,6 +84,6 @@ export const ROLE_PERMISSIONS = {
     canManageMonitors: false,
     canManageAdmins: false,
     canViewAllCenters: false,
-    canApproveUsers: false,    // NOU
+    canApproveUsers: false,
   }
 };
