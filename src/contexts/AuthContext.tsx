@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, onSnapshot, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, collection, query, where, getDocs, updateDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { UserProfile, UserStatus } from '@/types/user';
 
@@ -26,6 +26,7 @@ interface AuthContextType {
   updateProfile: (data: { displayName?: string; gender?: string | null }) => Promise<void>;
   userStatus: UserStatus | null;
   firestoreUserId: string | null; // ID del document a la col·lecció 'users'
+  centers: string[]; // centres de l'instructor (buit = veu tot)
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,6 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
   const [firestoreUserId, setFirestoreUserId] = useState<string | null>(null);
   const [firestoreUserIdResolved, setFirestoreUserIdResolved] = useState(false);
+  const [centers, setCenters] = useState<string[]>([]);
 
   const profileUnsubscribeRef = useRef<(() => void) | null>(null);
 
@@ -103,8 +105,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (docSnap.exists()) {
               const data = docSnap.data();
               const status: UserStatus = data.status || 'approved';
-              setUserStatus(status);
-
+              setUserStatus(status);  
+              
+              const profileCenters: string[] = Array.isArray(data.centers) ? data.centers : [];
+              setCenters(profileCenters);
+              
               const profile: UserProfile = {
                 uid: user.uid,
                 email: user.email || '',
@@ -116,6 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 birthDate: data.birthDate,
                 gender: data.gender || null,
                 center: data.center,
+                centers: profileCenters,
                 monitorId: data.monitorId,
                 status: status,
                 createdAt: data.createdAt?.toDate() || new Date(),
@@ -261,6 +267,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     updateProfile,
     userStatus,
     firestoreUserId,
+    centers,
   };
 
   return (
