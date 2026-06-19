@@ -94,7 +94,7 @@ const AccordionSection = ({ title, emoji, earnedCount, totalCount, defaultOpen =
       </button>
 
       {isOpen && (
-        <div className="px-4 pb-4">
+        <div className="px-3 pb-3">
           {children}
         </div>
       )}
