@@ -1,75 +1,187 @@
 // ============================================================
-// GRAELLA DE TOTES LES INSÍGNIES ORGANITZADES PER CATEGORIA
+// GRAELLA DE INSÍGNIES — Distincions / Fites / Marques Personals
 // ============================================================
 
-import { BadgeWithStatus, CATEGORY_NAMES, BadgeCategory, BadgeGroup, TIER_ORDER } from '@/types/badges';
+import { useState, useMemo } from 'react';
+import { BadgeWithStatus, CATEGORY_NAMES, SUBCATEGORY_NAMES, BadgeCategory, ExploracioSubcategory } from '@/types/badges';
 import BadgeCard from './BadgeCard';
 import { getBadgeSummary } from '@/utils/badgeCalculations';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface BadgeGridProps {
   badges: BadgeWithStatus[];
   gender?: string | null;
 }
 
-const CATEGORY_ORDER: BadgeCategory[] = [
+type FilterTab = 'tot' | 'aconseguides' | 'per_aconseguir';
+
+// ── Categories de Fites i el seu ordre ───────────────────────
+const FITES_CATEGORIES: BadgeCategory[] = [
   'assistencia',
   'constancia',
   'antiguitat',
   'exploracio',
   'especial',
-  'personal',
 ];
 
-// Per cada grup, retorna UNA sola insígnia representativa:
-// - el nivell més alt assolit, o
-// - el nivell bronze (primer) si no n'ha assolit cap
-function deduplicateGroups(badges: BadgeWithStatus[]): BadgeWithStatus[] {
-  const seen = new Map<BadgeGroup, BadgeWithStatus>();
-  const result: BadgeWithStatus[] = [];
+const EXPLORACIO_SUBCATEGORIES: ExploracioSubcategory[] = [
+  'horaris',
+  'varietat',
+  'intensitat',
+];
 
-  for (const badge of badges) {
-    if (!badge.group) {
-      result.push(badge);
-      continue;
-    }
+// ── Filtre de targetes ────────────────────────────────────────
+function applyFilter(badges: BadgeWithStatus[], filter: FilterTab): BadgeWithStatus[] {
+  if (filter === 'aconseguides') return badges.filter(b => b.earned);
+  if (filter === 'per_aconseguir') return badges.filter(b => !b.earned && !b.unavailable);
+  return badges;
+}
 
-    const existing = seen.get(badge.group);
-    if (!existing) {
-      seen.set(badge.group, badge);
-    } else {
-      // Prioritzem el nivell més alt assolit
-      if (badge.earned) {
-        const existingTierIdx = TIER_ORDER.indexOf(existing.tier);
-        const newTierIdx = TIER_ORDER.indexOf(badge.tier);
-        if (!existing.earned || newTierIdx > existingTierIdx) {
+// ── Component pestanyes de filtre ─────────────────────────────
+const FilterTabs = ({ active, onChange }: { active: FilterTab; onChange: (f: FilterTab) => void }) => (
+  <div className="flex gap-1 bg-muted/40 rounded-xl p-1 mb-4">
+    {([['tot', 'Tot'], ['aconseguides', 'Aconseguides'], ['per_aconseguir', 'Per aconseguir']] as [FilterTab, string][]).map(([val, label]) => (
+      <button
+        key={val}
+        onClick={() => onChange(val)}
+        className={`flex-1 text-xs font-semibold py-1.5 rounded-lg transition-all duration-200
+          ${active === val ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+      >
+        {label}
+      </button>
+    ))}
+  </div>
+);
+
+// ── Component secció acordió ──────────────────────────────────
+interface AccordionSectionProps {
+  title: string;
+  emoji: string;
+  earnedCount: number;
+  totalCount: number;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+  accentClass?: string;
+}
+
+const AccordionSection = ({ title, emoji, earnedCount, totalCount, defaultOpen = true, children, accentClass = 'bg-primary/10 border-primary/20' }: AccordionSectionProps) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className={`rounded-2xl border-2 overflow-hidden ${accentClass}`}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-4 hover:bg-black/5 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">{emoji}</span>
+          <div className="text-left">
+            <h3 className="font-bold text-base">{title}</h3>
+            <p className="text-xs text-muted-foreground">
+              {earnedCount} de {totalCount} aconseguides
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="text-sm font-bold text-primary">
+            {totalCount > 0 ? Math.round((earnedCount / totalCount) * 100) : 0}%
+          </div>
+          {isOpen
+            ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+            : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          }
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="px-4 pb-4">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Component graella simple ──────────────────────────────────
+const BadgeCardGrid = ({ badges, gender }: { badges: BadgeWithStatus[]; gender?: string | null }) => {
+  if (badges.length === 0) {
+    return <p className="text-sm text-muted-foreground text-center py-4">Cap insígnia en aquesta categoria.</p>;
+  }
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+      {badges.map(badge => (
+        <BadgeCard key={badge.id} badge={badge} gender={gender} />
+      ))}
+    </div>
+  );
+};
+
+// ── COMPONENT PRINCIPAL ───────────────────────────────────────
+const BadgeGrid = ({ badges, gender }: BadgeGridProps) => {
+  const [filterDistincions, setFilterDistincions] = useState<FilterTab>('tot');
+  const [filterFites, setFilterFites] = useState<FilterTab>('tot');
+  const [filterMarques, setFilterMarques] = useState<FilterTab>('tot');
+
+  const summary = getBadgeSummary(badges);
+
+  // Separació en tres grups
+  const distincions = useMemo(() =>
+    badges.filter(b => !!b.group),
+    [badges]
+  );
+
+  const marques = useMemo(() =>
+    badges.filter(b => b.category === 'personal'),
+    [badges]
+  );
+
+  const fites = useMemo(() =>
+    badges.filter(b => !b.group && b.category !== 'personal'),
+    [badges]
+  );
+
+  // Deduplicar distincions (una targeta per grup)
+  const distincionsBadges = useMemo(() => {
+    const seen = new Map<string, BadgeWithStatus>();
+    for (const badge of distincions) {
+      if (!badge.group) continue;
+      const existing = seen.get(badge.group);
+      if (!existing) {
+        seen.set(badge.group, badge);
+      } else if (badge.earned) {
+        const existingTiers = ['bronze','plata','or','diamant','llegenda'];
+        const existingIdx = existingTiers.indexOf(existing.tier);
+        const newIdx = existingTiers.indexOf(badge.tier);
+        if (!existing.earned || newIdx > existingIdx) {
           seen.set(badge.group, badge);
         }
       }
-      // Si cap és assolit, mantenim el bronze (primer de la llista, ja ordenat)
     }
-  }
-
-  // Reinsertem en ordre original però substituïts
-  const groupsInserted = new Set<BadgeGroup>();
-  for (const badge of badges) {
-    if (!badge.group) continue;
-    if (!groupsInserted.has(badge.group)) {
-      const representative = seen.get(badge.group)!;
-      // Afegim al lloc on apareixeria el primer del grup
-      const insertIdx = result.findIndex(b => b.group === badge.group);
-      if (insertIdx === -1) result.push(representative);
-      groupsInserted.add(badge.group);
+    // Retornem en ordre d'aparició (primer del grup)
+    const result: BadgeWithStatus[] = [];
+    const inserted = new Set<string>();
+    for (const badge of distincions) {
+      if (!badge.group || inserted.has(badge.group)) continue;
+      result.push(seen.get(badge.group)!);
+      inserted.add(badge.group);
     }
-  }
+    return result;
+  }, [distincions]);
 
-  return result;
-}
+  // Comptes per secció
+  const distincionsTotals = distincionsBadges.length;
+  const distincionEarned = distincionsBadges.filter(b => b.earned).length;
+  const marquesTotals = marques.length;
+  const marquesEarned = marques.filter(b => b.earned).length;
+  const fitesTotals = fites.filter(b => !b.unavailable).length;
+  const fitesEarned = fites.filter(b => b.earned).length;
 
-const BadgeGrid = ({ badges, gender }: BadgeGridProps) => {
-  const summary = getBadgeSummary(badges);
+  // Filtres aplicats
+  const distincionsFiltrades = applyFilter(distincionsBadges, filterDistincions);
+  const marquesFiltrades = applyFilter(marques, filterMarques);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
 
       {/* Resum global */}
       <div className="p-5 rounded-2xl shadow-neo bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20">
@@ -84,59 +196,102 @@ const BadgeGrid = ({ badges, gender }: BadgeGridProps) => {
             {summary.percentage}%
           </div>
         </div>
-
-        {/* Barra de progrés global */}
         <div className="w-full bg-white/50 rounded-full h-3 shadow-neo-inset">
           <div
             className="bg-primary h-3 rounded-full transition-all duration-700"
             style={{ width: `${summary.percentage}%` }}
           />
         </div>
-
-        {/* Resum per categoria */}
+        {/* Resum per tipus */}
         <div className="grid grid-cols-3 gap-2 mt-4">
-          {CATEGORY_ORDER.map(cat => {
-            const catBadges = badges.filter(b => b.category === cat);
-            const catEarned = catBadges.filter(b => b.earned).length;
-            return (
-              <div key={cat} className="text-center p-2 bg-white/40 rounded-xl">
-                <div className="text-xs font-bold text-primary">
-                  {catEarned}/{catBadges.length}
-                </div>
-                <div className="text-xs text-muted-foreground leading-tight">
-                  {CATEGORY_NAMES[cat].split(' ').slice(1).join(' ')}
-                </div>
-              </div>
-            );
-          })}
+          <div className="text-center p-2 bg-white/40 rounded-xl">
+            <div className="text-xs font-bold text-primary">{distincionEarned}/{distincionsTotals}</div>
+            <div className="text-xs text-muted-foreground">Distincions</div>
+          </div>
+          <div className="text-center p-2 bg-white/40 rounded-xl">
+            <div className="text-xs font-bold text-primary">{fitesEarned}/{fitesTotals}</div>
+            <div className="text-xs text-muted-foreground">Fites</div>
+          </div>
+          <div className="text-center p-2 bg-white/40 rounded-xl">
+            <div className="text-xs font-bold text-primary">{marquesEarned}/{marquesTotals}</div>
+            <div className="text-xs text-muted-foreground">Marques</div>
+          </div>
         </div>
       </div>
 
-      {/* Insígnies per categoria */}
-      {CATEGORY_ORDER.map(category => {
-        const catBadges = badges.filter(b => b.category === category);
-        const catEarned = catBadges.filter(b => b.earned).length;
-        const displayBadges = deduplicateGroups(catBadges);
+      {/* ── DISTINCIONS ── */}
+      <AccordionSection
+        title="Distincions"
+        emoji="🏅"
+        earnedCount={distincionEarned}
+        totalCount={distincionsTotals}
+        accentClass="bg-amber-50/50 border-amber-200"
+      >
+        <FilterTabs active={filterDistincions} onChange={setFilterDistincions} />
+        <BadgeCardGrid badges={distincionsFiltrades} gender={gender} />
+      </AccordionSection>
 
-        return (
-          <div key={category}>
-            {/* Capçalera de categoria */}
-            <div className="flex items-center gap-3 mb-4">
-              <h3 className="text-base font-bold">{CATEGORY_NAMES[category]}</h3>
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                {catEarned} / {catBadges.length}
-              </span>
-            </div>
+      {/* ── FITES ── */}
+      <AccordionSection
+        title="Fites"
+        emoji="🏆"
+        earnedCount={fitesEarned}
+        totalCount={fitesTotals}
+        accentClass="bg-teal-50/50 border-teal-200"
+      >
+        <FilterTabs active={filterFites} onChange={setFilterFites} />
 
-            {/* Graella d'insígnies */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {displayBadges.map(badge => (
-                <BadgeCard key={badge.id} badge={badge} gender={gender} />
-              ))}
+        {FITES_CATEGORIES.map(category => {
+          const catBadges = fites.filter(b => b.category === category);
+          if (catBadges.length === 0) return null;
+
+          if (category === 'exploracio') {
+            return (
+              <div key={category} className="mb-6">
+                <h4 className="text-sm font-bold mb-3 text-muted-foreground uppercase tracking-wide">
+                  {CATEGORY_NAMES[category]}
+                </h4>
+                {EXPLORACIO_SUBCATEGORIES.map(sub => {
+                  const subBadges = catBadges.filter(b => b.subcategory === sub);
+                  const filtered = applyFilter(subBadges, filterFites);
+                  if (subBadges.length === 0) return null;
+                  return (
+                    <div key={sub} className="mb-4">
+                      <h5 className="text-xs font-semibold mb-2 text-muted-foreground">
+                        {SUBCATEGORY_NAMES[sub]}
+                      </h5>
+                      <BadgeCardGrid badges={filtered} gender={gender} />
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          }
+
+          const filtered = applyFilter(catBadges, filterFites);
+          return (
+            <div key={category} className="mb-6">
+              <h4 className="text-sm font-bold mb-3 text-muted-foreground uppercase tracking-wide">
+                {CATEGORY_NAMES[category]}
+              </h4>
+              <BadgeCardGrid badges={filtered} gender={gender} />
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </AccordionSection>
+
+      {/* ── MARQUES PERSONALS ── */}
+      <AccordionSection
+        title="Marques Personals"
+        emoji="⭐"
+        earnedCount={marquesEarned}
+        totalCount={marquesTotals}
+        accentClass="bg-violet-50/50 border-violet-200"
+      >
+        <FilterTabs active={filterMarques} onChange={setFilterMarques} />
+        <BadgeCardGrid badges={marquesFiltrades} gender={gender} />
+      </AccordionSection>
+
     </div>
   );
 };
