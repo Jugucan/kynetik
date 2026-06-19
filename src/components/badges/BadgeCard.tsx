@@ -34,7 +34,7 @@ const BadgeCard = ({ badge, gender }: BadgeCardProps) => {
       <div
         onClick={handleClick}
         className={`
-          relative p-4 rounded-2xl border-2 transition-all duration-300 overflow-hidden cursor-pointer
+          relative p-3 rounded-2xl border-2 transition-all duration-300 overflow-hidden cursor-pointer
           ${isEarned
             ? `bg-gradient-to-br ${earnedStyle.bg} ${earnedStyle.border} shadow-lg hover:shadow-xl hover:scale-105`
             : isUnavailable
@@ -62,7 +62,7 @@ const BadgeCard = ({ badge, gender }: BadgeCardProps) => {
         </h3>
         {isEarned && (
           <div className="text-center relative z-10 mb-1">
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${earnedStyle.text} bg-white/30 backdrop-blur-sm`}>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${earnedStyle.text} bg-white/30 backdrop-blur-sm whitespace-nowrap`}>
               ✦ {TIER_COLORS[badge.tier].label} ✦
             </span>
           </div>
@@ -97,7 +97,7 @@ const BadgeCard = ({ badge, gender }: BadgeCardProps) => {
       <div
         onClick={handleClick}
         className={`
-          relative p-4 rounded-2xl border-2 transition-all duration-300 overflow-hidden cursor-pointer
+          relative p-3 rounded-2xl border-2 transition-all duration-300 overflow-hidden cursor-pointer
           ${isEarned
             ? `bg-gradient-to-br ${PERSONAL_BADGE_STYLE.bg} ${PERSONAL_BADGE_STYLE.border} shadow-lg hover:shadow-xl hover:scale-105`
             : 'bg-muted/30 border-muted/50 opacity-60 shadow-neo-inset hover:opacity-80'
@@ -141,7 +141,7 @@ const BadgeCard = ({ badge, gender }: BadgeCardProps) => {
     <div
       onClick={handleClick}
       className={`
-        relative p-4 rounded-2xl border-2 transition-all duration-300 overflow-hidden cursor-pointer
+        relative p-3 rounded-2xl border-2 transition-all duration-300 overflow-hidden cursor-pointer
         ${isEarned
           ? `bg-gradient-to-br ${UNIQUE_BADGE_STYLE.bg} ${UNIQUE_BADGE_STYLE.border} shadow-lg hover:shadow-xl hover:scale-105`
           : isUnavailable
