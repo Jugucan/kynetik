@@ -18,7 +18,7 @@ import { normalizeCenterName } from "@/utils/importUtils";
 import { useAuth } from '@/contexts/AuthContext';
 
 const Users = () => {
-  const { firestoreUserId, userProfile, centers } = useAuth();
+  const { userProfile, centers } = useAuth();
   const { users, loading, addUser, updateUser, deleteUser } = useUsers(userProfile?.role, centers);
   const { centers } = useCenters();
   const [searchQuery, setSearchQuery] = useState("");
