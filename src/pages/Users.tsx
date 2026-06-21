@@ -15,9 +15,11 @@ import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { UserDetailModal } from "@/components/UserDetailModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { normalizeCenterName } from "@/utils/importUtils";
+import { useAuth } from '@/contexts/AuthContext';
 
 const Users = () => {
-  const { users, loading, addUser, updateUser, deleteUser } = useUsers();
+  const { firestoreUserId, userProfile, centers } = useAuth();
+  const { users, loading, addUser, updateUser, deleteUser } = useUsers(userProfile?.role, centers);
   const { centers } = useCenters();
   const [searchQuery, setSearchQuery] = useState("");
   const [centerFilter, setCenterFilter] = useState<string>("all"); 
