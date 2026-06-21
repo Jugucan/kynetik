@@ -231,47 +231,77 @@ let usersCacheCallbacks: Array<(users: User[]) => void> = [];
 // ── Hook lleuger: SENSE sessions ────────────────────────────────────────────
 // Usa aquest hook a: Index.tsx, Users.tsx, UserFormModal, components/Users.tsx
 
-export const useUsers = () => {
-  const [users, setUsers] = useState<User[]>(usersCache || []);
-  const [loading, setLoading] = useState(usersCache === null);
+export const useUsers = (role?: string, centers?: string[]) => {
+  // Superadmin o sense restriccions → veu tot i usa la caché global
+  const isUnrestricted = !role || role === 'superadmin' || !centers || centers.length === 0;
+
+  const [users, setUsers] = useState<User[]>(isUnrestricted ? (usersCache || []) : []);
+  const [loading, setLoading] = useState(isUnrestricted ? usersCache === null : true);
 
   useEffect(() => {
-    if (usersCache !== null) {
-      setUsers(usersCache);
-      setLoading(false);
-      return;
-    }
-
-    if (usersCacheLoading) {
-      usersCacheCallbacks.push((cachedUsers) => {
-        setUsers(cachedUsers);
+    // ── SENSE RESTRICCIONS (superadmin) → caché global ──────────────────
+    if (isUnrestricted) {
+      if (usersCache !== null) {
+        setUsers(usersCache);
         setLoading(false);
-      });
+        return;
+      }
+      if (usersCacheLoading) {
+        usersCacheCallbacks.push((cachedUsers) => {
+          setUsers(cachedUsers);
+          setLoading(false);
+        });
+        return;
+      }
+      usersCacheLoading = true;
+      const fetchAll = async () => {
+        try {
+          const snapshot = await getDocs(collection(db, 'users'));
+          const usersData = snapshot.docs.map(doc =>
+            processUserDoc(doc.id, doc.data(), false)
+          ) as User[];
+          usersCache = usersData;
+          setUsers(usersData);
+          usersCacheCallbacks.forEach(cb => cb(usersData));
+          usersCacheCallbacks = [];
+        } catch (error) {
+          console.error('Error fetching users:', error);
+          toast.error('Error al carregar usuaris');
+        } finally {
+          setLoading(false);
+          usersCacheLoading = false;
+        }
+      };
+      fetchAll();
       return;
     }
 
-    usersCacheLoading = true;
-    const fetchUsers = async () => {
+    // ── AMB RESTRICCIONS (monitor/admin) → filtre per centre ────────────
+    // No usa la caché global per no contaminar-la
+    const fetchFiltered = async () => {
       try {
-        const snapshot = await getDocs(collection(db, 'users'));
-        const usersData = snapshot.docs.map(doc =>
-          processUserDoc(doc.id, doc.data(), false)
-        ) as User[];
-        usersCache = usersData;
-        setUsers(usersData);
-        usersCacheCallbacks.forEach(cb => cb(usersData));
-        usersCacheCallbacks = [];
+        // Una query per centre i combinem els resultats
+        const snapshots = await Promise.all(
+          centers!.map(center =>
+            getDocs(query(collection(db, 'users'), where('center', '==', center)))
+          )
+        );
+        const usersData = snapshots
+          .flatMap(snap => snap.docs)
+          .map(doc => processUserDoc(doc.id, doc.data(), false)) as User[];
+        // Eliminem duplicats (per si un usuari apareix a dos centres)
+        const unique = Array.from(new Map(usersData.map(u => [u.id, u])).values());
+        setUsers(unique);
       } catch (error) {
-        console.error('Error fetching users:', error);
+        console.error('Error fetching filtered users:', error);
         toast.error('Error al carregar usuaris');
       } finally {
         setLoading(false);
-        usersCacheLoading = false;
       }
     };
-    fetchUsers();
-  }, []);
-
+    fetchFiltered();
+  }, [isUnrestricted, centers?.join(',')]);
+  
   const addUser = async (userData: Omit<UserWithSessions, 'id'>) => {
     try {
       const dataToSave = prepareDataForFirestore(userData);
