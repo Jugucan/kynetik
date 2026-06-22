@@ -18,8 +18,8 @@ import { normalizeCenterName } from "@/utils/importUtils";
 import { useAuth } from '@/contexts/AuthContext';
 
 const Users = () => {
-  const { userProfile, centers } = useAuth();
-  const { users, loading, addUser, updateUser, deleteUser } = useUsers(userProfile?.role, centers);
+  const { userProfile, centers: instructorCenters } = useAuth();
+  const { users, loading, addUser, updateUser, deleteUser } = useUsers(userProfile?.role, instructorCenters);
   const { centers } = useCenters();
   const [searchQuery, setSearchQuery] = useState("");
   const [centerFilter, setCenterFilter] = useState<string>("all"); 
