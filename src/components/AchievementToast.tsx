@@ -24,12 +24,7 @@ const config: Record<AchievementType, { gradient: string; label: string; textCol
 };
 
 export function AchievementToast({ achievement, onClose }: Props) {
-  useEffect(() => {
-    if (!achievement) return;
-    const t = setTimeout(onClose, 5000);
-    return () => clearTimeout(t);
-  }, [achievement, onClose]);
-
+  
   const cfg = achievement ? config[achievement.type] : null;
 
   return (
@@ -103,9 +98,7 @@ export function AchievementToast({ achievement, onClose }: Props) {
                 <motion.div className="w-full h-1.5 bg-white/30 rounded-full overflow-hidden mt-2">
                   <motion.div
                     className="h-full bg-white/70 rounded-full"
-                    initial={{ width: "100%" }}
-                    animate={{ width: "0%" }}
-                    transition={{ duration: 5, ease: "linear" }}
+                    style={{ width: "100%" }}
                   />
                 </motion.div>
 
