@@ -10,6 +10,8 @@ import { Separator } from "@/components/ui/separator";
 import { getBenvingut } from "@/utils/genderHelpers";
 import { useMotivationalPhrase } from '@/hooks/useMotivationalPhrase';
 import { useAchievement } from "@/contexts/AchievementContext";
+import { usePrograms } from "@/hooks/usePrograms";
+import { getBadgeTexts } from "@/types/badges";
 
 // Mapes de nivells d'autodisciplina per detectar pujades
 const DISCIPLINE_LEVELS = [
@@ -39,7 +41,11 @@ const UserIndex = () => {
   const { userProfile } = useAuth();
   const { user: currentUserData, loading } = useCurrentUserWithSessions(firestoreUserId);
   const { triggerAchievement } = useAchievement();
-
+  const { programs } = usePrograms();
+  const programsForBadges = useMemo(
+    () => Object.values(programs).map((p: any) => ({ name: p.name, category: p.category || '' })),
+    [programs]
+  );
 
   const prevBadgeIds = useRef<Set<string> | null>(null);
   const prevLevelId = useRef<string | null>(null);
@@ -65,7 +71,7 @@ const UserIndex = () => {
     try {
       const badges = calculateBadges(
         { sessions, firstSession: currentUserData.firstSession },
-        []
+        programsForBadges
       );
       const earnedIds = new Set<string>(
         badges.filter(b => b.earned && !b.unavailable).map(b => b.id)
@@ -77,10 +83,11 @@ const UserIndex = () => {
         for (const id of earnedIds) {
           if (!prevIds.has(id)) {
             const badge = badges.find(b => b.id === id);
+            const badgeTexts = badge ? getBadgeTexts(badge, userProfile?.gender) : null;
             triggerAchievement({
               type: "badge",
-              title: badge?.name || "Nova Insígnia!",
-              description: badge?.description || "",
+              title: badgeTexts?.name || badge?.name || "Nova Insígnia!",
+              description: badgeTexts?.description || badge?.description || "",
               icon: badge?.emoji || "🏅",
             });
           }
@@ -92,10 +99,11 @@ const UserIndex = () => {
         for (const id of earnedIds) {
           if (!prevBadgeIds.current.has(id)) {
             const badge = badges.find(b => b.id === id);
+            const badgeTexts = badge ? getBadgeTexts(badge, userProfile?.gender) : null;
             triggerAchievement({
               type: "badge",
-              title: badge?.name || "Nova Insígnia!",
-              description: badge?.description || "",
+              title: badgeTexts?.name || badge?.name || "Nova Insígnia!",
+              description: badgeTexts?.description || badge?.description || "",
               icon: badge?.emoji || "🏅",
             });
           }
