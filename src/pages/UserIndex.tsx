@@ -61,7 +61,7 @@ const UserIndex = () => {
     const storageKey = `kynetik_achievements_${currentUserData.id}`;
   
     // Carreguem l'estat anterior del localStorage
-    let prevState: { badgeIds: string[]; levelId: string; disciplineLabel: string } | null = null;
+    let prevState: { badgeIds: string[]; levelId: string; disciplineLabel: string; bestStreak: number } | null = null;
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored) prevState = JSON.parse(stored);
@@ -177,12 +177,44 @@ const UserIndex = () => {
       console.warn("Discipline detection error:", e);
     }
   
+    // ── Ratxa setmanal ─────────────────────────────────────
+    try {
+      const progression = calculateProgression(sessions);
+      const currentStreak = progression.streak.current;
+      const prevBestStreak = prevState?.bestStreak || 0;
+
+      if (currentStreak > prevBestStreak && currentStreak >= 2) {
+        triggerAchievement({
+          type: "streak",
+          title: `${currentStreak} Setmanes seguides!`,
+          description: currentStreak === 2
+            ? "Dues setmanes consecutives. L'espurna ja crema!"
+            : currentStreak === 4
+              ? "Un mes sencer de constància. Impressionant!"
+              : currentStreak === 8
+                ? "Dos mesos sense aturar-te. Estàs en foc!"
+                : currentStreak === 12
+                  ? "Un trimestre sencer. Ets imparable!"
+                  : currentStreak === 26
+                    ? "Sis mesos de ratxa. Espectacular!"
+                    : currentStreak === 52
+                      ? "Un any sencer sense perdre cap setmana. Llegenda!"
+                      : `${currentStreak} setmanes consecutives. Continua així!`,
+          icon: "⚡",
+        });
+      }
+    } catch (e) {
+      console.warn("Streak detection error:", e);
+    }
+    
     // ── Guardar estat actual al localStorage ───────────────
     try {
+      const progression = calculateProgression(sessions);
       const newState = {
         badgeIds: Array.from(prevBadgeIds.current || []),
         levelId: prevLevelId.current || '',
         disciplineLabel: prevDisciplineLabel.current || '',
+        bestStreak: progression.streak.current,
       };
       localStorage.setItem(storageKey, JSON.stringify(newState));
     } catch {}
