@@ -40,36 +40,58 @@ const UserIndex = () => {
   const { user: currentUserData, loading } = useCurrentUserWithSessions(firestoreUserId);
   const { triggerAchievement } = useAchievement();
 
-  // PROVA TEMPORAL LOTTIE — esborra quan hagis comprovat les animacions
-  const testAchievements = () => {
-    triggerAchievement({ type: "badge", title: "Primera Classe!", description: "Has completat la teva primera sessió", icon: "🏅" });
-    setTimeout(() => triggerAchievement({ type: "level", title: "🚀 Imparable", description: "Estàs en un nivell que pocs assoleixen.", icon: "🚀" }), 5500);
-    setTimeout(() => triggerAchievement({ type: "discipline", title: "Autodisciplina Excel·lent", description: "Has millorat el teu nivell d'autodisciplina. Continua així!", icon: "🤩" }), 11000);
-    setTimeout(() => triggerAchievement({ type: "streak", title: "4 Setmanes seguides!", description: "Ratxa increïble", icon: "⚡" }), 16500);
-  };
 
   const prevBadgeIds = useRef<Set<string> | null>(null);
   const prevLevelId = useRef<string | null>(null);
   const prevDisciplineLabel = useRef<string | null>(null);
+  const achievementsInitialized = useRef(false);
 
   useEffect(() => {
     if (loading || !currentUserData) return;
     const sessions = Array.isArray(currentUserData.sessions) ? currentUserData.sessions : [];
     if (sessions.length === 0) return;
-
-    // — Insígnies —
+  
+    // Clau única per usuari al localStorage
+    const storageKey = `kynetik_achievements_${currentUserData.id}`;
+  
+    // Carreguem l'estat anterior del localStorage
+    let prevState: { badgeIds: string[]; levelId: string; disciplineLabel: string } | null = null;
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) prevState = JSON.parse(stored);
+    } catch {}
+  
+    // ── Insígnies ──────────────────────────────────────────
     try {
       const badges = calculateBadges(
         { sessions, firstSession: currentUserData.firstSession },
         []
       );
       const earnedIds = new Set<string>(
-        badges.filter((b) => b.earned && !b.unavailable).map((b) => b.id)
+        badges.filter(b => b.earned && !b.unavailable).map(b => b.id)
       );
-      if (prevBadgeIds.current !== null) {
+  
+      if (prevState && achievementsInitialized.current === false) {
+        // Primera càrrega de la sessió: comparar amb localStorage
+        const prevIds = new Set<string>(prevState.badgeIds || []);
+        for (const id of earnedIds) {
+          if (!prevIds.has(id)) {
+            const badge = badges.find(b => b.id === id);
+            triggerAchievement({
+              type: "badge",
+              title: badge?.name || "Nova Insígnia!",
+              description: badge?.description || "",
+              icon: badge?.emoji || "🏅",
+            });
+          }
+        }
+      } else if (!prevState && achievementsInitialized.current === false) {
+        // Primera vegada que entra mai — no mostrem res, només guardem
+      } else if (prevBadgeIds.current !== null) {
+        // Dins la mateixa sessió: comparar amb useRef
         for (const id of earnedIds) {
           if (!prevBadgeIds.current.has(id)) {
-            const badge = badges.find((b) => b.id === id);
+            const badge = badges.find(b => b.id === id);
             triggerAchievement({
               type: "badge",
               title: badge?.name || "Nova Insígnia!",
@@ -83,12 +105,22 @@ const UserIndex = () => {
     } catch (e) {
       console.warn("Badge detection error:", e);
     }
-
-    // — Nivell de progressió —
+  
+    // ── Nivell de progressió ───────────────────────────────
     try {
       const progression = calculateProgression(sessions);
       const currentLevelId = progression.level.id;
-      if (prevLevelId.current !== null && currentLevelId !== prevLevelId.current) {
+  
+      if (prevState && achievementsInitialized.current === false) {
+        if (prevState.levelId && currentLevelId !== prevState.levelId) {
+          triggerAchievement({
+            type: "level",
+            title: `${progression.level.emoji} ${progression.level.name}`,
+            description: progression.level.description,
+            icon: progression.level.emoji,
+          });
+        }
+      } else if (prevLevelId.current !== null && currentLevelId !== prevLevelId.current) {
         triggerAchievement({
           type: "level",
           title: `${progression.level.emoji} ${progression.level.name}`,
@@ -100,19 +132,30 @@ const UserIndex = () => {
     } catch (e) {
       console.warn("Level detection error:", e);
     }
-
-    // — Autodisciplina —
+  
+    // ── Autodisciplina ─────────────────────────────────────
     try {
       const advStats = calculateAdvancedStats(currentUserData);
       const currentDisciplineLabel = getDisciplineLevel(advStats.autodiscipline);
       const currentDisciplineEmoji = getDisciplineEmoji(advStats.autodiscipline);
-      if (
-        prevDisciplineLabel.current !== null &&
-        currentDisciplineLabel !== prevDisciplineLabel.current
-      ) {
-        const hasPujaDeNivell = DISCIPLINE_LEVELS.findIndex(l => l.label === currentDisciplineLabel) >
-                                DISCIPLINE_LEVELS.findIndex(l => l.label === prevDisciplineLabel.current);
-        if (hasPujaDeNivell) {
+  
+      if (prevState && achievementsInitialized.current === false) {
+        if (prevState.disciplineLabel && currentDisciplineLabel !== prevState.disciplineLabel) {
+          const prevIdx = DISCIPLINE_LEVELS.findIndex(l => l.label === prevState!.disciplineLabel);
+          const currIdx = DISCIPLINE_LEVELS.findIndex(l => l.label === currentDisciplineLabel);
+          if (currIdx > prevIdx) {
+            triggerAchievement({
+              type: "discipline",
+              title: `Autodisciplina ${currentDisciplineLabel}`,
+              description: `Has millorat el teu nivell d'autodisciplina. Continua així!`,
+              icon: currentDisciplineEmoji,
+            });
+          }
+        }
+      } else if (prevDisciplineLabel.current !== null && currentDisciplineLabel !== prevDisciplineLabel.current) {
+        const prevIdx = DISCIPLINE_LEVELS.findIndex(l => l.label === prevDisciplineLabel.current);
+        const currIdx = DISCIPLINE_LEVELS.findIndex(l => l.label === currentDisciplineLabel);
+        if (currIdx > prevIdx) {
           triggerAchievement({
             type: "discipline",
             title: `Autodisciplina ${currentDisciplineLabel}`,
@@ -125,7 +168,20 @@ const UserIndex = () => {
     } catch (e) {
       console.warn("Discipline detection error:", e);
     }
-
+  
+    // ── Guardar estat actual al localStorage ───────────────
+    try {
+      const newState = {
+        badgeIds: Array.from(prevBadgeIds.current || []),
+        levelId: prevLevelId.current || '',
+        disciplineLabel: prevDisciplineLabel.current || '',
+      };
+      localStorage.setItem(storageKey, JSON.stringify(newState));
+    } catch {}
+  
+    // Marcar que ja hem inicialitzat aquesta sessió
+    achievementsInitialized.current = true;
+  
   }, [currentUserData, loading]);
 
   const basicStats = useMemo(() => {
@@ -190,14 +246,7 @@ const UserIndex = () => {
   return (
     <div className="space-y-4 px-4 max-w-7xl mx-auto pb-8">
 
-      {/* BOTÓ PROVA LOTTIE — esborra quan hagis comprovat */}
-      <button
-        onClick={testAchievements}
-        className="fixed bottom-6 right-6 z-50 bg-primary text-white px-4 py-2 rounded-xl shadow-neo text-sm font-bold"
-      >
-        🎉 Test Lottie
-      </button>
-
+      
       <div className="flex items-center gap-3">
         <img
           src={currentUserData.profileImageUrl || currentUserData.avatar}
