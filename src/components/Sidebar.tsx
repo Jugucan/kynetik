@@ -56,7 +56,7 @@ const getMenuItems = (viewMode: 'instructor' | 'user' | 'superadmin') => {
     { title: "Mixtos", icon: Shuffle, path: "/mixtos", visibleFor: ['instructor'] },
     { title: "Horaris", icon: Clock, path: "/schedules", visibleFor: ['instructor'] },
     { title: "Les Meves Notes", icon: StickyNote, path: "/notes", visibleFor: ['instructor'] },
-    { title: "Les Meves Estadístiques", icon: BarChart3, path: "/stats", visibleFor: ['instructor', 'user'] },
+    { title: "Les Meves Estadístiques", icon: BarChart3, path: viewMode === 'user' ? "/userstats" : "/stats", visibleFor: ['instructor', 'user'] },
     { title: "Insígnies", icon: Trophy, path: "/badges", visibleFor: ['user'] },
     { title: "Configuració", icon: Settings, path: "/settings", visibleFor: ['instructor'] },
   ];
