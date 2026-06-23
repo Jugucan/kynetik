@@ -27,6 +27,7 @@ import Register from "./pages/Register";
 import PendingApproval from "./pages/PendingApproval";
 import Superadmin from "./pages/Superadmin";
 import NotFound from "./pages/NotFound";
+import UserStats from "./pages/UserStats";
 
 const queryClient = new QueryClient();
 
@@ -113,7 +114,14 @@ const AppRoutes = () => {
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/calendar" element={<Calendar />} />
-                    <Route path="/stats" element={<Stats />} />
+                    <Route
+                      path="/stats"
+                      element={
+                        <ViewProtectedRoute allowedViews={['instructor']}>
+                          <Stats />
+                        </ViewProtectedRoute>
+                      }
+                    />
 
                     <Route
                       path="/badges"
@@ -183,6 +191,16 @@ const AppRoutes = () => {
                     />
 
                     {/* /pending redirigeix a / per si l'usuari ja està aprovat */}
+
+                    <Route
+                      path="/userstats"
+                      element={
+                        <ViewProtectedRoute allowedViews={['user']}>
+                          <UserStats />
+                        </ViewProtectedRoute>
+                      }
+                    />
+                    
                     <Route path="/pending" element={<Navigate to="/" replace />} />
                     <Route path="/404" element={<NotFound />} />
                     <Route path="*" element={<Navigate to="/404" replace />} />
