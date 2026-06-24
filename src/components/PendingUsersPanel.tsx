@@ -1,5 +1,5 @@
 import { usePendingUsers } from '@/hooks/usePendingUsers';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuth } from '@/contexts/AuthContext';
 import { NeoCard } from '@/components/NeoCard';
 import { UserCheck, UserX, Clock, Phone, Calendar } from 'lucide-react';
 
@@ -22,8 +22,8 @@ const formatRegistrationDate = (date: Date): string => {
 
 export const PendingUsersPanel = () => {
   const { pendingUsers, loading, approveUser, rejectUser } = usePendingUsers();
-  const { userProfile } = useUserProfile();
-
+  const { userProfile } = useAuth();
+  
   // Només superadmin i admin poden veure aquest panell
   const canApprove = userProfile?.role === 'superadmin' || userProfile?.role === 'admin';
   if (!canApprove) return null;
