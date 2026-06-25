@@ -62,9 +62,10 @@ interface AccordionSectionProps {
   defaultOpen?: boolean;
   children: React.ReactNode;
   accentClass?: string;
+  showPercentage?: boolean;
 }
 
-const AccordionSection = ({ title, emoji, earnedCount, totalCount, defaultOpen = true, children, accentClass = 'bg-primary/10 border-primary/20' }: AccordionSectionProps) => {
+const AccordionSection = ({ title, emoji, earnedCount, totalCount, defaultOpen = true, children, accentClass = 'bg-primary/10 border-primary/20', showPercentage = true }: AccordionSectionProps) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -83,10 +84,12 @@ const AccordionSection = ({ title, emoji, earnedCount, totalCount, defaultOpen =
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="text-sm font-bold text-primary">
-            {totalCount > 0 ? Math.round((earnedCount / totalCount) * 100) : 0}%
-          </div>
-          {isOpen
+            {showPercentage && (
+              <div className="text-sm font-bold text-primary">
+                {totalCount > 0 ? Math.round((earnedCount / totalCount) * 100) : 0}%
+              </div>
+            )}
+            {isOpen
             ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
             : <ChevronDown className="w-4 h-4 text-muted-foreground" />
           }
@@ -285,6 +288,7 @@ const BadgeGrid = ({ badges, gender }: BadgeGridProps) => {
         earnedCount={marquesEarned}
         totalCount={marquesTotals}
         accentClass="bg-violet-50/50 border-violet-200"
+        showPercentage={false}
       >
         <BadgeCardGrid badges={marques} gender={gender} />
       </AccordionSection>
