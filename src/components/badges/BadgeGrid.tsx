@@ -120,8 +120,7 @@ const BadgeCardGrid = ({ badges, gender }: { badges: BadgeWithStatus[]; gender?:
 const BadgeGrid = ({ badges, gender }: BadgeGridProps) => {
   const [filterDistincions, setFilterDistincions] = useState<FilterTab>('tot');
   const [filterFites, setFilterFites] = useState<FilterTab>('tot');
-  const [filterMarques, setFilterMarques] = useState<FilterTab>('tot');
-
+  
   const summary = getBadgeSummary(badges);
 
   // Separació en tres grups
@@ -178,8 +177,7 @@ const BadgeGrid = ({ badges, gender }: BadgeGridProps) => {
 
   // Filtres aplicats
   const distincionsFiltrades = applyFilter(distincionsBadges, filterDistincions);
-  const marquesFiltrades = applyFilter(marques, filterMarques);
-
+  
   return (
     <div className="space-y-4">
 
@@ -288,8 +286,7 @@ const BadgeGrid = ({ badges, gender }: BadgeGridProps) => {
         totalCount={marquesTotals}
         accentClass="bg-violet-50/50 border-violet-200"
       >
-        <FilterTabs active={filterMarques} onChange={setFilterMarques} />
-        <BadgeCardGrid badges={marquesFiltrades} gender={gender} />
+        <BadgeCardGrid badges={marques} gender={gender} />
       </AccordionSection>
 
     </div>
