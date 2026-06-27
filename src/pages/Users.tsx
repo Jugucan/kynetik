@@ -463,8 +463,10 @@ const Users = () => {
                 >
                   <div className="mb-2 flex-shrink-0">
                     <img 
-                      src={user.profileImageUrl || user.avatar} 
+                      src={user.profileImageUrl || user.avatar}
                       alt={user.name}
+                      loading="lazy"
+                      onError={(e) => { e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name || 'user')}`; }}
                       className="w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-neo object-cover ring-2 ring-white"
                     />
                   </div>
