@@ -291,6 +291,7 @@ const UserIndex = () => {
         <img
           src={currentUserData.profileImageUrl || currentUserData.avatar}
           alt={currentUserData.name}
+          onError={(e) => { e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(currentUserData.name || 'user')}`; }}
           className="w-12 h-12 rounded-full shadow-neo object-cover"
         />
         <div>
