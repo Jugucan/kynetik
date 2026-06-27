@@ -127,8 +127,10 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                         <div className="flex items-center gap-3 sm:gap-4">
                             <img 
-                                src={user.profileImageUrl || user.avatar} 
+                                src={user.profileImageUrl || user.avatar}
                                 alt={user.name}
+                                loading="lazy"
+                                onError={(e) => { e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name || 'user')}`; }}
                                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-neo object-cover flex-shrink-0"
                             />
                             <div>
