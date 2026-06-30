@@ -79,6 +79,7 @@ export interface User {
   preferredPrograms: string[];
   profileImageUrl: string;
   notes: string;
+  manualNotes?: string;
   totalSessions?: number;
   firstSession?: string;
   lastSession?: string;
