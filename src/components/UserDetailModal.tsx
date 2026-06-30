@@ -24,7 +24,7 @@ export type User = {
   id: string;
   name?: string; email?: string; phone?: string; birthday?: string;
   age?: number; center?: string; preferredPrograms?: string[];
-  profileImageUrl?: string; avatar?: string; notes?: string;
+  profileImageUrl?: string; avatar?: string; notes?: string; manualNotes?: string;
   sessions?: UserSession[]; firstSession?: string; daysSinceLastSession?: number;
   totalSessions?: number;
 };
@@ -223,13 +223,30 @@ export const UserDetailModal = ({ user, isOpen, onClose, onEdit, allUsers }: Use
                                     </div>
                                 )}
 
-                                {/* Notes */}
+                                {/* Les Meves Notes (manuals) */}
+                                {user.manualNotes && (
+                                    <>
+                                        <Separator />
+                                        <div>
+                                            <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center gap-2">
+                                                📝 Les Meves Notes
+                                            </h3>
+                                            <p className="text-sm text-foreground p-3 bg-amber-50 border border-amber-200 rounded whitespace-pre-wrap">
+                                                {user.manualNotes}
+                                            </p>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Notes de Deporsite */}
                                 {user.notes && (
                                     <>
                                         <Separator />
                                         <div>
-                                            <h3 className="font-semibold text-base sm:text-lg mb-3">Notes</h3>
-                                            <p className="text-sm text-muted-foreground p-3 bg-muted/30 rounded whitespace-pre-wrap">
+                                            <h3 className="font-semibold text-base sm:text-lg mb-3 text-muted-foreground">
+                                                Notes de Deporsite
+                                            </h3>
+                                            <p className="text-xs text-muted-foreground p-3 bg-muted/30 rounded whitespace-pre-wrap">
                                                 {user.notes}
                                             </p>
                                         </div>
