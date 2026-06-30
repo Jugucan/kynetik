@@ -15,14 +15,20 @@ import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { UserDetailModal } from "@/components/UserDetailModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { normalizeCenterName } from "@/utils/importUtils";
+import { normalizeProgram } from "@/utils/statsHelpers";
 import { useAuth } from '@/contexts/AuthContext';
+import { ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react";
 
 const Users = () => {
   const { userProfile, centers: instructorCenters } = useAuth();
   const { users, loading, addUser, updateUser, deleteUser } = useUsers(userProfile?.role, instructorCenters);
   const { centers } = useCenters();
   const [searchQuery, setSearchQuery] = useState("");
-  const [centerFilter, setCenterFilter] = useState<string>("all"); 
+  const [centerFilter, setCenterFilter] = useState<string>("all");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [programFilter, setProgramFilter] = useState<string>("all");
+  const [minAge, setMinAge] = useState<string>("");
+  const [maxAge, setMaxAge] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [viewingUser, setViewingUser] = useState<User | null>(null);
@@ -48,19 +54,30 @@ const Users = () => {
     new Set(users.flatMap(u => u.preferredPrograms || []))
   ).sort();
 
+  // Llista de programes únics i normalitzats (sense duplicats com BC/BODYCOMBAT)
+  const allPrograms = Array.from(
+    new Set(
+      users.flatMap(u => (u.preferredPrograms || []).map(p => normalizeProgram(p)))
+    )
+  ).filter(Boolean).sort();
+
   const filteredUsers = sortedUsers.filter(user => {
     const userCenterNormalized = normalizeCenterName(user.center);
     const matchesCenter = centerFilter === "all" || userCenterNormalized === centerFilter;
-    const matchesProgram = programFilter === "all" ||
-                            (user.preferredPrograms || []).includes(programFilter);
+
+    const userProgramsNormalized = (user.preferredPrograms || []).map(p => normalizeProgram(p));
+    const matchesProgram = programFilter === "all" || userProgramsNormalized.includes(programFilter);
+
     const userAge = user.age || 0;
     const matchesMinAge = !minAge || userAge >= parseInt(minAge);
     const matchesMaxAge = !maxAge || userAge <= parseInt(maxAge);
+
     const query = searchQuery.toLowerCase();
     const matchesSearch = (user.name || '').toLowerCase().includes(query) ||
                           (user.email || '').toLowerCase().includes(query) ||
                           (user.notes || '').toLowerCase().includes(query) ||
                           (user.manualNotes || '').toLowerCase().includes(query);
+
     return matchesCenter && matchesProgram && matchesMinAge && matchesMaxAge && matchesSearch;
   });
 
@@ -427,7 +444,7 @@ const Users = () => {
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
             <Input 
-              placeholder="Cercar per nom, email o notes..." 
+              placeholder="Cercar per nom o email..." 
               className="pl-11 pr-4 shadow-neo-inset border-0 h-12 focus-visible:ring-0 rounded-xl"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -435,6 +452,53 @@ const Users = () => {
           </div>
         </div>
       </div>
+
+      <button
+        onClick={() => setShowAdvanced(!showAdvanced)}
+        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <SlidersHorizontal className="w-4 h-4" />
+        Cerca avançada
+        {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+      </button>
+
+      {showAdvanced && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full p-4 rounded-xl shadow-neo-inset bg-muted/20">
+          <div className="sm:col-span-1 min-w-0">
+            <Select value={programFilter} onValueChange={setProgramFilter}>
+              <SelectTrigger className="shadow-neo-inset border-0 h-12 px-4 focus:ring-0 rounded-xl">
+                <SelectValue placeholder="Filtrar per programa" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tots els Programes</SelectItem>
+                {allPrograms.map(prog => (
+                  <SelectItem key={prog} value={prog}>{prog}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="sm:col-span-1 min-w-0">
+            <Input
+              type="number"
+              placeholder="Edat mínima"
+              className="shadow-neo-inset border-0 h-12 focus-visible:ring-0 rounded-xl"
+              value={minAge}
+              onChange={(e) => setMinAge(e.target.value)}
+            />
+          </div>
+
+          <div className="sm:col-span-1 min-w-0">
+            <Input
+              type="number"
+              placeholder="Edat màxima"
+              className="shadow-neo-inset border-0 h-12 focus-visible:ring-0 rounded-xl"
+              value={maxAge}
+              onChange={(e) => setMaxAge(e.target.value)}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
         <div className="sm:col-span-1 min-w-0">
