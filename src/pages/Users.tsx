@@ -40,12 +40,28 @@ const Users = () => {
     (a.name || '').localeCompare(b.name || '', 'ca', { sensitivity: 'base' })
   );
 
+  const [programFilter, setProgramFilter] = useState<string>("all");
+  const [minAge, setMinAge] = useState<string>("");
+  const [maxAge, setMaxAge] = useState<string>("");
+
+  const allPrograms = Array.from(
+    new Set(users.flatMap(u => u.preferredPrograms || []))
+  ).sort();
+
   const filteredUsers = sortedUsers.filter(user => {
     const userCenterNormalized = normalizeCenterName(user.center);
     const matchesCenter = centerFilter === "all" || userCenterNormalized === centerFilter;
-    const matchesSearch = (user.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (user.email || '').toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCenter && matchesSearch;
+    const matchesProgram = programFilter === "all" ||
+                            (user.preferredPrograms || []).includes(programFilter);
+    const userAge = user.age || 0;
+    const matchesMinAge = !minAge || userAge >= parseInt(minAge);
+    const matchesMaxAge = !maxAge || userAge <= parseInt(maxAge);
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = (user.name || '').toLowerCase().includes(query) ||
+                          (user.email || '').toLowerCase().includes(query) ||
+                          (user.notes || '').toLowerCase().includes(query) ||
+                          (user.manualNotes || '').toLowerCase().includes(query);
+    return matchesCenter && matchesProgram && matchesMinAge && matchesMaxAge && matchesSearch;
   });
 
   const handleSaveUser = async (userData: Omit<User, 'id'>) => {
@@ -411,12 +427,48 @@ const Users = () => {
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
             <Input 
-              placeholder="Cercar per nom o email..." 
+              placeholder="Cercar per nom, email o notes..." 
               className="pl-11 pr-4 shadow-neo-inset border-0 h-12 focus-visible:ring-0 rounded-xl"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+        <div className="sm:col-span-1 min-w-0">
+          <Select value={programFilter} onValueChange={setProgramFilter}>
+            <SelectTrigger className="shadow-neo-inset border-0 h-12 px-4 focus:ring-0 rounded-xl">
+              <SelectValue placeholder="Filtrar per programa" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tots els Programes</SelectItem>
+              {allPrograms.map(prog => (
+                <SelectItem key={prog} value={prog}>{prog}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="sm:col-span-1 min-w-0">
+          <Input
+            type="number"
+            placeholder="Edat mínima"
+            className="shadow-neo-inset border-0 h-12 focus-visible:ring-0 rounded-xl"
+            value={minAge}
+            onChange={(e) => setMinAge(e.target.value)}
+          />
+        </div>
+
+        <div className="sm:col-span-1 min-w-0">
+          <Input
+            type="number"
+            placeholder="Edat màxima"
+            className="shadow-neo-inset border-0 h-12 focus-visible:ring-0 rounded-xl"
+            value={maxAge}
+            onChange={(e) => setMaxAge(e.target.value)}
+          />
         </div>
       </div>
 
