@@ -41,7 +41,7 @@ const initialFormData = {
   avatar: "",
   profileImageUrl: "",
   preferredPrograms: "",
-  notes: "",
+  manualNotes: "",
 };
 
 interface UserFormModalProps {
@@ -66,7 +66,7 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
         avatar: user.avatar,
         profileImageUrl: user.profileImageUrl || '',
         preferredPrograms: Array.isArray(user.preferredPrograms) ? user.preferredPrograms.join(', ') : (user.preferredPrograms as string || ''),
-        notes: user.notes || '',
+        manualNotes: user.manualNotes || '',
       });
     } else {
       setFormData(initialFormData);
@@ -198,12 +198,12 @@ export const UserFormModal = ({ open, onClose, onSave, user }: UserFormModalProp
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes Personals (Internes)</Label>
+            <Label htmlFor="manualNotes">Les Meves Notes (separades de Deporsite)</Label>
             <Textarea
-              id="notes"
+              id="manualNotes"
               placeholder="Afegeix aquí notes mèdiques, observacions, etc."
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              value={formData.manualNotes}
+              onChange={(e) => setFormData({ ...formData, manualNotes: e.target.value })}
             />
           </div>
           
