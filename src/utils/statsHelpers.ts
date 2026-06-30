@@ -101,3 +101,31 @@ export interface Session {
   deleteReason?: string;
   addReason?: string;
 }
+
+// ── Normalització de noms de programes ──────────────────────────────────────
+
+const PROGRAM_MAP: { [key: string]: string } = {
+  'BODYPUMP': 'BP', 'BP': 'BP',
+  'BODYBALANCE': 'BB', 'BB': 'BB',
+  'BODYCOMBAT': 'BC', 'BC': 'BC',
+  'SHBAM': 'SB', 'DANCE': 'SB', 'SB': 'SB',
+  'ESTIRAMIENTOS': 'ES', 'STRETCH': 'ES', 'ESTIRAMENTS': 'ES', 'ES': 'ES',
+  'RPM': 'RPM',
+  'BODYSTEP': 'BS', 'BS': 'BS',
+  'CXWORX': 'CX', 'CX': 'CX',
+  'SPRINT': 'SPRINT',
+  'GRIT': 'GRIT',
+  'BARRE': 'BARRE',
+  'TONE': 'TONE',
+  'CORE': 'CORE',
+  'CROSSTRAINING': 'CROSS', 'CROSS': 'CROSS',
+};
+
+export const normalizeProgram = (program: string): string => {
+  if (!program) return '';
+  const normalized = program.toUpperCase()
+    .replace(/\s+/g, '')
+    .replace(/OUTDOOR/g, '')
+    .replace(/'/g, '');
+  return PROGRAM_MAP[normalized] || normalized;
+};
