@@ -46,14 +46,7 @@ const Users = () => {
     (a.name || '').localeCompare(b.name || '', 'ca', { sensitivity: 'base' })
   );
 
-  const [programFilter, setProgramFilter] = useState<string>("all");
-  const [minAge, setMinAge] = useState<string>("");
-  const [maxAge, setMaxAge] = useState<string>("");
-
-  const allPrograms = Array.from(
-    new Set(users.flatMap(u => u.preferredPrograms || []))
-  ).sort();
-
+ 
   // Llista de programes únics i normalitzats (sense duplicats com BC/BODYCOMBAT)
   const allPrograms = Array.from(
     new Set(
