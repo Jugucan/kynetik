@@ -492,43 +492,7 @@ const Users = () => {
           </div>
         </div>
       )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-        <div className="sm:col-span-1 min-w-0">
-          <Select value={programFilter} onValueChange={setProgramFilter}>
-            <SelectTrigger className="shadow-neo-inset border-0 h-12 px-4 focus:ring-0 rounded-xl">
-              <SelectValue placeholder="Filtrar per programa" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tots els Programes</SelectItem>
-              {allPrograms.map(prog => (
-                <SelectItem key={prog} value={prog}>{prog}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="sm:col-span-1 min-w-0">
-          <Input
-            type="number"
-            placeholder="Edat mínima"
-            className="shadow-neo-inset border-0 h-12 focus-visible:ring-0 rounded-xl"
-            value={minAge}
-            onChange={(e) => setMinAge(e.target.value)}
-          />
-        </div>
-
-        <div className="sm:col-span-1 min-w-0">
-          <Input
-            type="number"
-            placeholder="Edat màxima"
-            className="shadow-neo-inset border-0 h-12 focus-visible:ring-0 rounded-xl"
-            value={maxAge}
-            onChange={(e) => setMaxAge(e.target.value)}
-          />
-        </div>
-      </div>
-
+      
       <NeoCard>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregant usuaris...</div>
