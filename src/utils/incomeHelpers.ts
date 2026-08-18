@@ -6,10 +6,15 @@ import { dateToKey } from '@/utils/statsHelpers';
 import type { Schedule, SettingsData, Center } from '@/contexts/AppDataContext';
 
 export interface PayPeriod {
-  start: string; // 'YYYY-MM-DD'
-  end: string;   // 'YYYY-MM-DD'
-  label: string;
+  start: string;      // 'YYYY-MM-DD'
+  end: string;         // 'YYYY-MM-DD'
+  monthLabel: string;  // "Juliol"
+  rangeLabel: string;  // "26 jul. - 25 d'ag. del 2026"
 }
+
+const MONTH_FULL = ['Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny', 'Juliol', 'Agost', 'Setembre', 'Octubre', 'Novembre', 'Desembre'];
+const MONTH_ABBR = ['gen.', 'febr.', 'març', 'abr.', 'maig', 'juny', 'jul.', 'ag.', 'set.', 'oct.', 'nov.', 'des.'];
+const VOWEL_MONTHS = [3, 7, 9]; // abril, agost, octubre -> porten "d'" en lloc de "de "
 
 // Donada una data, retorna el període de nòmina (26 -> 25) al qual pertany
 export const getPayPeriodForDate = (date: Date): { start: string; end: string } => {
@@ -28,12 +33,24 @@ export const getPayPeriodForDate = (date: Date): { start: string; end: string } 
   return { start: dateToKey(periodStart), end: dateToKey(periodEnd) };
 };
 
-export const getPeriodLabel = (periodStart: string, periodEnd: string): string => {
+// Genera "Juliol" (mes en gran) i "26 jul. - 25 d'ag. del 2026" (rang en petit)
+// El mes gran es basa en el dia d'INICI del període (dia 26).
+export const getPeriodLabels = (periodStart: string, periodEnd: string): { monthLabel: string; rangeLabel: string } => {
   const start = new Date(periodStart);
   const end = new Date(periodEnd);
-  const startLabel = start.toLocaleDateString('ca-ES', { day: 'numeric', month: 'short' });
-  const endLabel = end.toLocaleDateString('ca-ES', { day: 'numeric', month: 'short', year: 'numeric' });
-  return `${startLabel} - ${endLabel}`;
+
+  const monthLabel = MONTH_FULL[start.getMonth()];
+
+  const startDay = start.getDate();
+  const startAbbr = MONTH_ABBR[start.getMonth()];
+  const endDay = end.getDate();
+  const endAbbr = MONTH_ABBR[end.getMonth()];
+  const endYear = end.getFullYear();
+  const endPrep = VOWEL_MONTHS.includes(end.getMonth()) ? "d'" : "de ";
+
+  const rangeLabel = `${startDay} ${startAbbr} - ${endDay} ${endPrep}${endAbbr} del ${endYear}`;
+
+  return { monthLabel, rangeLabel };
 };
 
 // Retorna els últims `count` períodes, començant pel període actual (índex 0)
@@ -43,7 +60,8 @@ export const getRecentPeriods = (count: number, fromDate: Date = new Date()): Pa
 
   for (let i = 0; i < count; i++) {
     const { start, end } = getPayPeriodForDate(cursor);
-    periods.push({ start, end, label: getPeriodLabel(start, end) });
+    const { monthLabel, rangeLabel } = getPeriodLabels(start, end);
+    periods.push({ start, end, monthLabel, rangeLabel });
 
     const prevDay = new Date(start);
     prevDay.setDate(prevDay.getDate() - 1); // últim dia del període anterior
