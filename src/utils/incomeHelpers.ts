@@ -72,6 +72,21 @@ export const getRecentPeriods = (count: number, fromDate: Date = new Date()): Pa
   return periods;
 };
 
+// Retorna els 12 períodes (Gener–Desembre) corresponents a un any concret,
+// seguint la mateixa lògica que el teu Excel (columna = mes, període 26→25).
+export const getPeriodsForYear = (year: number): PayPeriod[] => {
+  const periods: PayPeriod[] = [];
+  for (let month = 0; month < 12; month++) {
+    const start = new Date(year, month - 1, 26);
+    const end = new Date(year, month, 25);
+    const startKey = dateToKey(start);
+    const endKey = dateToKey(end);
+    const { monthLabel, rangeLabel } = getPeriodLabels(startKey, endKey);
+    periods.push({ start: startKey, end: endKey, monthLabel, rangeLabel });
+  }
+  return periods;
+};
+
 // Compta les sessions EFECTIVES per centre dins d'un període — inclou baixes,
 // substitucions i qualsevol modificació feta des del Calendari (customSessions),
 // per mostrar exactament el mateix que la pàgina de Calendari.
