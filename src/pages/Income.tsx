@@ -35,6 +35,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { YearlyIncomeSummary } from "@/components/income/YearlyIncomeSummary";
 
 const formatEuro = (value: number) =>
   new Intl.NumberFormat("ca-ES", { style: "currency", currency: "EUR" }).format(value);
@@ -159,6 +161,14 @@ const Income = () => {
         </p>
       </div>
 
+      <Tabs defaultValue="current" className="space-y-6">
+        <TabsList className="grid grid-cols-2 w-full">
+          <TabsTrigger value="current">Període actual</TabsTrigger>
+          <TabsTrigger value="yearly">Resum anual</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="current" className="space-y-6">
+      
       <NeoCard className="p-4 sm:p-6">
         <div className="flex items-center justify-between gap-2">
           <Button
@@ -338,6 +348,19 @@ const Income = () => {
           ))}
         </div>
       </NeoCard>
+        </TabsContent>
+
+        <TabsContent value="yearly">
+          <YearlyIncomeSummary
+            schedules={schedules}
+            settings={settings}
+            customSessions={customSessions}
+            activeCenters={activeCenters}
+            getCenterByLegacyId={getCenterByLegacyId}
+            payrolls={payrolls}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
