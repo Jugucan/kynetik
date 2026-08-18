@@ -1,5 +1,5 @@
 // src/pages/Income.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,14 +15,17 @@ import {
 } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Euro, Trash2, TrendingUp } from "lucide-react";
 import { useCenters } from "@/hooks/useCenters";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 import { useSchedules } from "@/hooks/useSchedules";
 import { useSettings } from "@/hooks/useSettings";
 import { usePayrolls } from "@/hooks/usePayrolls";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getRecentPeriods,
-  countSessionsInPeriod,
+  countEffectiveSessionsInPeriod,
 } from "@/utils/incomeHelpers";
+import type { EffectiveSession } from "@/utils/sessionHelpers";
 import {
   BarChart,
   Bar,
@@ -43,6 +46,22 @@ const Income = () => {
   const settings = useSettings(); // useSettings() ja retorna vacations, closuresByCenter, etc. directament (no dins d'un objecte "settings")
   const { payrolls, loading, addPayroll, deletePayroll } = usePayrolls();
 
+    const [customSessions, setCustomSessions] = useState<Record<string, EffectiveSession[]>>({});
+
+  useEffect(() => {
+    const loadCustomSessions = async () => {
+      const snap = await getDoc(doc(db, "settings", "customSessions"));
+      if (snap.exists()) {
+        const data = snap.data();
+        const sessionsMap: Record<string, EffectiveSession[]> = {};
+        Object.entries(data).forEach(([dateKey, sessions]) => {
+          if (Array.isArray(sessions)) sessionsMap[dateKey] = sessions as EffectiveSession[];
+        });
+        setCustomSessions(sessionsMap);
+      }
+    };
+    loadCustomSessions();
+  }, []);
   const periods = useMemo(() => getRecentPeriods(12), []);
   const [selectedPeriodIndex, setSelectedPeriodIndex] = useState(0);
   const selectedPeriod = periods[selectedPeriodIndex];
@@ -53,14 +72,15 @@ const Income = () => {
 
   const sessionCounts = useMemo(() => {
     if (!selectedPeriod) return {};
-    return countSessionsInPeriod(
+    return countEffectiveSessionsInPeriod(
       schedules,
       settings,
+      customSessions,
       selectedPeriod.start,
       selectedPeriod.end,
       getCenterByLegacyId
     );
-  }, [schedules, settings, selectedPeriod, getCenterByLegacyId]);
+  }, [schedules, settings, customSessions, selectedPeriod, getCenterByLegacyId]);
 
   const entriesForPeriod = useMemo(
     () => payrolls.filter((p) => selectedPeriod && p.periodStart === selectedPeriod.start),
@@ -139,8 +159,8 @@ const Income = () => {
       <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
         <h3 className="text-lg font-semibold mb-1">Classes fetes aquest període (referència)</h3>
         <p className="text-xs text-muted-foreground mb-4">
-          Calculat automàticament a partir del teu horari habitual. No inclou substitucions
-          puntuals fetes des del Calendari.
+          Calculat automàticament a partir del Calendari: reflecteix baixes, substitucions
+          i qualsevol modificació que hi hagis fet.
         </p>
         <div className="grid grid-cols-2 gap-3">
           {activeCenters.map((center) => (
