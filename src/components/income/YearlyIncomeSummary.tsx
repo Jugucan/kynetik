@@ -80,10 +80,12 @@ export const YearlyIncomeSummary = ({
   }, [yearPeriods, schedules, settings, customSessions, activeCenters, getCenterByLegacyId, payrolls]);
 
   const yearTotals = useMemo(() => {
-    const totalHores = monthlyBreakdown.reduce((sum, m) => sum + m.totalHores, 0);
-    const totalPagat = monthlyBreakdown.reduce((sum, m) => sum + m.totalPagat, 0);
-    const monthsWithData = monthlyBreakdown.filter((m) => m.totalPagat > 0).length;
-    const mitjanaMensual = monthsWithData > 0 ? totalPagat / monthsWithData : 0;
+    // Només comptem els mesos amb almenys una nòmina introduïda,
+    // per no falsejar les mitjanes amb mesos futurs que encara no s'han cobrat.
+    const monthsWithData = monthlyBreakdown.filter((m) => m.totalPagat > 0);
+    const totalHores = monthsWithData.reduce((sum, m) => sum + m.totalHores, 0);
+    const totalPagat = monthsWithData.reduce((sum, m) => sum + m.totalPagat, 0);
+    const mitjanaMensual = monthsWithData.length > 0 ? totalPagat / monthsWithData.length : 0;
     const euroHoraMitjana = totalHores > 0 ? totalPagat / totalHores : 0;
     return { totalHores, totalPagat, mitjanaMensual, euroHoraMitjana };
   }, [monthlyBreakdown]);
