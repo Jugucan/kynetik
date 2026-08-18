@@ -92,7 +92,7 @@ const Income = () => {
       const total = payrolls
         .filter((p) => p.periodStart === period.start)
         .reduce((sum, e) => sum + e.amount, 0);
-      return { periode: period.label.split(" - ")[0], total };
+      return { periode: period.monthLabel, total };
     });
   }, [periods, payrolls]);
 
@@ -119,7 +119,8 @@ const Income = () => {
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <div className="text-center">
-            <p className="font-semibold text-lg">{selectedPeriod?.label}</p>
+            <p className="font-bold text-xl">{selectedPeriod?.monthLabel}</p>
+            <p className="text-xs text-muted-foreground">({selectedPeriod?.rangeLabel})</p>
             {selectedPeriodIndex === 0 && (
               <Badge variant="outline" className="mt-1">Període actual</Badge>
             )}
