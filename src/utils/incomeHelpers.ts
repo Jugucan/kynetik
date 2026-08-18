@@ -3,6 +3,7 @@
 // i comptatge automàtic de classes per centre, en memòria, sense lectures noves a Firebase.
 
 import { dateToKey } from '@/utils/statsHelpers';
+import { getEffectiveSessionsForDate } from '@/utils/sessionHelpers';
 import type { Schedule, SettingsData, Center } from '@/contexts/AppDataContext';
 
 export interface PayPeriod {
@@ -71,12 +72,13 @@ export const getRecentPeriods = (count: number, fromDate: Date = new Date()): Pa
   return periods;
 };
 
-// Compta les classes programades per centre dins d'un període,
-// respectant vacances, tancaments i festius. NOMÉS horari fix
-// (no inclou substitucions puntuals fetes des del Calendari).
-export const countSessionsInPeriod = (
+// Compta les sessions EFECTIVES per centre dins d'un període — inclou baixes,
+// substitucions i qualsevol modificació feta des del Calendari (customSessions),
+// per mostrar exactament el mateix que la pàgina de Calendari.
+export const countEffectiveSessionsInPeriod = (
   schedules: Schedule[],
   settings: SettingsData,
+  customSessions: Record<string, import('./sessionHelpers').EffectiveSession[]>,
   periodStart: string,
   periodEnd: string,
   getCenterByLegacyId: (legacyId: 'Arbucies' | 'SantHilari') => Center | undefined
@@ -86,36 +88,15 @@ export const countSessionsInPeriod = (
   const end = new Date(periodEnd);
   const current = new Date(start);
 
-  const sortedSchedules = [...schedules].sort((a, b) => b.startDate.localeCompare(a.startDate));
-
   while (current <= end) {
-    const dateKey = dateToKey(current);
-
-    const isHoliday = !!settings.officialHolidays?.hasOwnProperty(dateKey);
-    const isVacation = !!settings.vacations?.hasOwnProperty(dateKey);
-    const isClosure = Object.values(settings.closuresByCenter || {}).some(
-      (closures) => closures && closures.hasOwnProperty(dateKey)
-    );
-
-    if (!isHoliday && !isVacation && !isClosure) {
-      const schedule = sortedSchedules.find((s) => {
-        const sStart = s.startDate;
-        const sEnd = s.endDate || '9999-12-31';
-        return dateKey >= sStart && dateKey <= sEnd;
+    const sessions = getEffectiveSessionsForDate(current, schedules, settings, customSessions);
+    sessions
+      .filter((s) => !s.isDeleted)
+      .forEach((session) => {
+        const center = getCenterByLegacyId(session.center as 'Arbucies' | 'SantHilari');
+        const centerId = center?.id || session.center;
+        if (centerId) counts[centerId] = (counts[centerId] || 0) + 1;
       });
-
-      if (schedule) {
-        const dayOfWeek = current.getDay();
-        const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
-        const sessions = schedule.sessions[adjustedDay] || [];
-        sessions.forEach((session) => {
-          const center = getCenterByLegacyId(session.center);
-          const centerId = center?.id || session.center;
-          counts[centerId] = (counts[centerId] || 0) + 1;
-        });
-      }
-    }
-
     current.setDate(current.getDate() + 1);
   }
 
