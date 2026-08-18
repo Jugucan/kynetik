@@ -40,7 +40,7 @@ export const getPeriodLabels = (periodStart: string, periodEnd: string): { month
   const start = new Date(periodStart);
   const end = new Date(periodEnd);
 
-  const monthLabel = MONTH_FULL[start.getMonth()];
+  const monthLabel = MONTH_FULL[end.getMonth()];
 
   const startDay = start.getDate();
   const startAbbr = MONTH_ABBR[start.getMonth()];
