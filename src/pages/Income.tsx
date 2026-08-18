@@ -37,10 +37,10 @@ const formatEuro = (value: number) =>
   new Intl.NumberFormat("ca-ES", { style: "currency", currency: "EUR" }).format(value);
 
 const Income = () => {
-  const { firestoreUserId } = useAuth();
+  const { currentUser } = useAuth();
   const { activeCenters, getCenterByLegacyId } = useCenters();
   const { schedules } = useSchedules();
-  const { settings } = useSettings();
+  const settings = useSettings(); // useSettings() ja retorna vacations, closuresByCenter, etc. directament (no dins d'un objecte "settings")
   const { payrolls, loading, addPayroll, deletePayroll } = usePayrolls();
 
   const periods = useMemo(() => getRecentPeriods(12), []);
@@ -71,11 +71,11 @@ const Income = () => {
 
   const handleAdd = async () => {
     const amount = parseFloat(amountInput.replace(",", "."));
-    if (!selectedCenterId || isNaN(amount) || amount <= 0 || !selectedPeriod || !firestoreUserId) return;
+    if (!selectedCenterId || isNaN(amount) || amount <= 0 || !selectedPeriod || !currentUser) return;
     setSaving(true);
     try {
       await addPayroll({
-        instructorId: firestoreUserId,
+        instructorId: currentUser.uid,
         centerId: selectedCenterId,
         periodStart: selectedPeriod.start,
         periodEnd: selectedPeriod.end,
