@@ -87,7 +87,7 @@ const Income = () => {
     };
     loadCustomSessions();
   }, []);
-  const periods = useMemo(() => getRecentPeriods(12), []);
+  const periods = useMemo(() => getRecentPeriods(60), []);
   const [selectedPeriodIndex, setSelectedPeriodIndex] = useState(0);
   const selectedPeriod = periods[selectedPeriodIndex];
 
@@ -311,31 +311,39 @@ const Income = () => {
 
         {/* Vista MÒBIL: llista vertical amb barra segmentada per centre */}
         <div className="block sm:hidden space-y-3">
-          {chartData.map((item) => (
-            <div key={item.periode} className="space-y-2">
-              <div className="flex items-center justify-between text-sm gap-2">
-                <span className="font-medium">{item.periode}</span>
-                <Badge variant="outline" className="bg-indigo-50">
-                  {formatEuro(item.total)}
-                </Badge>
-              </div>
-              <div className="h-8 bg-muted rounded-full overflow-hidden flex">
-                {activeCenters.map((center) => {
-                  const value = item[center.id] || 0;
-                  const pct = item.total > 0 ? (value / item.total) * 100 : 0;
-                  if (pct === 0) return null;
-                  return (
-                    <div
-                      key={center.id}
-                      className={CENTER_COLOR_CLASS[center.color] || "bg-indigo-500"}
-                      style={{ width: `${pct}%` }}
-                      title={`${center.name}: ${formatEuro(value)}`}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+          {(() => {
+            const maxTotal = Math.max(...chartData.map((c) => c.total), 1);
+            return chartData.map((item) => {
+              const barWidthPct = (item.total / maxTotal) * 100;
+              return (
+                <div key={item.periode} className="space-y-2">
+                  <div className="flex items-center justify-between text-sm gap-2">
+                    <span className="font-medium">{item.periode}</span>
+                    <Badge variant="outline" className="bg-indigo-50">
+                      {formatEuro(item.total)}
+                    </Badge>
+                  </div>
+                  <div className="h-8 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full flex" style={{ width: `${barWidthPct}%` }}>
+                      {activeCenters.map((center) => {
+                        const value = item[center.id] || 0;
+                        const centerPct = item.total > 0 ? (value / item.total) * 100 : 0;
+                        if (centerPct === 0) return null;
+                        return (
+                          <div
+                            key={center.id}
+                            className={CENTER_COLOR_CLASS[center.color] || "bg-indigo-500"}
+                            style={{ width: `${centerPct}%` }}
+                            title={`${center.name}: ${formatEuro(value)}`}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            });
+          })()}
         </div>
 
         {/* Llegenda de colors per centre */}
