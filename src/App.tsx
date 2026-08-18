@@ -28,6 +28,7 @@ import PendingApproval from "./pages/PendingApproval";
 import Superadmin from "./pages/Superadmin";
 import NotFound from "./pages/NotFound";
 import UserStats from "./pages/UserStats";
+import Income from "./pages/Income";
 
 const queryClient = new QueryClient();
 
@@ -176,6 +177,14 @@ const AppRoutes = () => {
                       element={
                         <ViewProtectedRoute allowedViews={['instructor']}>
                           <Notes />
+                        </ViewProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/income"
+                      element={
+                        <ViewProtectedRoute allowedViews={['instructor']}>
+                          <Income />
                         </ViewProtectedRoute>
                       }
                     />
