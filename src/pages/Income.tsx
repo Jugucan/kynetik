@@ -39,6 +39,29 @@ import {
 const formatEuro = (value: number) =>
   new Intl.NumberFormat("ca-ES", { style: "currency", currency: "EUR" }).format(value);
 
+// Mateixa paleta que fas servir a Configuració → Centres (CenterManagement.tsx)
+const CENTER_COLOR_CLASS: Record<string, string> = {
+  blue: "bg-blue-500",
+  green: "bg-green-500",
+  purple: "bg-purple-500",
+  orange: "bg-orange-500",
+  red: "bg-red-500",
+  pink: "bg-pink-500",
+  yellow: "bg-yellow-500",
+  indigo: "bg-indigo-500",
+};
+
+const CENTER_COLOR_HEX: Record<string, string> = {
+  blue: "#3b82f6",
+  green: "#22c55e",
+  purple: "#a855f7",
+  orange: "#f97316",
+  red: "#ef4444",
+  pink: "#ec4899",
+  yellow: "#eab308",
+  indigo: "#6366f1",
+};
+
 const Income = () => {
   const { currentUser } = useAuth();
   const { activeCenters, getCenterByLegacyId } = useCenters();
@@ -109,12 +132,20 @@ const Income = () => {
 
   const chartData = useMemo(() => {
     return [...periods].reverse().map((period) => {
-      const total = payrolls
-        .filter((p) => p.periodStart === period.start)
-        .reduce((sum, e) => sum + e.amount, 0);
-      return { periode: period.monthLabel, total };
+      const periodEntries = payrolls.filter((p) => p.periodStart === period.start);
+      const row: Record<string, any> = { periode: period.monthLabel };
+      let total = 0;
+      activeCenters.forEach((center) => {
+        const centerTotal = periodEntries
+          .filter((e) => e.centerId === center.id)
+          .reduce((sum, e) => sum + e.amount, 0);
+        row[center.id] = centerTotal;
+        total += centerTotal;
+      });
+      row.total = total;
+      return row;
     });
-  }, [periods, payrolls]);
+  }, [periods, payrolls, activeCenters]);
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-4xl mx-auto">
@@ -240,21 +271,71 @@ const Income = () => {
         )}
       </NeoCard>
 
-      <NeoCard className="p-4 sm:p-6">
+      <NeoCard className="p-4 sm:p-6 min-w-0">
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp className="w-5 h-5" />
-          <h3 className="text-lg font-semibold">Evolució dels ingressos</h3>
+          <h3 className="text-lg sm:text-xl font-semibold">Evolució dels ingressos</h3>
         </div>
-        <div className="h-64">
+        <Separator className="mb-4" />
+
+        {/* Vista ESCRIPTORI: gràfica de barres apilades, un color per centre */}
+        <div className="hidden sm:block h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="periode" fontSize={12} />
               <YAxis fontSize={12} />
               <Tooltip formatter={(value: number) => formatEuro(value as number)} />
-              <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              {activeCenters.map((center) => (
+                <Bar
+                  key={center.id}
+                  dataKey={center.id}
+                  stackId="income"
+                  name={center.name}
+                  fill={CENTER_COLOR_HEX[center.color] || "#6366f1"}
+                />
+              ))}
             </BarChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* Vista MÒBIL: llista vertical amb barra segmentada per centre */}
+        <div className="block sm:hidden space-y-3">
+          {chartData.map((item) => (
+            <div key={item.periode} className="space-y-2">
+              <div className="flex items-center justify-between text-sm gap-2">
+                <span className="font-medium">{item.periode}</span>
+                <Badge variant="outline" className="bg-indigo-50">
+                  {formatEuro(item.total)}
+                </Badge>
+              </div>
+              <div className="h-8 bg-muted rounded-full overflow-hidden flex">
+                {activeCenters.map((center) => {
+                  const value = item[center.id] || 0;
+                  const pct = item.total > 0 ? (value / item.total) * 100 : 0;
+                  if (pct === 0) return null;
+                  return (
+                    <div
+                      key={center.id}
+                      className={CENTER_COLOR_CLASS[center.color] || "bg-indigo-500"}
+                      style={{ width: `${pct}%` }}
+                      title={`${center.name}: ${formatEuro(value)}`}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Llegenda de colors per centre */}
+        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground border-t pt-3 mt-4">
+          {activeCenters.map((center) => (
+            <div key={center.id} className="flex items-center gap-1">
+              <div className={`w-3 h-3 rounded ${CENTER_COLOR_CLASS[center.color] || "bg-indigo-500"} flex-shrink-0`}></div>
+              <span>{center.name}</span>
+            </div>
+          ))}
         </div>
       </NeoCard>
     </div>
