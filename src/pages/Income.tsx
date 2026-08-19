@@ -136,7 +136,7 @@ const Income = () => {
   const chartData = useMemo(() => {
     return [...periods].reverse().map((period) => {
       const periodEntries = payrolls.filter((p) => p.periodStart === period.start);
-      const row: Record<string, any> = { periode: period.monthLabel };
+      const row: Record<string, any> = { periode: period.shortLabel };
       let total = 0;
       activeCenters.forEach((center) => {
         const centerTotal = periodEntries
