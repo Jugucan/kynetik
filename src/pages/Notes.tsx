@@ -239,7 +239,7 @@ const Notes = () => {
         <div className="flex items-center gap-3">
           <StickyNote className="w-8 h-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Les Meves Notes</h1>
+            <h1 className="text-3xl font-bold text-foreground">Notes</h1>
             <p className="text-sm text-muted-foreground">
               Gestiona les teves notes personals
             </p>
