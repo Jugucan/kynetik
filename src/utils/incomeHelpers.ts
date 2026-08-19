@@ -17,6 +17,14 @@ const MONTH_FULL = ['Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny', 'Juliol
 const MONTH_ABBR = ['gen.', 'febr.', 'març', 'abr.', 'maig', 'juny', 'jul.', 'ag.', 'set.', 'oct.', 'nov.', 'des.'];
 const VOWEL_MONTHS = [3, 7, 9]; // abril, agost, octubre -> porten "d'" en lloc de "de "
 
+// IMPORTANT: parseja una clau 'YYYY-MM-DD' com a data LOCAL, mai com a UTC.
+// "new Date('2024-11-25')" es interpreta com a UTC i pot desquadrar-se una hora
+// als canvis d'horari d'estiu/hivern (per això fallava sempre al novembre).
+const parseDateKey = (dateKey: string): Date => {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 // Donada una data, retorna el període de nòmina (26 -> 25) al qual pertany
 export const getPayPeriodForDate = (date: Date): { start: string; end: string } => {
   const day = date.getDate();
@@ -35,10 +43,10 @@ export const getPayPeriodForDate = (date: Date): { start: string; end: string } 
 };
 
 // Genera "Juliol" (mes en gran) i "26 jul. - 25 d'ag. del 2026" (rang en petit)
-// El mes gran es basa en el dia d'INICI del període (dia 26).
+// El mes gran es basa en el dia de TANCAMENT del període (dia 25).
 export const getPeriodLabels = (periodStart: string, periodEnd: string): { monthLabel: string; rangeLabel: string } => {
-  const start = new Date(periodStart);
-  const end = new Date(periodEnd);
+  const start = parseDateKey(periodStart);
+  const end = parseDateKey(periodEnd);
 
   const monthLabel = MONTH_FULL[end.getMonth()];
 
@@ -64,7 +72,7 @@ export const getRecentPeriods = (count: number, fromDate: Date = new Date()): Pa
     const { monthLabel, rangeLabel } = getPeriodLabels(start, end);
     periods.push({ start, end, monthLabel, rangeLabel });
 
-    const prevDay = new Date(start);
+    const prevDay = parseDateKey(start);
     prevDay.setDate(prevDay.getDate() - 1); // últim dia del període anterior
     cursor = prevDay;
   }
@@ -99,8 +107,8 @@ export const countEffectiveSessionsInPeriod = (
   getCenterByLegacyId: (legacyId: 'Arbucies' | 'SantHilari') => Center | undefined
 ): Record<string, number> => {
   const counts: Record<string, number> = {};
-  const start = new Date(periodStart);
-  const end = new Date(periodEnd);
+  const start = parseDateKey(periodStart);
+  const end = parseDateKey(periodEnd);
   const current = new Date(start);
 
   while (current <= end) {
