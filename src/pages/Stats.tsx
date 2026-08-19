@@ -79,7 +79,7 @@ const StatsNew = () => {
         <div className="flex items-center gap-3">
           <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">Les Meves Estadístiques</h1>
+            <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">Estadístiques</h1>
             <p className="text-sm text-muted-foreground">Anàlisi del teu rendiment com a instructora</p>
           </div>
         </div>
@@ -95,7 +95,7 @@ const StatsNew = () => {
           <div className="flex items-center gap-3 min-w-0">
             <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">Les Meves Estadístiques</h1>
+              <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">Estadístiques</h1>
               <p className="text-sm text-muted-foreground">Classes reals segons el teu calendari</p>
             </div>
           </div>
