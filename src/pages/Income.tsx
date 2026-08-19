@@ -334,7 +334,7 @@ const Income = () => {
         <div className="hidden sm:block overflow-x-auto">
           <div
             className="h-64"
-            style={{ minWidth: `${Math.max(displayedChartData.length * 60, 100)}%` }}
+            style={{ minWidth: `${Math.max(displayedChartData.length * 60, 400)}px` }}
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={displayedChartData}>
