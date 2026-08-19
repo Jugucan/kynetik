@@ -584,6 +584,7 @@ const Income = () => {
             getCenterByLegacyId={getCenterByLegacyId}
             payrolls={payrolls}
             incentives={incentives}
+            getParamsForYear={getParamsForYear}
           />
         </TabsContent>
       </Tabs>
