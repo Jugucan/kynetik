@@ -214,7 +214,11 @@ export const YearlyIncomeSummary = ({
                 <div className="space-y-3">
                   {activeCenters.map((center) => {
                     const data = row.byCenter[center.id];
-                    const pct = row.totalPagat > 0 ? (data.pagat / row.totalPagat) * 100 : 0;
+                    const maxCenterPagat = Math.max(
+                      ...activeCenters.map((c) => row.byCenter[c.id]?.pagat || 0),
+                      1
+                    );
+                    const pct = maxCenterPagat > 0 ? (data.pagat / maxCenterPagat) * 100 : 0;
                     return (
                       <div key={center.id} className="space-y-1">
                         <div className="flex items-center justify-between text-xs gap-2">
