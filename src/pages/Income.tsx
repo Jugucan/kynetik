@@ -233,7 +233,7 @@ const Income = () => {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Euro className="w-6 h-6" />
-          Els meus ingressos
+          Ingressos
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Registre de nòmines per centre i període (del 26 al 25 de cada mes).
