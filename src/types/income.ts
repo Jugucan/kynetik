@@ -13,3 +13,14 @@ export interface PayrollEntry {
 }
 
 export type NewPayrollEntry = Omit<PayrollEntry, 'id' | 'createdAt'>;
+
+export interface IncentiveEntry {
+  id: string;
+  instructorId: string;
+  periodStart: string; // 'YYYY-MM-DD'
+  periodEnd: string;   // 'YYYY-MM-DD'
+  amount: number;
+  createdAt: string;
+}
+
+export type NewIncentiveEntry = Omit<IncentiveEntry, 'id' | 'createdAt'>;
