@@ -37,6 +37,8 @@ import {
 } from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { YearlyIncomeSummary } from "@/components/income/YearlyIncomeSummary";
+import { dateToKey } from "@/utils/statsHelpers";
+import { getEffectiveSessionsForDate } from "@/utils/sessionHelpers";
 
 const formatEuro = (value: number) =>
   new Intl.NumberFormat("ca-ES", { style: "currency", currency: "EUR" }).format(value);
@@ -106,6 +108,22 @@ const Income = () => {
       getCenterByLegacyId
     );
   }, [schedules, settings, customSessions, selectedPeriod, getCenterByLegacyId]);
+
+    const dailyBreakdown = useMemo(() => {
+    if (!selectedPeriod) return [];
+    const result: { dateKey: string; sessions: EffectiveSession[] }[] = [];
+    const start = new Date(selectedPeriod.start);
+    const end = new Date(selectedPeriod.end);
+    const current = new Date(start);
+    while (current <= end) {
+      const sessions = getEffectiveSessionsForDate(current, schedules, settings, customSessions).filter(
+        (s) => !s.isDeleted
+      );
+      result.push({ dateKey: dateToKey(current), sessions });
+      current.setDate(current.getDate() + 1);
+    }
+    return result;
+  }, [selectedPeriod, schedules, settings, customSessions]);
 
   const entriesForPeriod = useMemo(
     () => payrolls.filter((p) => selectedPeriod && p.periodStart === selectedPeriod.start),
@@ -213,6 +231,31 @@ const Income = () => {
           ))}
         </div>
       </NeoCard>
+
+      <NeoCard className="p-4 sm:p-6 min-w-0">
+        <h3 className="text-lg font-semibold mb-1">Detall diari (temporal, per verificar)</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Llista dia a dia del que calcula aquesta pàgina. Compara-ho amb el Calendari.
+        </p>
+        <div className="max-h-80 overflow-y-auto space-y-1">
+          {dailyBreakdown.map((day) => (
+            <div key={day.dateKey} className="flex items-center justify-between text-xs border-b py-1 gap-2">
+              <span className="font-mono flex-shrink-0">{day.dateKey}</span>
+              <div className="flex flex-wrap gap-1 justify-end">
+                {day.sessions.length === 0 ? (
+                  <span className="text-muted-foreground">sense classes</span>
+                ) : (
+                  day.sessions.map((s, i) => (
+                    <Badge key={i} variant="outline">
+                      {s.center === "Arbucies" ? "Arb" : s.center === "SantHilari" ? "SH" : s.center} · {s.program}
+                    </Badge>
+                  ))
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </NeoCard>    
 
       <NeoCard className="p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4">Afegir nòmina d'aquest període</h3>
