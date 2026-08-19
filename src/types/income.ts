@@ -24,3 +24,23 @@ export interface IncentiveEntry {
 }
 
 export type NewIncentiveEntry = Omit<IncentiveEntry, 'id' | 'createdAt'>;
+
+export interface PayrollParams {
+  id: string;
+  instructorId: string;
+  year: number;
+  souBase: number;
+  pagaEstiu: number;
+  pagaNadal: number;
+  pagaBeneficis: number;
+  substitutoriCalcat: number;
+  incentiuEuroHora: number;
+  contingenciesComunes: number; // percentatge, ex: 4.70
+  atur: number;
+  formacioProfessional: number;
+  mecanismeEquitat: number;
+  irpf: number;
+  createdAt: string;
+}
+
+export type NewPayrollParams = Omit<PayrollParams, 'id' | 'createdAt'>;
