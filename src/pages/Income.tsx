@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Euro, Trash2, TrendingUp, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, Euro, Trash2, TrendingUp, Sparkles, Calculator } from "lucide-react";
 import { useCenters } from "@/hooks/useCenters";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -22,6 +22,9 @@ import { useSchedules } from "@/hooks/useSchedules";
 import { useSettings } from "@/hooks/useSettings";
 import { usePayrolls } from "@/hooks/usePayrolls";
 import { useIncentives } from "@/hooks/useIncentives";
+import { usePayrollParams } from "@/hooks/usePayrollParams";
+import { PayrollParamsDialog } from "@/components/income/PayrollParamsDialog";
+import { computeEstimatedNet } from "@/utils/incomeHelpers";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getRecentPeriods,
@@ -73,6 +76,7 @@ const Income = () => {
   const settings = useSettings(); // useSettings() ja retorna vacations, closuresByCenter, etc. directament (no dins d'un objecte "settings")
   const { payrolls, loading, addPayroll, deletePayroll } = usePayrolls();
   const { incentives, addIncentive, updateIncentive, deleteIncentive } = useIncentives();
+  const { getParamsForYear, saveParamsForYear } = usePayrollParams();
 
     const [customSessions, setCustomSessions] = useState<Record<string, EffectiveSession[]>>({});
 
@@ -114,6 +118,10 @@ const Income = () => {
     () => Object.values(sessionCounts).reduce((sum, v) => sum + (v as number), 0),
     [sessionCounts]
   );
+
+  const selectedPeriodYear = selectedPeriod ? parseInt(selectedPeriod.end.split("-")[0], 10) : new Date().getFullYear();
+  const paramsForPeriod = getParamsForYear(selectedPeriodYear);
+  const estimatedNet = paramsForPeriod ? computeEstimatedNet(paramsForPeriod, totalHoresPeriode) : null;
 
   const incentiveForPeriod = useMemo(
     () => incentives.find((i) => selectedPeriod && i.periodStart === selectedPeriod.start),
@@ -414,6 +422,60 @@ const Income = () => {
           </div>
         )}
       </NeoCard>
+
+      {entriesForPeriod.length === 0 && (
+        <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-violet-50 to-purple-50">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="flex items-center gap-2">
+              <Calculator className="w-5 h-5 text-violet-600" />
+              <h3 className="text-lg font-semibold">Previsió d'aquest període</h3>
+            </div>
+            <PayrollParamsDialog
+              year={selectedPeriodYear}
+              currentParams={paramsForPeriod}
+              onSave={saveParamsForYear}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">
+            Estimació orientativa. Un cop introdueixis la nòmina real d'aquest període, aquesta
+            previsió desapareixerà.
+          </p>
+
+          {estimatedNet ? (
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Sou base + pagues</span>
+                <span>{formatEuro(estimatedNet.grossFixed)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Incentius estimats ({totalHoresPeriode}h × {paramsForPeriod?.incentiuEuroHora.toFixed(2)}€)
+                </span>
+                <span>{formatEuro(estimatedNet.incentiuEstimat)}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between font-medium">
+                <span>Total brut</span>
+                <span>{formatEuro(estimatedNet.grossTotal)}</span>
+              </div>
+              <div className="flex justify-between text-red-600">
+                <span>Retencions (-{estimatedNet.deductionPct.toFixed(2)}%)</span>
+                <span>-{formatEuro(estimatedNet.deductionAmount)}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between font-bold text-lg text-violet-700">
+                <span>Total net estimat</span>
+                <span>{formatEuro(estimatedNet.netEstimate)}</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Encara no has configurat els paràmetres de nòmina per a {selectedPeriodYear}. Clica
+              "Configurar previsió" per introduir-los.
+            </p>
+          )}
+        </NeoCard>
+      )}
 
       <NeoCard className="p-4 sm:p-6 min-w-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
