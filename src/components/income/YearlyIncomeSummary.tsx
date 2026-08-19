@@ -6,14 +6,6 @@ import { useState, useMemo, Fragment } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ChevronLeft, ChevronRight, Clock, Wallet, TrendingUp, Coins } from "lucide-react";
 import type { Schedule, SettingsData, Center } from "@/contexts/AppDataContext";
 import type { EffectiveSession } from "@/utils/sessionHelpers";
@@ -34,6 +26,18 @@ const formatEuro = (value: number) =>
 
 const formatEuroHora = (value: number) =>
   isFinite(value) && value > 0 ? `${value.toFixed(2)} €/h` : "-";
+
+// Mateixa paleta que fas servir a Configuració → Centres
+const CENTER_COLOR_CLASS: Record<string, string> = {
+  blue: "bg-blue-500",
+  green: "bg-green-500",
+  purple: "bg-purple-500",
+  orange: "bg-orange-500",
+  red: "bg-red-500",
+  pink: "bg-pink-500",
+  yellow: "bg-yellow-500",
+  indigo: "bg-indigo-500",
+};
 
 export const YearlyIncomeSummary = ({
   schedules,
@@ -142,60 +146,77 @@ export const YearlyIncomeSummary = ({
         </NeoCard>
       </div>
 
-      <NeoCard className="p-4 sm:p-6 min-w-0">
-        <h3 className="text-lg sm:text-xl font-semibold mb-4">Detall mensual {selectedYear}</h3>
-        <Separator className="mb-4" />
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Mes</TableHead>
-                {activeCenters.map((center) => (
-                  <TableHead key={center.id} colSpan={3} className="text-center border-l">
-                    {center.name}
-                  </TableHead>
-                ))}
-                <TableHead colSpan={3} className="text-center border-l">
-                  Total
-                </TableHead>
-              </TableRow>
-              <TableRow>
-                <TableHead></TableHead>
-                {activeCenters.map((center) => (
-                  <Fragment key={center.id}>
-                    <TableHead className="text-xs text-right border-l">Hores</TableHead>
-                    <TableHead className="text-xs text-right">Pagat</TableHead>
-                    <TableHead className="text-xs text-right">€/h</TableHead>
-                  </Fragment>
-                ))}
-                <TableHead className="text-xs text-right border-l">Hores</TableHead>
-                <TableHead className="text-xs text-right">Pagat</TableHead>
-                <TableHead className="text-xs text-right">€/h</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {monthlyBreakdown.map((row) => (
-                <TableRow key={row.period.start}>
-                  <TableCell className="font-medium">{row.period.monthLabel}</TableCell>
+      <div>
+        <h3 className="text-lg sm:text-xl font-semibold mb-4 px-1">Detall mensual {selectedYear}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {monthlyBreakdown.map((row) => {
+            const hasData = row.totalPagat > 0;
+            return (
+              <NeoCard
+                key={row.period.start}
+                className={`p-4 min-w-0 ${!hasData ? "opacity-50" : ""}`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-base">{row.period.monthLabel}</h4>
+                  {hasData ? (
+                    <Badge className="bg-indigo-500 hover:bg-indigo-500 text-white">
+                      {formatEuro(row.totalPagat)}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-muted-foreground">
+                      Sense dades
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="space-y-3">
                   {activeCenters.map((center) => {
                     const data = row.byCenter[center.id];
+                    const pct = row.totalPagat > 0 ? (data.pagat / row.totalPagat) * 100 : 0;
                     return (
-                      <Fragment key={center.id}>
-                        <TableCell className="text-right border-l">{data.hores}</TableCell>
-                        <TableCell className="text-right">{formatEuro(data.pagat)}</TableCell>
-                        <TableCell className="text-right">{formatEuroHora(data.euroHora)}</TableCell>
-                      </Fragment>
+                      <div key={center.id} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <div
+                              className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                                CENTER_COLOR_CLASS[center.color] || "bg-indigo-500"
+                              }`}
+                            />
+                            <span className="font-medium truncate">{center.name}</span>
+                          </div>
+                          <span className="text-muted-foreground flex-shrink-0">
+                            {data.hores}h · {formatEuroHora(data.euroHora)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full transition-all ${
+                                CENTER_COLOR_CLASS[center.color] || "bg-indigo-500"
+                              }`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium w-16 text-right flex-shrink-0">
+                            {formatEuro(data.pagat)}
+                          </span>
+                        </div>
+                      </div>
                     );
                   })}
-                  <TableCell className="text-right border-l font-medium">{row.totalHores}</TableCell>
-                  <TableCell className="text-right font-medium">{formatEuro(row.totalPagat)}</TableCell>
-                  <TableCell className="text-right font-medium">{formatEuroHora(row.totalEuroHora)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                </div>
+
+                <Separator className="my-3" />
+
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{row.totalHores} h totals</span>
+                  <span>{formatEuroHora(row.totalEuroHora)}</span>
+                </div>
+              </NeoCard>
+            );
+          })}
         </div>
-      </NeoCard>
+      </div>
     </div>
   );
 };
