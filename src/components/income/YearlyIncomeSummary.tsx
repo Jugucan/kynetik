@@ -2,15 +2,15 @@
 // Resum anual d'ingressos i hores per centre, a l'estil del teu Excel de seguiment.
 // No fa cap lectura nova a Firebase: tot es calcula en memòria a partir de dades ja carregades.
 
-import { useState, useMemo, Fragment } from "react";
+import { useState, useMemo } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Clock, Wallet, TrendingUp, Coins } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Wallet, TrendingUp, Coins, Sparkles } from "lucide-react";
 import type { Schedule, SettingsData, Center } from "@/contexts/AppDataContext";
 import type { EffectiveSession } from "@/utils/sessionHelpers";
-import type { PayrollEntry } from "@/types/income";
+import type { PayrollEntry, IncentiveEntry } from "@/types/income";
 import { getPeriodsForYear, countEffectiveSessionsInPeriod } from "@/utils/incomeHelpers";
 
 interface YearlyIncomeSummaryProps {
@@ -20,6 +20,7 @@ interface YearlyIncomeSummaryProps {
   activeCenters: Center[];
   getCenterByLegacyId: (legacyId: "Arbucies" | "SantHilari") => Center | undefined;
   payrolls: PayrollEntry[];
+  incentives: IncentiveEntry[];
 }
 
 const formatEuro = (value: number) =>
@@ -47,6 +48,7 @@ export const YearlyIncomeSummary = ({
   activeCenters,
   getCenterByLegacyId,
   payrolls,
+  incentives,
 }: YearlyIncomeSummaryProps) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
@@ -80,19 +82,29 @@ export const YearlyIncomeSummary = ({
 
       const totalEuroHora = totalHores > 0 ? totalPagat / totalHores : 0;
 
-      return { period, byCenter, totalHores, totalPagat, totalEuroHora };
+      const incentiveEntry = incentives.find((i) => i.periodStart === period.start);
+      const incentiuAmount = incentiveEntry?.amount || 0;
+      const hasIncentiu = !!incentiveEntry;
+      const incentiuEuroHora = hasIncentiu && totalHores > 0 ? incentiuAmount / totalHores : 0;
+
+      return { period, byCenter, totalHores, totalPagat, totalEuroHora, incentiuAmount, hasIncentiu, incentiuEuroHora };
     });
-  }, [yearPeriods, schedules, settings, customSessions, activeCenters, getCenterByLegacyId, payrolls]);
+  }, [yearPeriods, schedules, settings, customSessions, activeCenters, getCenterByLegacyId, payrolls, incentives]);
 
   const yearTotals = useMemo(() => {
-    // Només comptem els mesos amb almenys una nòmina introduïda,
-    // per no falsejar les mitjanes amb mesos futurs que encara no s'han cobrat.
     const monthsWithData = monthlyBreakdown.filter((m) => m.totalPagat > 0);
     const totalHores = monthsWithData.reduce((sum, m) => sum + m.totalHores, 0);
     const totalPagat = monthsWithData.reduce((sum, m) => sum + m.totalPagat, 0);
     const mitjanaMensual = monthsWithData.length > 0 ? totalPagat / monthsWithData.length : 0;
     const euroHoraMitjana = totalHores > 0 ? totalPagat / totalHores : 0;
-    return { totalHores, totalPagat, mitjanaMensual, euroHoraMitjana };
+
+    // Incentius: només mesos amb dada introduïda, per no falsejar la mitjana
+    const monthsWithIncentiu = monthlyBreakdown.filter((m) => m.hasIncentiu);
+    const totalIncentius = monthsWithIncentiu.reduce((sum, m) => sum + m.incentiuAmount, 0);
+    const totalHoresIncentiu = monthsWithIncentiu.reduce((sum, m) => sum + m.totalHores, 0);
+    const euroHoraIncentiuMitjana = totalHoresIncentiu > 0 ? totalIncentius / totalHoresIncentiu : 0;
+
+    return { totalHores, totalPagat, mitjanaMensual, euroHoraMitjana, totalIncentius, euroHoraIncentiuMitjana };
   }, [monthlyBreakdown]);
 
   return (
@@ -143,6 +155,25 @@ export const YearlyIncomeSummary = ({
           </div>
           <p className="text-xl sm:text-2xl font-bold text-orange-800">
             {formatEuroHora(yearTotals.euroHoraMitjana)}
+          </p>
+        </NeoCard>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-amber-50 to-amber-100 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <p className="text-xs text-amber-700 truncate">Incentius totals</p>
+          </div>
+          <p className="text-xl sm:text-2xl font-bold text-amber-800">{formatEuro(yearTotals.totalIncentius)}</p>
+        </NeoCard>
+        <NeoCard className="p-3 sm:p-4 bg-gradient-to-br from-amber-50 to-amber-100 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <Coins className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <p className="text-xs text-amber-700 truncate">€/h incentius mitjana</p>
+          </div>
+          <p className="text-xl sm:text-2xl font-bold text-amber-800">
+            {formatEuroHora(yearTotals.euroHoraIncentiuMitjana)}
           </p>
         </NeoCard>
       </div>
@@ -213,6 +244,17 @@ export const YearlyIncomeSummary = ({
                   <span>{row.totalHores} h totals</span>
                   <span>{formatEuroHora(row.totalEuroHora)}</span>
                 </div>
+
+                {row.hasIncentiu && (
+                  <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-amber-200">
+                    <span className="flex items-center gap-1 text-amber-700">
+                      <Sparkles className="w-3 h-3" /> Incentius
+                    </span>
+                    <span className="font-medium text-amber-700">
+                      {formatEuro(row.incentiuAmount)} · {row.totalHores > 0 ? `${row.incentiuEuroHora.toFixed(2)} €/h` : "-"}
+                    </span>
+                  </div>
+                )}
               </NeoCard>
             );
           })}
