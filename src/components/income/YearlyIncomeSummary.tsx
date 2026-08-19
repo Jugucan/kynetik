@@ -6,6 +6,7 @@ import { useState, useMemo, Fragment } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Clock, Wallet, TrendingUp, Coins } from "lucide-react";
 import type { Schedule, SettingsData, Center } from "@/contexts/AppDataContext";
 import type { EffectiveSession } from "@/utils/sessionHelpers";
