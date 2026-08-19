@@ -24,17 +24,17 @@ interface PayrollParamsDialogProps {
 }
 
 const DEFAULT_VALUES = {
-  souBase: 0,
-  pagaEstiu: 0,
-  pagaNadal: 0,
-  pagaBeneficis: 0,
-  substitutoriCalcat: 0,
-  incentiuEuroHora: 0,
-  contingenciesComunes: 0,
-  atur: 0,
-  formacioProfessional: 0,
-  mecanismeEquitat: 0,
-  irpf: 0,
+  souBase: "",
+  pagaEstiu: "",
+  pagaNadal: "",
+  pagaBeneficis: "",
+  substitutoriCalcat: "",
+  incentiuEuroHora: "",
+  contingenciesComunes: "",
+  atur: "",
+  formacioProfessional: "",
+  mecanismeEquitat: "",
+  irpf: "",
 };
 
 export const PayrollParamsDialog = ({ year, currentParams, onSave }: PayrollParamsDialogProps) => {
@@ -47,17 +47,17 @@ export const PayrollParamsDialog = ({ year, currentParams, onSave }: PayrollPara
       setValues(
         currentParams
           ? {
-              souBase: currentParams.souBase,
-              pagaEstiu: currentParams.pagaEstiu,
-              pagaNadal: currentParams.pagaNadal,
-              pagaBeneficis: currentParams.pagaBeneficis,
-              substitutoriCalcat: currentParams.substitutoriCalcat,
-              incentiuEuroHora: currentParams.incentiuEuroHora,
-              contingenciesComunes: currentParams.contingenciesComunes,
-              atur: currentParams.atur,
-              formacioProfessional: currentParams.formacioProfessional,
-              mecanismeEquitat: currentParams.mecanismeEquitat,
-              irpf: currentParams.irpf,
+              souBase: String(currentParams.souBase),
+              pagaEstiu: String(currentParams.pagaEstiu),
+              pagaNadal: String(currentParams.pagaNadal),
+              pagaBeneficis: String(currentParams.pagaBeneficis),
+              substitutoriCalcat: String(currentParams.substitutoriCalcat),
+              incentiuEuroHora: String(currentParams.incentiuEuroHora),
+              contingenciesComunes: String(currentParams.contingenciesComunes),
+              atur: String(currentParams.atur),
+              formacioProfessional: String(currentParams.formacioProfessional),
+              mecanismeEquitat: String(currentParams.mecanismeEquitat),
+              irpf: String(currentParams.irpf),
             }
           : DEFAULT_VALUES
       );
@@ -65,14 +65,24 @@ export const PayrollParamsDialog = ({ year, currentParams, onSave }: PayrollPara
   }, [open, currentParams]);
 
   const handleChange = (field: keyof typeof DEFAULT_VALUES, raw: string) => {
-    const num = parseFloat(raw.replace(",", "."));
-    setValues((prev) => ({ ...prev, [field]: isNaN(num) ? 0 : num }));
+    // Deixem el text tal qual mentre s'escriu (permet la coma decimal a mig escriure).
+    // Només acceptem dígits, coma, punt i el signe negatiu.
+    if (raw === "" || /^-?[0-9]*[.,]?[0-9]*$/.test(raw)) {
+      setValues((prev) => ({ ...prev, [field]: raw }));
+    }
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await onSave(year, values);
+      const numericValues = Object.fromEntries(
+        Object.entries(values).map(([key, raw]) => {
+          const num = parseFloat(String(raw).replace(",", "."));
+          return [key, isNaN(num) ? 0 : num];
+        })
+      ) as Omit<PayrollParams, "id" | "instructorId" | "year" | "createdAt">;
+
+      await onSave(year, numericValues);
       setOpen(false);
     } finally {
       setSaving(false);
@@ -123,7 +133,7 @@ export const PayrollParamsDialog = ({ year, currentParams, onSave }: PayrollPara
                 <Input
                   type="text"
                   inputMode="decimal"
-                  value={values[f.key] === 0 ? "" : String(values[f.key])}
+                  value={values[f.key]}
                   placeholder="0"
                   onChange={(e) => handleChange(f.key, e.target.value)}
                 />
@@ -142,7 +152,7 @@ export const PayrollParamsDialog = ({ year, currentParams, onSave }: PayrollPara
                 <Input
                   type="text"
                   inputMode="decimal"
-                  value={values[f.key] === 0 ? "" : String(values[f.key])}
+                  value={values[f.key]}
                   placeholder="0"
                   onChange={(e) => handleChange(f.key, e.target.value)}
                 />
