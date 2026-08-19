@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Clock, Wallet, TrendingUp, Coins, Sparkles } from "lucide-react";
 import type { Schedule, SettingsData, Center } from "@/contexts/AppDataContext";
 import type { EffectiveSession } from "@/utils/sessionHelpers";
-import type { PayrollEntry, IncentiveEntry } from "@/types/income";
-import { getPeriodsForYear, countEffectiveSessionsInPeriod } from "@/utils/incomeHelpers";
+import type { PayrollEntry, IncentiveEntry, PayrollParams } from "@/types/income";
+import { getPeriodsForYear, countEffectiveSessionsInPeriod, computeEstimatedNet } from "@/utils/incomeHelpers";
 
 interface YearlyIncomeSummaryProps {
   schedules: Schedule[];
@@ -21,6 +21,7 @@ interface YearlyIncomeSummaryProps {
   getCenterByLegacyId: (legacyId: "Arbucies" | "SantHilari") => Center | undefined;
   payrolls: PayrollEntry[];
   incentives: IncentiveEntry[];
+  getParamsForYear: (year: number) => PayrollParams | undefined;
 }
 
 const formatEuro = (value: number) =>
@@ -49,6 +50,7 @@ export const YearlyIncomeSummary = ({
   getCenterByLegacyId,
   payrolls,
   incentives,
+  getParamsForYear,
 }: YearlyIncomeSummaryProps) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
@@ -194,11 +196,19 @@ export const YearlyIncomeSummary = ({
                     <Badge className="bg-indigo-500 hover:bg-indigo-500 text-white">
                       {formatEuro(row.totalPagat)}
                     </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-muted-foreground">
-                      Sense dades
-                    </Badge>
-                  )}
+                  ) : (() => {
+                    const params = getParamsForYear(parseInt(row.period.end.split("-")[0], 10));
+                    const estimate = params ? computeEstimatedNet(params, row.totalHores) : null;
+                    return estimate ? (
+                      <Badge variant="outline" className="border-dashed border-violet-400 text-violet-700">
+                        ~ {formatEuro(estimate.netEstimate)}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-muted-foreground">
+                        Sense dades
+                      </Badge>
+                    );
+                  })()}
                 </div>
 
                 <div className="space-y-3">
