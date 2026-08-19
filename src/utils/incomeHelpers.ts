@@ -128,3 +128,40 @@ export const countEffectiveSessionsInPeriod = (
 
   return counts;
 };
+
+export interface EstimatedNetBreakdown {
+  grossFixed: number;
+  incentiuEstimat: number;
+  grossTotal: number;
+  deductionPct: number;
+  deductionAmount: number;
+  netEstimate: number;
+}
+
+// Calcula una previsió del net a partir dels paràmetres configurats i les hores del període.
+export const computeEstimatedNet = (
+  params: {
+    souBase: number;
+    pagaEstiu: number;
+    pagaNadal: number;
+    pagaBeneficis: number;
+    substitutoriCalcat: number;
+    incentiuEuroHora: number;
+    contingenciesComunes: number;
+    atur: number;
+    formacioProfessional: number;
+    mecanismeEquitat: number;
+    irpf: number;
+  },
+  totalHores: number
+): EstimatedNetBreakdown => {
+  const grossFixed =
+    params.souBase + params.pagaEstiu + params.pagaNadal + params.pagaBeneficis + params.substitutoriCalcat;
+  const incentiuEstimat = totalHores * params.incentiuEuroHora;
+  const grossTotal = grossFixed + incentiuEstimat;
+  const deductionPct =
+    params.contingenciesComunes + params.atur + params.formacioProfessional + params.mecanismeEquitat + params.irpf;
+  const deductionAmount = grossTotal * (deductionPct / 100);
+  const netEstimate = grossTotal - deductionAmount;
+  return { grossFixed, incentiuEstimat, grossTotal, deductionPct, deductionAmount, netEstimate };
+};
