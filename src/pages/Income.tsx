@@ -14,13 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Euro, Trash2, TrendingUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, Euro, Trash2, TrendingUp, Sparkles } from "lucide-react";
 import { useCenters } from "@/hooks/useCenters";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useSchedules } from "@/hooks/useSchedules";
 import { useSettings } from "@/hooks/useSettings";
 import { usePayrolls } from "@/hooks/usePayrolls";
+import { useIncentives } from "@/hooks/useIncentives";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getRecentPeriods,
@@ -71,6 +72,7 @@ const Income = () => {
   const { schedules } = useSchedules();
   const settings = useSettings(); // useSettings() ja retorna vacations, closuresByCenter, etc. directament (no dins d'un objecte "settings")
   const { payrolls, loading, addPayroll, deletePayroll } = usePayrolls();
+  const { incentives, addIncentive, updateIncentive, deleteIncentive } = useIncentives();
 
     const [customSessions, setCustomSessions] = useState<Record<string, EffectiveSession[]>>({});
 
@@ -108,6 +110,45 @@ const Income = () => {
     );
   }, [schedules, settings, customSessions, selectedPeriod, getCenterByLegacyId]);
 
+  const totalHoresPeriode = useMemo(
+    () => Object.values(sessionCounts).reduce((sum, v) => sum + (v as number), 0),
+    [sessionCounts]
+  );
+
+  const incentiveForPeriod = useMemo(
+    () => incentives.find((i) => selectedPeriod && i.periodStart === selectedPeriod.start),
+    [incentives, selectedPeriod]
+  );
+
+  const incentiuEuroHora =
+    incentiveForPeriod && totalHoresPeriode > 0 ? incentiveForPeriod.amount / totalHoresPeriode : 0;
+
+  const [incentiveInput, setIncentiveInput] = useState("");
+  const [savingIncentive, setSavingIncentive] = useState(false);
+  const [editingIncentive, setEditingIncentive] = useState(false);
+
+  const handleSaveIncentive = async () => {
+    const amount = parseFloat(incentiveInput.replace(",", "."));
+    if (isNaN(amount) || amount < 0 || !selectedPeriod || !currentUser) return;
+    setSavingIncentive(true);
+    try {
+      if (incentiveForPeriod) {
+        await updateIncentive(incentiveForPeriod.id, { amount });
+      } else {
+        await addIncentive({
+          instructorId: currentUser.uid,
+          periodStart: selectedPeriod.start,
+          periodEnd: selectedPeriod.end,
+          amount,
+        });
+      }
+      setIncentiveInput("");
+      setEditingIncentive(false);
+    } finally {
+      setSavingIncentive(false);
+    }
+  };
+  
   const entriesForPeriod = useMemo(
     () => payrolls.filter((p) => selectedPeriod && p.periodStart === selectedPeriod.start),
     [payrolls, selectedPeriod]
@@ -242,7 +283,70 @@ const Income = () => {
             </div>
           ))}
         </div>
-      </NeoCard>   
+      </NeoCard>
+
+      <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-amber-50 to-yellow-50">
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles className="w-5 h-5 text-amber-600" />
+          <h3 className="text-lg font-semibold">Incentius d'aquest període</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Import ja inclòs dins el total de la nòmina. Es mostra a part només per controlar el €/h.
+        </p>
+
+        {incentiveForPeriod && !editingIncentive ? (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="grid grid-cols-2 gap-3 flex-1 w-full">
+              <div className="p-3 bg-white rounded-lg border">
+                <p className="text-xs text-muted-foreground">Incentius</p>
+                <p className="text-xl font-bold">{formatEuro(incentiveForPeriod.amount)}</p>
+              </div>
+              <div className="p-3 bg-white rounded-lg border">
+                <p className="text-xs text-muted-foreground">€/h incentius</p>
+                <p className="text-xl font-bold">
+                  {totalHoresPeriode > 0 ? `${incentiuEuroHora.toFixed(2)} €/h` : "-"}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIncentiveInput(String(incentiveForPeriod.amount));
+                  setEditingIncentive(true);
+                }}
+              >
+                Editar
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => deleteIncentive(incentiveForPeriod.id)}>
+                <Trash2 className="w-4 h-4 text-red-500" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <Label>Import incentius (€)</Label>
+              <Input
+                type="text"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={incentiveInput}
+                onChange={(e) => setIncentiveInput(e.target.value)}
+              />
+            </div>
+            <Button onClick={handleSaveIncentive} disabled={savingIncentive || !incentiveInput}>
+              {savingIncentive ? "Guardant..." : incentiveForPeriod ? "Actualitzar" : "Guardar"}
+            </Button>
+            {editingIncentive && (
+              <Button variant="ghost" onClick={() => setEditingIncentive(false)}>
+                Cancel·lar
+              </Button>
+            )}
+          </div>
+        )}
+      </NeoCard>
 
       <NeoCard className="p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4">Afegir nòmina d'aquest període</h3>
@@ -417,6 +521,7 @@ const Income = () => {
             activeCenters={activeCenters}
             getCenterByLegacyId={getCenterByLegacyId}
             payrolls={payrolls}
+            incentives={incentives}
           />
         </TabsContent>
       </Tabs>
