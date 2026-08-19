@@ -10,6 +10,7 @@ export interface PayPeriod {
   start: string;      // 'YYYY-MM-DD'
   end: string;         // 'YYYY-MM-DD'
   monthLabel: string;  // "Juliol"
+  shortLabel: string;  // "jul. 26" (mes abreujat + any, per desambiguar entre anys)
   rangeLabel: string;  // "26 jul. - 25 d'ag. del 2026"
 }
 
@@ -44,22 +45,24 @@ export const getPayPeriodForDate = (date: Date): { start: string; end: string } 
 
 // Genera "Juliol" (mes en gran) i "26 jul. - 25 d'ag. del 2026" (rang en petit)
 // El mes gran es basa en el dia de TANCAMENT del període (dia 25).
-export const getPeriodLabels = (periodStart: string, periodEnd: string): { monthLabel: string; rangeLabel: string } => {
+export const getPeriodLabels = (periodStart: string, periodEnd: string): { monthLabel: string; shortLabel: string; rangeLabel: string } => {
   const start = parseDateKey(periodStart);
   const end = parseDateKey(periodEnd);
 
   const monthLabel = MONTH_FULL[end.getMonth()];
+  const endAbbr = MONTH_ABBR[end.getMonth()];
+  const endYearShort = (end.getFullYear() % 100).toString().padStart(2, '0');
+  const shortLabel = `${endAbbr} ${endYearShort}`; // ex: "nov. 24"
 
   const startDay = start.getDate();
   const startAbbr = MONTH_ABBR[start.getMonth()];
   const endDay = end.getDate();
-  const endAbbr = MONTH_ABBR[end.getMonth()];
   const endYear = end.getFullYear();
   const endPrep = VOWEL_MONTHS.includes(end.getMonth()) ? "d'" : "de ";
 
   const rangeLabel = `${startDay} ${startAbbr} - ${endDay} ${endPrep}${endAbbr} del ${endYear}`;
 
-  return { monthLabel, rangeLabel };
+  return { monthLabel, shortLabel, rangeLabel };
 };
 
 // Retorna els últims `count` períodes, començant pel període actual (índex 0)
@@ -69,8 +72,8 @@ export const getRecentPeriods = (count: number, fromDate: Date = new Date()): Pa
 
   for (let i = 0; i < count; i++) {
     const { start, end } = getPayPeriodForDate(cursor);
-    const { monthLabel, rangeLabel } = getPeriodLabels(start, end);
-    periods.push({ start, end, monthLabel, rangeLabel });
+    const { monthLabel, shortLabel, rangeLabel } = getPeriodLabels(start, end);
+    periods.push({ start, end, monthLabel, shortLabel, rangeLabel });
 
     const prevDay = parseDateKey(start);
     prevDay.setDate(prevDay.getDate() - 1); // últim dia del període anterior
@@ -89,8 +92,8 @@ export const getPeriodsForYear = (year: number): PayPeriod[] => {
     const end = new Date(year, month, 25);
     const startKey = dateToKey(start);
     const endKey = dateToKey(end);
-    const { monthLabel, rangeLabel } = getPeriodLabels(startKey, endKey);
-    periods.push({ start: startKey, end: endKey, monthLabel, rangeLabel });
+    const { monthLabel, shortLabel, rangeLabel } = getPeriodLabels(startKey, endKey);
+    periods.push({ start: startKey, end: endKey, monthLabel, shortLabel, rangeLabel });
   }
   return periods;
 };
