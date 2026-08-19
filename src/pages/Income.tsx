@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -37,8 +38,6 @@ import {
 } from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { YearlyIncomeSummary } from "@/components/income/YearlyIncomeSummary";
-import { dateToKey } from "@/utils/statsHelpers";
-import { getEffectiveSessionsForDate } from "@/utils/sessionHelpers";
 
 const formatEuro = (value: number) =>
   new Intl.NumberFormat("ca-ES", { style: "currency", currency: "EUR" }).format(value);
@@ -109,22 +108,6 @@ const Income = () => {
     );
   }, [schedules, settings, customSessions, selectedPeriod, getCenterByLegacyId]);
 
-    const dailyBreakdown = useMemo(() => {
-    if (!selectedPeriod) return [];
-    const result: { dateKey: string; sessions: EffectiveSession[] }[] = [];
-    const start = new Date(selectedPeriod.start);
-    const end = new Date(selectedPeriod.end);
-    const current = new Date(start);
-    while (current <= end) {
-      const sessions = getEffectiveSessionsForDate(current, schedules, settings, customSessions).filter(
-        (s) => !s.isDeleted
-      );
-      result.push({ dateKey: dateToKey(current), sessions });
-      current.setDate(current.getDate() + 1);
-    }
-    return result;
-  }, [selectedPeriod, schedules, settings, customSessions]);
-
   const entriesForPeriod = useMemo(
     () => payrolls.filter((p) => selectedPeriod && p.periodStart === selectedPeriod.start),
     [payrolls, selectedPeriod]
@@ -166,6 +149,35 @@ const Income = () => {
       return row;
     });
   }, [periods, payrolls, activeCenters]);
+
+  const [evolutionView, setEvolutionView] = useState<"recent12" | "all" | "years">("recent12");
+
+  const yearlyChartData = useMemo(() => {
+    const byYear: Record<string, any> = {};
+    [...periods].reverse().forEach((period) => {
+      const year = period.end.split("-")[0];
+      if (!byYear[year]) {
+        const row: Record<string, any> = { periode: year, total: 0 };
+        activeCenters.forEach((c) => (row[c.id] = 0));
+        byYear[year] = row;
+      }
+      const periodEntries = payrolls.filter((p) => p.periodStart === period.start);
+      activeCenters.forEach((center) => {
+        const centerTotal = periodEntries
+          .filter((e) => e.centerId === center.id)
+          .reduce((sum, e) => sum + e.amount, 0);
+        byYear[year][center.id] += centerTotal;
+        byYear[year].total += centerTotal;
+      });
+    });
+    return Object.values(byYear).sort((a: any, b: any) => a.periode.localeCompare(b.periode));
+  }, [periods, payrolls, activeCenters]);
+
+  const displayedChartData = useMemo(() => {
+    if (evolutionView === "years") return yearlyChartData;
+    if (evolutionView === "all") return chartData;
+    return chartData.slice(-12); // últims 12 períodes
+  }, [evolutionView, chartData, yearlyChartData]);
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-4xl mx-auto">
@@ -230,32 +242,7 @@ const Income = () => {
             </div>
           ))}
         </div>
-      </NeoCard>
-
-      <NeoCard className="p-4 sm:p-6 min-w-0">
-        <h3 className="text-lg font-semibold mb-1">Detall diari (temporal, per verificar)</h3>
-        <p className="text-xs text-muted-foreground mb-4">
-          Llista dia a dia del que calcula aquesta pàgina. Compara-ho amb el Calendari.
-        </p>
-        <div className="max-h-80 overflow-y-auto space-y-1">
-          {dailyBreakdown.map((day) => (
-            <div key={day.dateKey} className="flex items-center justify-between text-xs border-b py-1 gap-2">
-              <span className="font-mono flex-shrink-0">{day.dateKey}</span>
-              <div className="flex flex-wrap gap-1 justify-end">
-                {day.sessions.length === 0 ? (
-                  <span className="text-muted-foreground">sense classes</span>
-                ) : (
-                  day.sessions.map((s, i) => (
-                    <Badge key={i} variant="outline">
-                      {s.center === "Arbucies" ? "Arb" : s.center === "SantHilari" ? "SH" : s.center} · {s.program}
-                    </Badge>
-                  ))
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </NeoCard>    
+      </NeoCard>   
 
       <NeoCard className="p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4">Afegir nòmina d'aquest període</h3>
@@ -325,68 +312,89 @@ const Income = () => {
       </NeoCard>
 
       <NeoCard className="p-4 sm:p-6 min-w-0">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="w-5 h-5" />
-          <h3 className="text-lg sm:text-xl font-semibold">Evolució dels ingressos</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5" />
+            <h3 className="text-lg sm:text-xl font-semibold">Evolució dels ingressos</h3>
+          </div>
+          <Select value={evolutionView} onValueChange={(value: any) => setEvolutionView(value)}>
+            <SelectTrigger className="w-full sm:w-56 min-w-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent12">Últims 12 períodes</SelectItem>
+              <SelectItem value="all">Tot l'historial</SelectItem>
+              <SelectItem value="years">Per anys</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <Separator className="mb-4" />
 
-        {/* Vista ESCRIPTORI: gràfica de barres apilades, un color per centre */}
-        <div className="hidden sm:block h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="periode" fontSize={12} />
-              <YAxis fontSize={12} />
-              <Tooltip formatter={(value: number) => formatEuro(value as number)} />
-              {activeCenters.map((center) => (
-                <Bar
-                  key={center.id}
-                  dataKey={center.id}
-                  stackId="income"
-                  name={center.name}
-                  fill={CENTER_COLOR_HEX[center.color] || "#6366f1"}
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
+        {/* Vista ESCRIPTORI: gràfica de barres apilades, amb scroll horitzontal si hi ha molts períodes */}
+        <div className="hidden sm:block overflow-x-auto">
+          <div
+            className="h-64"
+            style={{ minWidth: `${Math.max(displayedChartData.length * 60, 100)}%` }}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={displayedChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="periode" fontSize={12} />
+                <YAxis fontSize={12} />
+                <Tooltip formatter={(value: number) => formatEuro(value as number)} />
+                {activeCenters.map((center) => (
+                  <Bar
+                    key={center.id}
+                    dataKey={center.id}
+                    stackId="income"
+                    name={center.name}
+                    fill={CENTER_COLOR_HEX[center.color] || "#6366f1"}
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* Vista MÒBIL: llista vertical amb barra segmentada per centre */}
-        <div className="block sm:hidden space-y-3">
-          {(() => {
-            const maxTotal = Math.max(...chartData.map((c) => c.total), 1);
-            return chartData.map((item) => {
-              const barWidthPct = (item.total / maxTotal) * 100;
-              return (
-                <div key={item.periode} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm gap-2">
-                    <span className="font-medium">{item.periode}</span>
-                    <Badge variant="outline" className="bg-indigo-50">
-                      {formatEuro(item.total)}
-                    </Badge>
-                  </div>
-                  <div className="h-8 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full flex" style={{ width: `${barWidthPct}%` }}>
-                      {activeCenters.map((center) => {
-                        const value = item[center.id] || 0;
-                        const centerPct = item.total > 0 ? (value / item.total) * 100 : 0;
-                        if (centerPct === 0) return null;
-                        return (
-                          <div
-                            key={center.id}
-                            className={CENTER_COLOR_CLASS[center.color] || "bg-indigo-500"}
-                            style={{ width: `${centerPct}%` }}
-                            title={`${center.name}: ${formatEuro(value)}`}
-                          />
-                        );
-                      })}
+        {/* Vista MÒBIL: llista dins d'un contenidor amb scroll, com a "Les Meves Estadístiques" */}
+        <div className="block sm:hidden">
+          <ScrollArea className="h-80">
+            <div className="space-y-3 pr-3">
+              {(() => {
+                const maxTotal = Math.max(...displayedChartData.map((c: any) => c.total), 1);
+                return displayedChartData.map((item: any) => {
+                  const barWidthPct = (item.total / maxTotal) * 100;
+                  return (
+                    <div key={item.periode} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm gap-2">
+                        <span className="font-medium">{item.periode}</span>
+                        <Badge variant="outline" className="bg-indigo-50">
+                          {formatEuro(item.total)}
+                        </Badge>
+                      </div>
+                      <div className="h-8 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full flex" style={{ width: `${barWidthPct}%` }}>
+                          {activeCenters.map((center) => {
+                            const value = item[center.id] || 0;
+                            const centerPct = item.total > 0 ? (value / item.total) * 100 : 0;
+                            if (centerPct === 0) return null;
+                            return (
+                              <div
+                                key={center.id}
+                                className={CENTER_COLOR_CLASS[center.color] || "bg-indigo-500"}
+                                style={{ width: `${centerPct}%` }}
+                                title={`${center.name}: ${formatEuro(value)}`}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              );
-            });
-          })()}
+                  );
+                });
+              })()}
+            </div>
+          </ScrollArea>
         </div>
 
         {/* Llegenda de colors per centre */}
