@@ -229,7 +229,7 @@ const Income = () => {
   }, [evolutionView, chartData, yearlyChartData]);
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Euro className="w-6 h-6" />
@@ -425,9 +425,9 @@ const Income = () => {
 
       {entriesForPeriod.length === 0 && (
         <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-violet-50 to-purple-50">
-          <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
             <div className="flex items-center gap-2">
-              <Calculator className="w-5 h-5 text-violet-600" />
+              <Calculator className="w-5 h-5 text-violet-600 flex-shrink-0" />
               <h3 className="text-lg font-semibold">Previsió d'aquest període</h3>
             </div>
             <PayrollParamsDialog
