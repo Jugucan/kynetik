@@ -109,8 +109,8 @@ export const PayrollParamsDialog = ({ year, currentParams, onSave }: PayrollPara
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Settings2 className="w-4 h-4 mr-1" />
+        <Button variant="outline" size="sm" className="w-full sm:w-auto">
+          <Settings2 className="w-4 h-4 mr-1 flex-shrink-0" />
           Configurar previsió {year}
         </Button>
       </DialogTrigger>
