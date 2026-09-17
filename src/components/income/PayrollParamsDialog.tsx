@@ -16,10 +16,12 @@ import {
 } from "@/components/ui/dialog";
 import { Settings2 } from "lucide-react";
 import type { PayrollParams } from "@/types/income";
+import type { Center } from "@/contexts/AppDataContext";
 
 interface PayrollParamsDialogProps {
   year: number;
   currentParams: PayrollParams | undefined;
+  activeCenters: Center[];
   onSave: (year: number, values: Omit<PayrollParams, "id" | "instructorId" | "year" | "createdAt">) => Promise<void>;
 }
 
@@ -37,9 +39,10 @@ const DEFAULT_VALUES = {
   irpf: "",
 };
 
-export const PayrollParamsDialog = ({ year, currentParams, onSave }: PayrollParamsDialogProps) => {
+export const PayrollParamsDialog = ({ year, currentParams, activeCenters, onSave }: PayrollParamsDialogProps) => {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState(DEFAULT_VALUES);
+  const [splitValues, setSplitValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -64,11 +67,29 @@ export const PayrollParamsDialog = ({ year, currentParams, onSave }: PayrollPara
     }
   }, [open, currentParams]);
 
+    useEffect(() => {
+    if (open) {
+      const initial: Record<string, string> = {};
+      const equalShare = activeCenters.length > 0 ? (100 / activeCenters.length).toFixed(2) : "0";
+      activeCenters.forEach((c) => {
+        const saved = currentParams?.centerSplitPct?.[c.id];
+        initial[c.id] = saved !== undefined ? String(saved) : equalShare;
+      });
+      setSplitValues(initial);
+    }
+  }, [open, currentParams, activeCenters]);
+
   const handleChange = (field: keyof typeof DEFAULT_VALUES, raw: string) => {
     // Deixem el text tal qual mentre s'escriu (permet la coma decimal a mig escriure).
     // Només acceptem dígits, coma, punt i el signe negatiu.
     if (raw === "" || /^-?[0-9]*[.,]?[0-9]*$/.test(raw)) {
       setValues((prev) => ({ ...prev, [field]: raw }));
+    }
+  };
+
+    const handleSplitChange = (centerId: string, raw: string) => {
+    if (raw === "" || /^-?[0-9]*[.,]?[0-9]*$/.test(raw)) {
+      setSplitValues((prev) => ({ ...prev, [centerId]: raw }));
     }
   };
 
@@ -80,14 +101,25 @@ export const PayrollParamsDialog = ({ year, currentParams, onSave }: PayrollPara
           const num = parseFloat(String(raw).replace(",", "."));
           return [key, isNaN(num) ? 0 : num];
         })
-      ) as Omit<PayrollParams, "id" | "instructorId" | "year" | "createdAt">;
+      ) as Omit<PayrollParams, "id" | "instructorId" | "year" | "createdAt" | "centerSplitPct">;
 
-      await onSave(year, numericValues);
+      const centerSplitPct: Record<string, number> = {};
+      activeCenters.forEach((c) => {
+        const num = parseFloat(String(splitValues[c.id] || "0").replace(",", "."));
+        centerSplitPct[c.id] = isNaN(num) ? 0 : num;
+      });
+
+      await onSave(year, { ...numericValues, centerSplitPct });
       setOpen(false);
     } finally {
       setSaving(false);
     }
   };
+
+  const splitTotal = activeCenters.reduce(
+    (sum, c) => sum + (parseFloat(String(splitValues[c.id] || "0").replace(",", ".")) || 0),
+    0
+  );
 
   const FIELDS: { key: keyof typeof DEFAULT_VALUES; label: string; suffix: string }[] = [
     { key: "souBase", label: "Sou base", suffix: "€/mes" },
@@ -141,6 +173,31 @@ export const PayrollParamsDialog = ({ year, currentParams, onSave }: PayrollPara
               </div>
             </div>
           ))}
+
+                    <Separator className="my-2" />
+
+          <p className="text-sm font-semibold">Repartiment entre centres (%)</p>
+          <p className="text-xs text-muted-foreground">
+            Quan rebis un import conjunt sense desglossar, es repartirà amb aquest percentatge.
+          </p>
+          {activeCenters.map((center) => (
+            <div key={center.id} className="grid grid-cols-2 items-center gap-2">
+              <Label className="text-sm">{center.name}</Label>
+              <div className="flex items-center gap-1">
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={splitValues[center.id] || ""}
+                  placeholder="0"
+                  onChange={(e) => handleSplitChange(center.id, e.target.value)}
+                />
+                <span className="text-xs text-muted-foreground w-14 flex-shrink-0">%</span>
+              </div>
+            </div>
+          ))}
+          <p className={`text-xs ${Math.abs(splitTotal - 100) < 0.5 ? "text-muted-foreground" : "text-amber-600"}`}>
+            Suma: {splitTotal.toFixed(2)}% {Math.abs(splitTotal - 100) >= 0.5 && "(hauria de sumar 100%)"}
+          </p>
 
           <Separator className="my-2" />
 
