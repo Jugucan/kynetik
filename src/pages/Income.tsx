@@ -101,6 +101,9 @@ const Income = () => {
   const [selectedCenterId, setSelectedCenterId] = useState<string>(activeCenters[0]?.id || "");
   const [amountInput, setAmountInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [addMode, setAddMode] = useState<"perCenter" | "combined">("perCenter");
+  const [combinedAmountInput, setCombinedAmountInput] = useState("");
+  const [savingCombined, setSavingCombined] = useState(false);
 
   const sessionCounts = useMemo(() => {
     if (!selectedPeriod) return {};
@@ -182,6 +185,31 @@ const Income = () => {
     }
   };
 
+    const handleAddCombined = async () => {
+    const total = parseFloat(combinedAmountInput.replace(",", "."));
+    if (isNaN(total) || total <= 0 || !selectedPeriod || !currentUser || !paramsForPeriod?.centerSplitPct) return;
+    setSavingCombined(true);
+    try {
+      const splitPct = paramsForPeriod.centerSplitPct;
+      for (const center of activeCenters) {
+        const pct = splitPct[center.id] || 0;
+        if (pct <= 0) continue;
+        const amount = Math.round(total * (pct / 100) * 100) / 100;
+        await addPayroll({
+          instructorId: currentUser.uid,
+          centerId: center.id,
+          periodStart: selectedPeriod.start,
+          periodEnd: selectedPeriod.end,
+          amount,
+          isEstimatedSplit: true,
+        });
+      }
+      setCombinedAmountInput("");
+    } finally {
+      setSavingCombined(false);
+    }
+  };
+  
   const chartData = useMemo(() => {
     return [...periods].reverse().map((period) => {
       const periodEntries = payrolls.filter((p) => p.periodStart === period.start);
@@ -356,38 +384,87 @@ const Income = () => {
         )}
       </NeoCard>
 
-      <NeoCard className="p-4 sm:p-6">
-        <h3 className="text-lg font-semibold mb-4">Afegir nòmina d'aquest període</h3>
-        <div className="grid sm:grid-cols-3 gap-3 items-end">
-          <div>
-            <Label>Centre</Label>
-            <Select value={selectedCenterId} onValueChange={setSelectedCenterId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona centre" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeCenters.map((center) => (
-                  <SelectItem key={center.id} value={center.id}>
-                    {center.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <NeoCard className="p-4 sm:p-6">
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <h3 className="text-lg font-semibold">Afegir nòmina d'aquest període</h3>
+          <div className="flex gap-1 bg-muted rounded-lg p-1">
+            <Button
+              size="sm"
+              variant={addMode === "perCenter" ? "default" : "ghost"}
+              onClick={() => setAddMode("perCenter")}
+              className="text-xs h-7"
+            >
+              Per centre
+            </Button>
+            <Button
+              size="sm"
+              variant={addMode === "combined" ? "default" : "ghost"}
+              onClick={() => setAddMode("combined")}
+              className="text-xs h-7"
+            >
+              Import conjunt
+            </Button>
           </div>
-          <div>
-            <Label>Import (€)</Label>
-            <Input
-              type="text"
-              inputMode="decimal"
-              placeholder="0,00"
-              value={amountInput}
-              onChange={(e) => setAmountInput(e.target.value)}
-            />
-          </div>
-          <Button onClick={handleAdd} disabled={saving || !amountInput}>
-            {saving ? "Guardant..." : "Guardar nòmina"}
-          </Button>
         </div>
+
+        {addMode === "perCenter" ? (
+          <div className="grid sm:grid-cols-3 gap-3 items-end">
+            <div>
+              <Label>Centre</Label>
+              <Select value={selectedCenterId} onValueChange={setSelectedCenterId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona centre" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeCenters.map((center) => (
+                    <SelectItem key={center.id} value={center.id}>
+                      {center.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Import (€)</Label>
+              <Input
+                type="text"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={amountInput}
+                onChange={(e) => setAmountInput(e.target.value)}
+              />
+            </div>
+            <Button onClick={handleAdd} disabled={saving || !amountInput}>
+              {saving ? "Guardant..." : "Guardar nòmina"}
+            </Button>
+          </div>
+        ) : !paramsForPeriod?.centerSplitPct ? (
+          <p className="text-sm text-muted-foreground">
+            Encara no has configurat el % de repartiment entre centres. Ves a "Configurar previsió{" "}
+            {selectedPeriodYear}" (a la targeta de Previsió, més avall) per definir-lo.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Es repartirà automàticament: {activeCenters.map((c) => `${c.name} ${paramsForPeriod.centerSplitPct[c.id]?.toFixed(2) || 0}%`).join(" · ")}
+            </p>
+            <div className="grid sm:grid-cols-3 gap-3 items-end">
+              <div className="sm:col-span-2">
+                <Label>Import total rebut (€)</Label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={combinedAmountInput}
+                  onChange={(e) => setCombinedAmountInput(e.target.value)}
+                />
+              </div>
+              <Button onClick={handleAddCombined} disabled={savingCombined || !combinedAmountInput}>
+                {savingCombined ? "Guardant..." : "Repartir i guardar"}
+              </Button>
+            </div>
+          </div>
+        )}
       </NeoCard>
 
       <NeoCard className="p-4 sm:p-6">
@@ -404,7 +481,14 @@ const Income = () => {
               const center = activeCenters.find((c) => c.id === entry.centerId);
               return (
                 <div key={entry.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                  <p className="font-medium text-sm">{center?.name || entry.centerId}</p>
+                  <p className="font-medium text-sm flex items-center gap-1.5">
+                    {center?.name || entry.centerId}
+                    {entry.isEstimatedSplit && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-amber-300 text-amber-700">
+                        repartit
+                      </Badge>
+                    )}
+                  </p>
                   <div className="flex items-center gap-3">
                     <span className="font-semibold">{formatEuro(entry.amount)}</span>
                     <Button variant="ghost" size="sm" onClick={() => deletePayroll(entry.id)}>
@@ -433,6 +517,7 @@ const Income = () => {
             <PayrollParamsDialog
               year={selectedPeriodYear}
               currentParams={paramsForPeriod}
+              activeCenters={activeCenters}
               onSave={saveParamsForYear}
             />
           </div>
