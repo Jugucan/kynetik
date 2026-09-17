@@ -10,6 +10,7 @@ export interface PayrollEntry {
   amount: number;
   notes?: string;
   createdAt: string;
+  isEstimatedSplit?: boolean; // true si l'import es va repartir automàticament a partir d'un total conjunt
 }
 
 export type NewPayrollEntry = Omit<PayrollEntry, 'id' | 'createdAt'>;
@@ -41,6 +42,7 @@ export interface PayrollParams {
   mecanismeEquitat: number;
   irpf: number;
   createdAt: string;
+  centerSplitPct: Record<string, number>; // ex: { arbucies: 54.55, "sant-hilari": 45.45 }
 }
 
 export type NewPayrollParams = Omit<PayrollParams, 'id' | 'createdAt'>;
