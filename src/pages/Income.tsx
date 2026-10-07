@@ -311,13 +311,19 @@ const Income = () => {
           i qualsevol modificació que hi hagis fet.
         </p>
         <div className="grid grid-cols-2 gap-3">
-          {activeCenters.map((center) => (
-            <div key={center.id} className="p-3 bg-white rounded-lg border">
-              <p className="text-sm text-muted-foreground">{center.name}</p>
-              <p className="text-2xl font-bold">{sessionCounts[center.id] || 0}</p>
-              <p className="text-xs text-muted-foreground">classes</p>
-            </div>
-          ))}
+          {activeCenters
+            .filter(
+              (center) =>
+                center.id === getCenterByLegacyId("Arbucies")?.id ||
+                center.id === getCenterByLegacyId("SantHilari")?.id
+            )
+            .map((center) => (
+              <div key={center.id} className="p-3 bg-white rounded-lg border">
+                <p className="text-sm text-muted-foreground">{center.name}</p>
+                <p className="text-2xl font-bold">{sessionCounts[center.id] || 0}</p>
+                <p className="text-xs text-muted-foreground">classes</p>
+              </div>
+            ))}
         </div>
       </NeoCard>
 
