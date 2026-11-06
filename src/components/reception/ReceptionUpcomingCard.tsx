@@ -21,6 +21,7 @@ const OFF_LABELS: Record<ReceptionOffReason, string> = {
   holiday: "Festiu",
   closure: "Centre tancat",
   "no-shift": "Sense torn",
+  "no-template": "Sense horari de recepció",
 };
 
 export const ReceptionUpcomingCard = ({ data, settings, centerId, days = 14 }: ReceptionUpcomingCardProps) => {
