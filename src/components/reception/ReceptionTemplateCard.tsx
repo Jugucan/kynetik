@@ -1,28 +1,22 @@
 // src/components/reception/ReceptionTemplateCard.tsx
-// Editor de la plantilla setmanal de recepció (el teu horari fix de cada setmana).
+// Llista de versions de l'horari de recepció (habitual, estiu, Nadal...) amb les seves dates de vigència.
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { NeoCard } from "@/components/NeoCard";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Loader2, Save } from "lucide-react";
-import type { ReceptionShift } from "@/types/reception";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Copy, Trash2 } from "lucide-react";
+import { ReceptionTemplateEditor } from "@/components/reception/ReceptionTemplateEditor";
+import { dateToKey } from "@/utils/statsHelpers";
+import { applyTemplateSave, getTemplateForDate, parseDateKey } from "@/utils/receptionHelpers";
+import type { ReceptionShift, ReceptionTemplate } from "@/types/reception";
 
 interface ReceptionTemplateCardProps {
-  weekly: Record<string, ReceptionShift>;
-  onSave: (weekly: Record<string, ReceptionShift>) => Promise<void>;
+  templates: ReceptionTemplate[];
+  onSave: (templates: ReceptionTemplate[]) => Promise<void>;
 }
 
-interface DayRow {
-  enabled: boolean;
-  start: string;
-  end: string;
-}
-
-const DAY_NAMES = ["Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", "Dissabte", "Diumenge"];
-
-// Horari habitual de recepció: només s'usa com a valor inicial la primera vegada, abans de desar res.
+// Horari habitual de recepció: només s'usa com a valor inicial del primer horari que creïs.
 const INITIAL_DEFAULTS: Record<string, ReceptionShift> = {
   "1": { start: "14:15", end: "22:00" },
   "2": { start: "14:15", end: "22:00" },
@@ -31,106 +25,135 @@ const INITIAL_DEFAULTS: Record<string, ReceptionShift> = {
   "5": { start: "14:00", end: "18:00" },
 };
 
-const buildRows = (weekly: Record<string, ReceptionShift>): Record<string, DayRow> => {
-  const source = Object.keys(weekly).length > 0 ? weekly : INITIAL_DEFAULTS;
-  const rows: Record<string, DayRow> = {};
-  for (let day = 1; day <= 7; day++) {
-    const shift = source[String(day)];
-    rows[String(day)] = shift
-      ? { enabled: true, start: shift.start, end: shift.end }
-      : { enabled: false, start: "14:00", end: "18:00" };
-  }
-  return rows;
-};
+const DAY_SHORT = ["Dl", "Dt", "Dc", "Dj", "Dv", "Ds", "Dg"];
 
-export const ReceptionTemplateCard = ({ weekly, onSave }: ReceptionTemplateCardProps) => {
-  const [rows, setRows] = useState<Record<string, DayRow>>(() => buildRows(weekly));
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const formatDate = (key: string) => parseDateKey(key).toLocaleDateString("ca-ES");
 
-  useEffect(() => {
-    setRows(buildRows(weekly));
-  }, [weekly]);
+export const ReceptionTemplateCard = ({ templates, onSave }: ReceptionTemplateCardProps) => {
+  const todayKey = dateToKey(new Date());
+  const inForce = getTemplateForDate(templates, todayKey);
+  const sorted = [...templates].sort((a, b) => b.startDate.localeCompare(a.startDate));
 
-  const updateRow = (day: string, changes: Partial<DayRow>) => {
-    setRows((prev) => ({ ...prev, [day]: { ...prev[day], ...changes } }));
+  const [editing, setEditing] = useState<ReceptionTemplate | null>(null);
+  const [isNew, setIsNew] = useState(false);
+
+  const startNew = () => {
+    setEditing({
+      id: `rt_${Date.now()}`,
+      name: templates.length === 0 ? "Horari habitual" : "Horari nou",
+      startDate: todayKey,
+      endDate: null,
+      weekly: templates.length === 0 ? INITIAL_DEFAULTS : {},
+    });
+    setIsNew(true);
   };
 
-  const handleSave = async () => {
-    setError(null);
-    const result: Record<string, ReceptionShift> = {};
-    for (let day = 1; day <= 7; day++) {
-      const row = rows[String(day)];
-      if (!row.enabled) continue;
-      if (!row.start || !row.end || row.end <= row.start) {
-        setError(`${DAY_NAMES[day - 1]}: l'hora de final ha de ser posterior a la d'inici.`);
-        return;
-      }
-      result[String(day)] = { start: row.start, end: row.end };
+  const startCopy = (source: ReceptionTemplate) => {
+    setEditing({
+      id: `rt_${Date.now()}`,
+      name: `${source.name} (còpia)`,
+      startDate: todayKey,
+      endDate: null,
+      weekly: { ...source.weekly },
+    });
+    setIsNew(true);
+  };
+
+  const startEdit = (template: ReceptionTemplate) => {
+    setEditing({ ...template });
+    setIsNew(false);
+  };
+
+  const handleSave = async (template: ReceptionTemplate) => {
+    await onSave(applyTemplateSave(templates, template));
+    setEditing(null);
+  };
+
+  const handleDelete = async (template: ReceptionTemplate) => {
+    if (!confirm(`Segur que vols eliminar l'horari "${template.name}"?`)) return;
+    await onSave(templates.filter((t) => t.id !== template.id));
+  };
+
+  const statusBadge = (t: ReceptionTemplate) => {
+    if (inForce?.id === t.id) {
+      return <Badge className="bg-green-500 hover:bg-green-500 text-white">En vigor</Badge>;
     }
-    setSaving(true);
-    try {
-      await onSave(result);
-    } finally {
-      setSaving(false);
+    if (t.startDate > todayKey) {
+      return <Badge variant="outline" className="border-blue-300 text-blue-700">Futur</Badge>;
     }
+    return <Badge variant="outline" className="text-muted-foreground">Anterior</Badge>;
   };
 
   return (
-    <NeoCard className="p-4 sm:p-6 min-w-0">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
-        <h2 className="text-xl font-semibold">Plantilla setmanal de recepció</h2>
-        <Button size="sm" onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2 flex-shrink-0" />
-          ) : (
-            <Save className="h-4 w-4 mr-2 flex-shrink-0" />
-          )}
-          Desar plantilla
-        </Button>
-      </div>
-      <p className="text-xs text-muted-foreground mb-4">
-        El teu horari habitual de cada setmana. Els canvis d'un dia concret els afegeixes a "Canvis i
-        absències", sense tocar aquesta plantilla.
-      </p>
+    <div className="space-y-4">
+      <NeoCard className="p-4 sm:p-6 min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
+          <h2 className="text-xl font-semibold">Horaris de recepció</h2>
+          <Button size="sm" variant="outline" onClick={startNew} className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2 flex-shrink-0" />
+            Nou horari
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Cada horari té la seva data d'inici i de fi (habitual, estiu, Nadal...). Els canvis d'un dia concret
+          els afegeixes a "Canvis i absències", sense tocar l'horari.
+        </p>
 
-      <div className="space-y-2">
-        {DAY_NAMES.map((dayName, idx) => {
-          const day = String(idx + 1);
-          const row = rows[day];
-          return (
-            <div key={day} className="p-3 rounded-xl shadow-neo-inset min-w-0">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-3">
-                  <Switch checked={row.enabled} onCheckedChange={(checked) => updateRow(day, { enabled: checked })} />
-                  <span className="font-medium text-sm sm:text-base w-24">{dayName}</span>
-                </div>
-                {row.enabled ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="time"
-                      value={row.start}
-                      onChange={(e) => updateRow(day, { start: e.target.value })}
-                      className="shadow-neo-inset border-0 text-sm w-28"
-                    />
-                    <span className="text-muted-foreground">–</span>
-                    <Input
-                      type="time"
-                      value={row.end}
-                      onChange={(e) => updateRow(day, { end: e.target.value })}
-                      className="shadow-neo-inset border-0 text-sm w-28"
-                    />
+        {sorted.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Encara no tens cap horari de recepció. Clica "Nou horari" per crear el primer.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {sorted.map((t) => (
+              <div key={t.id} className="p-3 rounded-xl shadow-neo-inset min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold truncate">{t.name}</p>
+                      {statusBadge(t)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Des del {formatDate(t.startDate)}
+                      {t.endDate ? ` fins al ${formatDate(t.endDate)}` : " · sense data de fi"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {DAY_SHORT.map((label, idx) => {
+                        const shift = t.weekly[String(idx + 1)];
+                        return shift ? `${label} ${shift.start}–${shift.end}` : null;
+                      })
+                        .filter(Boolean)
+                        .join(" · ") || "Cap dia"}
+                    </p>
                   </div>
-                ) : (
-                  <span className="text-sm text-muted-foreground italic">No hi vaig</span>
-                )}
+                  <div className="flex gap-1 flex-shrink-0">
+                    <Button variant="outline" size="sm" onClick={() => startEdit(t)}>
+                      Editar
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => startCopy(t)} title="Copiar">
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(t)} title="Eliminar">
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            ))}
+          </div>
+        )}
+      </NeoCard>
 
-      {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
-    </NeoCard>
+      {editing && (
+        <ReceptionTemplateEditor
+          key={editing.id}
+          template={editing}
+          isNew={isNew}
+          existingTemplates={templates}
+          onSave={handleSave}
+          onCancel={() => setEditing(null)}
+        />
+      )}
+    </div>
   );
 };
