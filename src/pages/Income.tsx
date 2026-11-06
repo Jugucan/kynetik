@@ -143,10 +143,7 @@ const Income = () => {
   const receptionParamsForPeriod = getReceptionParamsForYear(selectedPeriodYear);
   const estimatedReceptionNet = receptionParamsForPeriod ? computeEstimatedReceptionNet(receptionParamsForPeriod) : null;
 
-  const dirigidesEntriesForPeriod = entriesForPeriod.filter((e) => e.centerId !== recepcioCenterId);
-  const recepcioEntryForPeriod = entriesForPeriod.find((e) => e.centerId === recepcioCenterId);
-
-  const incentiveForPeriod = useMemo(
+    const incentiveForPeriod = useMemo(
     () => incentives.find((i) => selectedPeriod && i.periodStart === selectedPeriod.start),
     [incentives, selectedPeriod]
   );
@@ -186,6 +183,9 @@ const Income = () => {
   );
 
   const totalForPeriod = entriesForPeriod.reduce((sum, e) => sum + e.amount, 0);
+
+  const dirigidesEntriesForPeriod = entriesForPeriod.filter((e) => e.centerId !== recepcioCenterId);
+  const recepcioEntryForPeriod = entriesForPeriod.find((e) => e.centerId === recepcioCenterId);
 
   const handleAdd = async () => {
     const amount = parseFloat(amountInput.replace(",", "."));
