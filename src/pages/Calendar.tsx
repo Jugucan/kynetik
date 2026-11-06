@@ -9,6 +9,10 @@ import { useSchedules } from "@/hooks/useSchedules";
 import { useCenters } from "@/hooks/useCenters";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
+import { useReceptionSchedule } from "@/hooks/useReceptionSchedule";
+import { ReceptionDaySection } from "@/components/reception/ReceptionDaySection";
+import { getReceptionStatusForDate, formatMinutes, formatShiftCompact } from "@/utils/receptionHelpers";
+import type { SettingsData } from "@/contexts/AppDataContext";
 
 // Definició de Session
 export interface Session {
@@ -85,6 +89,14 @@ const Calendar = () => {
   const [selectedCenterFilter, setSelectedCenterFilter] = useState<string>("all");
 
   const loading = settingsLoading || schedulesLoading || centersLoading;
+  
+  // Horari de recepció: només es carrega a la vista d'instructora
+  const reception = useReceptionSchedule(viewMode === 'instructor');
+  const receptionCenterId = getCenterByLegacyId('Arbucies')?.id ?? 'arbucies';
+  const receptionSettings = useMemo(
+    () => ({ vacations, officialHolidays, closuresByCenter, closuresArbucies, closuresSantHilari }) as SettingsData,
+    [vacations, officialHolidays, closuresByCenter, closuresArbucies, closuresSantHilari]
+  );
 
   // Carregar sessions personalitzades de Firebase amb listener en temps real
   useEffect(() => {
@@ -280,6 +292,23 @@ const Calendar = () => {
     return stats;
   }, [viewBillingPeriod, getSessionsForDate, activeCenters]);
 
+  // Hores i dies de recepció del període 26→25 que es veu al calendari
+  const receptionStats = useMemo(() => {
+    if (viewMode !== 'instructor') return null;
+    let minutes = 0;
+    let days = 0;
+    const cursor = new Date(viewBillingPeriod.start);
+    while (cursor <= viewBillingPeriod.end) {
+      const status = getReceptionStatusForDate(cursor, reception.data, receptionSettings, receptionCenterId);
+      if (status.kind === 'shift') {
+        minutes += status.minutes;
+        days++;
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return { minutes, days };
+  }, [viewMode, viewBillingPeriod, reception.data, receptionSettings, receptionCenterId]);
+  
   const upcomingEvents = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -426,6 +455,10 @@ const Calendar = () => {
               const isToday = dayInfo.date && dayInfo.date.getTime() === today.getTime();
               const dateKey = dayInfo.date ? dateToKey(dayInfo.date) : '';
               const hasModifications = customSessions[dateKey] && customSessions[dateKey].length > 0;
+              const receptionStatus =
+                viewMode === 'instructor' && dayInfo.date
+                  ? getReceptionStatusForDate(dayInfo.date, reception.data, receptionSettings, receptionCenterId)
+                  : null;
 
               return (
                 <button
@@ -486,6 +519,22 @@ const Calendar = () => {
                               </div>
                             );
                           })}
+                          </div>
+                      )}
+                      {receptionStatus && receptionStatus.kind === 'shift' && (
+                        <div
+                          className={`mt-0.5 w-full rounded px-0.5 text-[8px] leading-tight font-bold text-center truncate ${
+                            receptionStatus.source === 'override' ? 'bg-amber-100 text-amber-800' : 'bg-sky-100 text-sky-800'
+                          }`}
+                          title={`Recepció: ${receptionStatus.start} - ${receptionStatus.end}`}
+                        >
+                          <span className="sm:hidden">R</span>
+                          <span className="hidden sm:inline">{formatShiftCompact(receptionStatus.start, receptionStatus.end)}</span>
+                        </div>
+                      )}
+                      {receptionStatus && receptionStatus.kind === 'off' && receptionStatus.reason === 'absent' && (
+                        <div className="mt-0.5 w-full rounded px-0.5 text-[8px] leading-tight font-bold text-center bg-red-100 text-red-700" title="Recepció: no hi vaig">
+                          R ✕
                         </div>
                       )}
                     </>
@@ -501,6 +550,12 @@ const Calendar = () => {
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-yellow-500/50"></div><span>Festiu</span></div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-500/50"></div><span>Vacances</span></div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-gray-500/50"></div><span>Tancament (un o més centres)</span></div>
+            {viewMode === 'instructor' && (
+              <>
+                <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-sky-100 border border-sky-300"></div><span>Recepció</span></div>
+                <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-amber-100 border border-amber-300"></div><span>Recepció amb canvi</span></div>
+              </>
+            )}
             {viewMode === 'instructor' && Object.entries(getAllProgramColors()).map(([code, color]) => (
               <div key={code} className="flex items-center gap-1"><div className="w-3 h-3 rounded" style={{ backgroundColor: color }}></div><span>{code}</span></div>
             ))}
@@ -523,6 +578,20 @@ const Calendar = () => {
               </NeoCard>
             ))}
           </div>
+        )}
+
+        {/* Recepció del període - NOMÉS vista instructora */}
+        {viewMode === 'instructor' && receptionStats && reception.data.templates.length > 0 && (
+          <NeoCard>
+            <h3 className="font-semibold mb-3">Recepció</h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Període: {viewBillingPeriod.start.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })} - {viewBillingPeriod.end.toLocaleDateString("ca-ES", { day: 'numeric', month: 'short' })}
+            </p>
+            <div className="space-y-2">
+              <div className="flex justify-between"><span className="text-muted-foreground">Hores de recepció:</span><span className="font-bold text-primary">{formatMinutes(receptionStats.minutes)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Dies de recepció:</span><span className="font-bold">{receptionStats.days}</span></div>
+            </div>
+          </NeoCard>
         )}
 
         <NeoCard>
@@ -566,6 +635,18 @@ const Calendar = () => {
         onUpdateSessions={handleUpdateSessions}
         onDeleteSession={handleDeleteSession}
         readOnly={viewMode === 'user'}
+        extraContent={
+          viewMode === 'instructor' && selectedDate ? (
+            <ReceptionDaySection
+              key={dateToKey(selectedDate)}
+              date={selectedDate}
+              status={getReceptionStatusForDate(selectedDate, reception.data, receptionSettings, receptionCenterId)}
+              override={reception.data.overrides[dateToKey(selectedDate)]}
+              onSet={reception.setOverride}
+              onRemove={reception.removeOverride}
+            />
+          ) : null
+        }
       />
     </div>
   );
