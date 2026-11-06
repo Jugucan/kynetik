@@ -23,8 +23,10 @@ import { useSettings } from "@/hooks/useSettings";
 import { usePayrolls } from "@/hooks/usePayrolls";
 import { useIncentives } from "@/hooks/useIncentives";
 import { usePayrollParams } from "@/hooks/usePayrollParams";
+import { useReceptionParams } from "@/hooks/useReceptionParams";
 import { PayrollParamsDialog } from "@/components/income/PayrollParamsDialog";
-import { computeEstimatedNet } from "@/utils/incomeHelpers";
+import { ReceptionParamsDialog } from "@/components/income/ReceptionParamsDialog";
+import { computeEstimatedNet, computeEstimatedReceptionNet } from "@/utils/incomeHelpers";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getRecentPeriods,
@@ -77,6 +79,18 @@ const Income = () => {
   const { payrolls, loading, addPayroll, deletePayroll } = usePayrolls();
   const { incentives, addIncentive, updateIncentive, deleteIncentive } = useIncentives();
   const { getParamsForYear, saveParamsForYear } = usePayrollParams();
+  const { getParamsForYear: getReceptionParamsForYear, saveParamsForYear: saveReceptionParamsForYear } =
+    useReceptionParams();
+
+  const recepcioCenterId = activeCenters.find((c) => c.name.trim() === "Recepció")?.id;
+
+  const dirigidesCenters = useMemo(
+    () =>
+      activeCenters.filter(
+        (c) => c.id === getCenterByLegacyId("Arbucies")?.id || c.id === getCenterByLegacyId("SantHilari")?.id
+      ),
+    [activeCenters, getCenterByLegacyId]
+  );
 
     const [customSessions, setCustomSessions] = useState<Record<string, EffectiveSession[]>>({});
 
@@ -125,6 +139,12 @@ const Income = () => {
   const selectedPeriodYear = selectedPeriod ? parseInt(selectedPeriod.end.split("-")[0], 10) : new Date().getFullYear();
   const paramsForPeriod = getParamsForYear(selectedPeriodYear);
   const estimatedNet = paramsForPeriod ? computeEstimatedNet(paramsForPeriod, totalHoresPeriode) : null;
+
+  const receptionParamsForPeriod = getReceptionParamsForYear(selectedPeriodYear);
+  const estimatedReceptionNet = receptionParamsForPeriod ? computeEstimatedReceptionNet(receptionParamsForPeriod) : null;
+
+  const dirigidesEntriesForPeriod = entriesForPeriod.filter((e) => e.centerId !== recepcioCenterId);
+  const recepcioEntryForPeriod = entriesForPeriod.find((e) => e.centerId === recepcioCenterId);
 
   const incentiveForPeriod = useMemo(
     () => incentives.find((i) => selectedPeriod && i.periodStart === selectedPeriod.start),
@@ -191,7 +211,7 @@ const Income = () => {
     setSavingCombined(true);
     try {
       const splitPct = paramsForPeriod.centerSplitPct;
-      for (const center of activeCenters) {
+      for (const center of dirigidesCenters) {
         const pct = splitPct[center.id] || 0;
         if (pct <= 0) continue;
         const amount = Math.round(total * (pct / 100) * 100) / 100;
@@ -452,7 +472,7 @@ const Income = () => {
         ) : (
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Es repartirà automàticament: {activeCenters.map((c) => `${c.name} ${paramsForPeriod.centerSplitPct[c.id]?.toFixed(2) || 0}%`).join(" · ")}
+              Es repartirà automàticament: {dirigidesCenters.map((c) => `${c.name} ${paramsForPeriod.centerSplitPct[c.id]?.toFixed(2) || 0}%`).join(" · ")}
             </p>
             <div className="grid sm:grid-cols-3 gap-3 items-end">
               <div className="sm:col-span-2">
@@ -513,17 +533,17 @@ const Income = () => {
         )}
       </NeoCard>
 
-      {entriesForPeriod.length === 0 && (
+      {dirigidesEntriesForPeriod.length === 0 && (
         <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-violet-50 to-purple-50">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
             <div className="flex items-center gap-2">
               <Calculator className="w-5 h-5 text-violet-600 flex-shrink-0" />
-              <h3 className="text-lg font-semibold">Previsió d'aquest període</h3>
+              <h3 className="text-lg font-semibold">Previsió dirigides d’aquest període</h3>
             </div>
             <PayrollParamsDialog
               year={selectedPeriodYear}
               currentParams={paramsForPeriod}
-              activeCenters={activeCenters}
+              activeCenters={dirigidesCenters}
               onSave={saveParamsForYear}
             />
           </div>
@@ -563,6 +583,45 @@ const Income = () => {
             <p className="text-sm text-muted-foreground">
               Encara no has configurat els paràmetres de nòmina per a {selectedPeriodYear}. Clica
               "Configurar previsió" per introduir-los.
+            </p>
+          )}
+        </NeoCard>
+      )}
+
+      
+      {recepcioCenterId && !recepcioEntryForPeriod && (
+        <NeoCard className="p-4 sm:p-6 bg-gradient-to-br from-cyan-50 to-sky-50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
+            <h3 className="text-lg font-semibold">Previsió Recepció d'aquest període</h3>
+            <ReceptionParamsDialog
+              year={selectedPeriodYear}
+              currentParams={receptionParamsForPeriod}
+              onSave={saveReceptionParamsForYear}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">
+            Estimació orientativa de la feina de recepció, independent de dirigides.
+          </p>
+
+          {estimatedReceptionNet ? (
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between font-medium">
+                <span>Total brut (sou base + pagues)</span>
+                <span>{formatEuro(estimatedReceptionNet.grossTotal)}</span>
+              </div>
+              <div className="flex justify-between text-red-600">
+                <span>Retencions (-{estimatedReceptionNet.deductionPct.toFixed(2)}%)</span>
+                <span>-{formatEuro(estimatedReceptionNet.deductionAmount)}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between font-bold text-lg text-sky-700">
+                <span>Total net estimat</span>
+                <span>{formatEuro(estimatedReceptionNet.netEstimate)}</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Encara no has configurat els paràmetres de recepció per a {selectedPeriodYear}.
             </p>
           )}
         </NeoCard>
