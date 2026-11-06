@@ -10,7 +10,7 @@ import { ReceptionExceptionsCard } from "@/components/reception/ReceptionExcepti
 import { ReceptionUpcomingCard } from "@/components/reception/ReceptionUpcomingCard";
 
 export const ReceptionPanel = () => {
-  const { data, loading, saveWeekly, setOverride, removeOverride } = useReceptionSchedule();
+  const { data, loading, saveTemplates, setOverride, removeOverride } = useReceptionSchedule();
   const settings = useSettings();
   const { getCenterByLegacyId } = useCenters();
 
@@ -34,7 +34,7 @@ export const ReceptionPanel = () => {
       </div>
       <ReceptionUpcomingCard data={data} settings={settings} centerId={centerId} />
       <ReceptionExceptionsCard overrides={data.overrides} onSet={setOverride} onRemove={removeOverride} />
-      <ReceptionTemplateCard weekly={data.weekly} onSave={saveWeekly} />
+      <ReceptionTemplateCard templates={data.templates} onSave={saveTemplates} />
     </div>
   );
 };
