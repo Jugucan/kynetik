@@ -1,14 +1,15 @@
 // src/hooks/useReceptionSchedule.ts
-// Horari de recepció (plantilla setmanal + excepcions per dia). Un únic document per usuària:
+// Horari de recepció (versions de l'horari setmanal + excepcions per dia). Un únic document per usuària:
 // receptionSchedules/{uid}. Una sola lectura (getDoc) per sessió. No usa onSnapshot.
 
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, updateDoc, deleteField, FieldPath } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
-import type { ReceptionScheduleData, ReceptionShift, ReceptionOverride } from '@/types/reception';
+import { dateToKey } from '@/utils/statsHelpers';
+import type { ReceptionScheduleData, ReceptionTemplate, ReceptionOverride } from '@/types/reception';
 
-const EMPTY: ReceptionScheduleData = { weekly: {}, overrides: {} };
+const EMPTY: ReceptionScheduleData = { templates: [], overrides: {} };
 
 export const useReceptionSchedule = () => {
   const { currentUser } = useAuth();
@@ -22,13 +23,30 @@ export const useReceptionSchedule = () => {
     }
     setLoading(true);
     try {
-      const snap = await getDoc(doc(db, 'receptionSchedules', currentUser.uid));
-      if (snap.exists()) {
-        const d = snap.data();
-        setData({ weekly: d.weekly || {}, overrides: d.overrides || {} });
-      } else {
+      const ref = doc(db, 'receptionSchedules', currentUser.uid);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
         setData(EMPTY);
+        return;
       }
+      const d = snap.data();
+      let templates: ReceptionTemplate[] = Array.isArray(d.templates) ? d.templates : [];
+
+      // Migració: si només hi ha l'antiga plantilla única ("weekly"), la convertim en la primera versió.
+      if (templates.length === 0 && d.weekly && Object.keys(d.weekly).length > 0) {
+        templates = [
+          {
+            id: `rt_${Date.now()}`,
+            name: 'Horari de recepció',
+            startDate: dateToKey(new Date()),
+            endDate: null,
+            weekly: d.weekly,
+          },
+        ];
+        await setDoc(ref, { templates }, { mergeFields: ['templates'] });
+      }
+
+      setData({ templates, overrides: d.overrides || {} });
     } catch (error) {
       console.error('Error carregant horari de recepció:', error);
     } finally {
@@ -40,11 +58,11 @@ export const useReceptionSchedule = () => {
     load();
   }, [load]);
 
-  // Substitueix tota la plantilla setmanal (només el camp "weekly", no toca les excepcions)
-  const saveWeekly = async (weekly: Record<string, ReceptionShift>) => {
+  // Substitueix totes les versions de l'horari (només el camp "templates", no toca les excepcions)
+  const saveTemplates = async (templates: ReceptionTemplate[]) => {
     if (!currentUser) return;
-    await setDoc(doc(db, 'receptionSchedules', currentUser.uid), { weekly }, { mergeFields: ['weekly'] });
-    setData((prev) => ({ ...prev, weekly }));
+    await setDoc(doc(db, 'receptionSchedules', currentUser.uid), { templates }, { mergeFields: ['templates'] });
+    setData((prev) => ({ ...prev, templates }));
   };
 
   const setOverride = async (dateKey: string, override: ReceptionOverride) => {
@@ -76,5 +94,5 @@ export const useReceptionSchedule = () => {
     });
   };
 
-  return { data, loading, saveWeekly, setOverride, removeOverride };
+  return { data, loading, saveTemplates, setOverride, removeOverride };
 };
