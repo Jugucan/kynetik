@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSchedules, Schedule, ScheduleSession, CenterType } from "@/hooks/useSchedules";
 import { useProgramColors } from "@/hooks/useProgramColors";
+import { ReceptionPanel } from "@/components/reception/ReceptionPanel";
 
 const Schedules = () => {
   const { schedules, loading, saveSchedules, getActiveSchedule, createNewSchedule, deactivateSchedule } = useSchedules();
@@ -440,6 +441,10 @@ const Schedules = () => {
           )}
         </NeoCard>
       )}
+
+      <hr className="my-2" />
+
+      <ReceptionPanel />
     </div>
   );
 };
