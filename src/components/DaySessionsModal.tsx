@@ -52,7 +52,7 @@ interface DaySessionsModalProps {
   extraContent?: ReactNode;
 }
 
-const CUSTOM_SESSIONS_DOC
+const CUSTOM_SESSIONS_DOC = doc(db, 'settings', 'customSessions');
 const SESSION_CHANGES_DOC = doc(db, 'settings', 'sessionChanges');
 
 const dateToKey = (date: Date): string => {
