@@ -11,13 +11,13 @@ import type { ReceptionScheduleData, ReceptionTemplate, ReceptionOverride } from
 
 const EMPTY: ReceptionScheduleData = { templates: [], overrides: {} };
 
-export const useReceptionSchedule = () => {
+export const useReceptionSchedule = (enabled: boolean = true) => {
   const { currentUser } = useAuth();
   const [data, setData] = useState<ReceptionScheduleData>(EMPTY);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!currentUser) {
+    if (!currentUser || !enabled) {
       setLoading(false);
       return;
     }
@@ -52,7 +52,7 @@ export const useReceptionSchedule = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, enabled]);
 
   useEffect(() => {
     load();
