@@ -165,3 +165,30 @@ export const computeEstimatedNet = (
   const netEstimate = grossTotal - deductionAmount;
   return { grossFixed, incentiuEstimat, grossTotal, deductionPct, deductionAmount, netEstimate };
 };
+
+export interface EstimatedReceptionNetBreakdown {
+  grossTotal: number;
+  deductionPct: number;
+  deductionAmount: number;
+  netEstimate: number;
+}
+
+// Previsió de Recepció: sou base + pagues, sense component d'hores/incentius.
+export const computeEstimatedReceptionNet = (params: {
+  souBase: number;
+  pagaEstiu: number;
+  pagaNadal: number;
+  pagaBeneficis: number;
+  contingenciesComunes: number;
+  atur: number;
+  formacioProfessional: number;
+  mecanismeEquitat: number;
+  irpf: number;
+}): EstimatedReceptionNetBreakdown => {
+  const grossTotal = params.souBase + params.pagaEstiu + params.pagaNadal + params.pagaBeneficis;
+  const deductionPct =
+    params.contingenciesComunes + params.atur + params.formacioProfessional + params.mecanismeEquitat + params.irpf;
+  const deductionAmount = grossTotal * (deductionPct / 100);
+  const netEstimate = grossTotal - deductionAmount;
+  return { grossTotal, deductionPct, deductionAmount, netEstimate };
+};
