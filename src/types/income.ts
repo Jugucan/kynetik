@@ -46,3 +46,21 @@ export interface PayrollParams {
 }
 
 export type NewPayrollParams = Omit<PayrollParams, 'id' | 'createdAt'>;
+
+export interface ReceptionParams {
+  id: string;
+  instructorId: string;
+  year: number;
+  souBase: number;
+  pagaEstiu: number;
+  pagaNadal: number;
+  pagaBeneficis: number;
+  contingenciesComunes: number;
+  atur: number;
+  formacioProfessional: number;
+  mecanismeEquitat: number;
+  irpf: number;
+  createdAt: string;
+}
+
+export type NewReceptionParams = Omit<ReceptionParams, 'id' | 'createdAt'>;
