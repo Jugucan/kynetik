@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import {
   Dialog,
   DialogContent,
@@ -49,9 +49,10 @@ interface DaySessionsModalProps {
   onUpdateSessions: (date: Date, sessions: Session[]) => void;
   onDeleteSession?: (date: Date, sessionIndex: number, reason: string) => void;
   readOnly?: boolean;
+  extraContent?: ReactNode;
 }
 
-const CUSTOM_SESSIONS_DOC = doc(db, 'settings', 'customSessions');
+const CUSTOM_SESSIONS_DOC
 const SESSION_CHANGES_DOC = doc(db, 'settings', 'sessionChanges');
 
 const dateToKey = (date: Date): string => {
@@ -68,6 +69,7 @@ export const DaySessionsModal = ({
   sessions,
   onUpdateSessions,
   readOnly = false,
+  extraContent,
 }: DaySessionsModalProps) => {
   const { getProgramColor, getProgramName, getAllProgramColors } = useProgramColors();
   const [localSessions, setLocalSessions] = useState<Session[]>([]);
@@ -268,7 +270,9 @@ export const DaySessionsModal = ({
               year: "numeric"
             })}
           </DialogTitle>
-        </DialogHeader>
+          </DialogHeader>
+
+        {extraContent}
 
         {/* Modal d'eliminació - NOMÉS si NO és readOnly */}
         {!readOnly && sessionToDelete !== null ? (
