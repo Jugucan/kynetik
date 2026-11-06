@@ -113,3 +113,22 @@ export const getReceptionStatusForDate = (
 
   return { kind: 'off', reason: 'no-shift' };
 };
+
+
+// Format compacte per al Calendari: "14:15–22h" (treu els minuts quan són :00).
+const compactTime = (time: string): string => {
+  const [h, m] = time.split(':');
+  return m === '00' ? `${parseInt(h, 10)}h` : `${parseInt(h, 10)}:${m}`;
+};
+
+export const formatShiftCompact = (start: string, end: string): string =>
+  `${compactTime(start)}–${compactTime(end)}`;
+
+export const RECEPTION_OFF_LABELS: Record<string, string> = {
+  absent: 'No hi vaig',
+  vacation: 'Vacances',
+  holiday: 'Festiu',
+  closure: 'Centre tancat',
+  'no-shift': 'Sense torn',
+  'no-template': 'Sense horari de recepció',
+};
